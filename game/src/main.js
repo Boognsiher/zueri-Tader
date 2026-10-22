@@ -90,7 +90,7 @@ async function start() {
       setzeTempo(0);
     },
     fortsetzen: () => {
-      const offen = ui.handelOffen || routenfenster.offen || $("bilanz").open;
+      const offen = ui.handelOffen || routenfenster.offen || $("bilanz").open || ui.gefechtOffen;
       if (tempoVorFenster && tempo === 0 && !offen) setzeTempo(tempoVorFenster);
       if (!offen) tempoVorFenster = 0;
     },
@@ -111,6 +111,9 @@ async function start() {
       warenwert: $("warenwert"),
       flotte: $("flotte"),
       besitz: $("besitz"),
+      staende: $("staende"),
+      gefecht: $("gefecht"),
+      gefechtInhalt: $("gefecht-inhalt"),
       markt: $("markt"),
       meldungen: $("meldungen"),
       handel: $("handel"),
@@ -149,7 +152,8 @@ async function start() {
   knoepfe.forEach((k) => k.addEventListener("click", () => setzeTempo(Number(k.dataset.tempo))));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      if (bilanzDialog.open) bilanzZu();
+      if (ui.gefechtOffen) ui.schliesseGefecht();
+      else if (bilanzDialog.open) bilanzZu();
       else if (routenfenster.offen) routenfenster.schliesse();
       else if (ui.handelOffen) ui.schliesseHandel();
       else if (!e.target.closest("details")) ui.abwaehlen();
@@ -261,6 +265,8 @@ async function start() {
       } else if (ankuenfte.length || neuerTag) {
         ui.aktualisiere();
       }
+      // Gefechte mit eigenen Schiffen: Bericht zeigen, die Zeit hält an
+      if (spiel.kampf.berichte.length && !ui.gefechtOffen) ui.zeigeGefecht(spiel.kampf.berichte.shift());
     }
     karte.zeichne(Math.min(vorrat / dauer, 1));
   }

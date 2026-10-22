@@ -227,7 +227,8 @@ main {
 .stadt.gewaehlt .haus { stroke: #f0b23c; stroke-width: 0.35; }
 .stadt.gewaehlt .stadtname { fill: var(--rot); }
 .stadt:hover .lichthof { opacity: 0.3; }
-.stadt .haus { fill: var(--rot); stroke: var(--papier-hell); stroke-width: 0.25; }
+.stadt .haus { fill: var(--stand, var(--rot)); stroke: var(--papier-hell); stroke-width: 0.25; }
+.stadt.feindlich .lichthof { fill: #c0392b; opacity: 0.35; }
 .stadt.gesperrt .haus { fill: #777; }
 .stadt.ereignis .haus { stroke: #f0b23c; stroke-width: 0.4; }
 .stadtname {
@@ -254,6 +255,11 @@ main {
 .spielerboot .segel { fill: #fbf4e2; stroke: #6b5a40; stroke-width: 0.1; }
 .spielerboot .wimpel { fill: var(--rot); }
 .spielerboot.gewaehlt .segel { fill: #fff; stroke: var(--rot); stroke-width: 0.2; }
+.kriegsschiff .rumpf { fill: #4a3320; stroke: #2b1d10; stroke-width: 0.12; }
+.kriegsschiff .mast { fill: #2b1d10; }
+.kriegsschiff .segel { fill: var(--stand); stroke: #2b1d10; stroke-width: 0.12; }
+.kriegsschiff .wimpel { fill: var(--stand); }
+.kriegsschiff.feind .rumpf { stroke: #e0402a; stroke-width: 0.3; }
 .bootname { font-size: 1.1px; text-anchor: middle; fill: var(--holz); font-style: italic; paint-order: stroke; stroke: var(--papier-hell); stroke-width: 0.3px; }
 .spielerboot.gewaehlt .bootname { fill: var(--rot); font-weight: 600; }
 
@@ -333,6 +339,30 @@ dialog.fenster .schiffkauf { font-size: 1rem; padding: 0.2em 0.6em; }
   .markt .ware small { white-space: normal; }
   .markt .aktionen { width: 4.6rem; }
   dialog.fenster { padding: 0.5rem 0.6rem; }
+}
+
+/* --- Stände, Kampf ------------------------------------------------------------ */
+.standfarbe { display: inline-block; width: 0.7em; height: 0.7em; border-radius: 2px; margin-right: 0.35em; vertical-align: baseline; border: 1px solid rgba(0, 0, 0, 0.35); }
+.staende { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.staende small { display: block; color: var(--tinte-blass); font-size: 0.82rem; margin-left: 1.05em; }
+.staende small.krieg { color: var(--rot); font-weight: 600; }
+.kampfwerte { display: block; font-size: 0.82rem; color: var(--tinte-blass); }
+.haltung { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin-top: 0.4rem; font-size: 0.88rem; }
+.haltung button { font-size: 0.85rem; padding: 0.05em 0.55em; }
+.haltung button[aria-pressed="true"] { background: var(--holz); color: #fff6e8; border-color: #2b1d10; }
+.gefechtseiten { display: grid; grid-template-columns: 1fr auto 1fr; gap: 0.6rem; align-items: start; }
+.gefechtseiten .gegen { align-self: center; font-family: var(--titelschrift); font-size: 1.2rem; color: var(--tinte-blass); }
+.gefechtseite h3 { margin: 0.3rem 0; font-size: 1rem; }
+.gefechtschiff { display: flex; gap: 0.4rem; align-items: center; margin-bottom: 0.45rem; }
+.gefechtschiff svg { width: 2.4rem; height: 2.4rem; flex: none; }
+.gefechtschiff small { display: block; color: var(--tinte-blass); }
+.gefechtschiff.versenkt svg { opacity: 0.35; transform: rotate(25deg); }
+.gefechtschiff.aufgebracht svg { opacity: 0.6; }
+.balken.rumpf { display: block; width: 100%; max-width: 9rem; }
+.gefechtergebnis { font-weight: 600; margin: 0.5rem 0 0.3rem; }
+.runden { font-size: 0.85rem; color: var(--tinte-blass); padding-left: 1.4rem; margin: 0; }
+@media (max-width: 600px) {
+  .gefechtseiten { grid-template-columns: 1fr; }
 }
 
 /* --- Spielstand-Menü -------------------------------------------------------- */

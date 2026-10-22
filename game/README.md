@@ -31,7 +31,10 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Meldungen** in zwei Reitern: «Wichtig» (Ereignisse, Ankünfte, Warnungen, Käufe und Bauten) und «Handel» (Käufe und Verkäufe, Automatik, Kontore); ein Punkt zeigt Neues im anderen Reiter
 - Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft
 
-Noch nicht dabei: Spielziel, Diplomatie, Kampf (siehe `docs/roadmap.md`).
+- **Stände:** Jede Stadt gehört einem Stand (Zürich, Schwyz, Rapperswil, Glarus). Die Stände führen ab und zu Krieg gegeneinander. Im Reiter «Rathaus» gibt es dann Kaperbriefe: Prisengeld für versenkte Kriegsschiffe des Gegners, dafür sind dessen Häfen gesperrt. Ruf pro Stand (hoher Ruf: weniger Handelsspanne, tiefer Ruf: feindlich)
+- **Kampf:** Kriegsschiffe (Wachtschiff, Kriegsnauen) in den Werften. Kampfhaltung pro Schiff: angreifen (fährt Gegner in der Nähe selbst an), verteidigen, ausweichen. Gefechte laufen von selbst, ein Gefechtsbericht zeigt das Ergebnis. Schäden werden im Hafen repariert
+
+Noch nicht dabei: Spielziel, Verträge und Embargos, Folgen von Kriegen für die Wirtschaft (siehe `docs/roadmap.md`).
 
 ## Aufbau
 
@@ -47,9 +50,11 @@ Noch nicht dabei: Spielziel, Diplomatie, Kampf (siehe `docs/roadmap.md`).
 | `src/speicher.js` | Spielstand speichern und laden |
 | `src/routenfenster.js` | Fenster zum Einrichten der Automatik |
 | `src/werft.js` | Bootshandel: neue und gebrauchte Schiffe, Verkauf |
+| `src/diplomatie.js` | Stände: Krieg und Frieden, Ruf, Kaperbriefe |
+| `src/kampf.js` | Kriegsschiffe der Stände, Kampfhaltungen, Gefechte |
 | `src/bilanz.js` | Buchhaltung für die Bilanz |
 | `src/karte.js` | Seekarte als SVG |
-| `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Meldungen |
+| `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Stände, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Werft, Rathaus, Gefechtsbericht, Meldungen |
 | `src/main.js` | Einstieg, Zeitsteuerung, Menü Spielstand |
 | `src/zufall.js` | reproduzierbarer Zufallsgenerator |
 | `test/wirtschaft_test.mjs` | Test ohne Browser (`node game/test/wirtschaft_test.mjs`) |
@@ -58,7 +63,7 @@ Reines JavaScript (ES-Module), ohne Build-Schritt und ohne Pakete. Wirtschaft un
 
 ## Regeln für Änderungen
 
-- Zahlen gehören nach `data/`. Startwerte und Tempo der Demo stehen in `data/spiel.json`, die Karte in `data/karte.json`, Schiffstypen und Bootshandel in `data/schiffe.json`.
+- Zahlen gehören nach `data/`. Startwerte und Tempo der Demo stehen in `data/spiel.json`, die Karte in `data/karte.json`, Schiffstypen, Kampfwerte und Bootshandel in `data/schiffe.json`, Stände und Kriege in `data/fraktionen.json`.
 - Die Schiffe des Spielers fahren stufenlos und frei, die KI-Händler in ganzen Tagen auf festen Wegen wie in der Simulation.
 - `src/wirtschaft.js` und `tools/sim/wirtschaft_sim.py` müssen dieselbe Logik haben. Wer eine Seite ändert, ändert die andere mit und lässt beide Tests laufen. Der Spieltest prüft dieselben Balance-Checks wie die Simulation.
 

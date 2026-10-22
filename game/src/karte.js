@@ -116,6 +116,7 @@ export class Karte {
 
     this.ebeneRoute = el("g", { class: "routen" }, svg);
     this.ebeneHaendler = el("g", { class: "haendler" }, svg);
+    this.ebeneKrieg = el("g", { class: "kriegsschiffe" }, svg);
     this.ebeneStaedte = el("g", { class: "staedte" }, svg);
     this.ebeneSpieler = el("g", { class: "spieler" }, svg);
 
@@ -124,7 +125,8 @@ export class Karte {
     this.beschriftungUnten = unten;
     for (const stadt of this.spiel.welt.staedte) {
       const [x, y] = stadt.pos;
-      const g = el("g", { class: "stadt", transform: `translate(${x},${y})`, tabindex: 0, role: "button", "aria-label": stadt.name }, this.ebeneStaedte);
+      const stand = this.spiel.diplomatie.vonStadt(stadt);
+      const g = el("g", { class: "stadt", transform: `translate(${x},${y})`, tabindex: 0, role: "button", "aria-label": `${stadt.name} (${stand.name})`, style: `--stand: ${stand.farbe}` }, this.ebeneStaedte);
       el("circle", { r: 3.2, class: "klickflaeche" }, g);
       el("circle", { r: 2.6, class: "lichthof" }, g);
       el("path", { d: "M-1,0.6 L-1,-0.5 L0,-1.3 L1,-0.5 L1,0.6 Z", class: "haus" }, g);
@@ -147,6 +149,7 @@ export class Karte {
     this.haendlerPunkte = this.spiel.welt.haendler.map(() => el("circle", { r: 0.5, class: "haendler-punkt" }, this.ebeneHaendler));
     this.haendlerWege = new Map();
     this.spielerBoote = new Map();
+    this.kriegsBoote = new Map();
   }
 
   kartusche(svg) {
@@ -205,6 +208,8 @@ export class Karte {
       punkt.setAttribute("cy", y.toFixed(2));
     });
 
+    this.zeichneKriegsschiffe(sicht);
+
     // Schiffe des Spielers. Symbole von Schiffen, die es nicht mehr gibt (zur Flotte
     // zusammengelegt, verkauft, Flotte aufgelöst), werden entfernt.
     for (const [schiff, boot] of this.spielerBoote) {
@@ -236,7 +241,7 @@ export class Karte {
         imHafen.set(schiff.ort, n + 1);
         // im Hafen auf der Seite, wo der Stadtname nicht steht
         const unten = this.beschriftungUnten.has(schiff.ort.name);
-        x = schiff.ort.pos[0] + (unten ? 2.6 : 2.1) + n * 2.1;
+        x = schiff.ort.pos[0] + (unten ? 2.6 : 2.1) + n * 2.8;
         y = schiff.ort.pos[1] + (unten ? -1.2 : 1.2);
       }
       boot.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
@@ -250,6 +255,52 @@ export class Karte {
     }
   }
 
+  // Kriegsschiffe der Stände, in den Farben ihres Stands und nur in Sichtweite
+  zeichneKriegsschiffe(sicht) {
+    const kampf = this.spiel.kampf;
+    for (const [s, boot] of this.kriegsBoote) {
+      if (!kampf.schiffe.includes(s)) {
+        boot.remove();
+        this.kriegsBoote.delete(s);
+      }
+    }
+    const imHafen = new Map();
+    for (const s of kampf.schiffe) {
+      let boot = this.kriegsBoote.get(s);
+      const stand = this.D.fraktionen.nach[s.fraktion];
+      if (!boot) {
+        boot = bootSymbol(this.ebeneKrieg, "kriegsschiff");
+        boot.style.setProperty("--stand", stand.farbe);
+        el("title", {}, boot);
+        this.kriegsBoote.set(s, boot);
+      }
+      let x;
+      let y;
+      let links = false;
+      if (s.ort && !s.fahrt) {
+        const n = imHafen.get(s.ort) ?? 0;
+        imHafen.set(s.ort, n + 1);
+        x = s.ort.pos[0] - 2.2 - n * 1.6;
+        y = s.ort.pos[1] + 0.9;
+        links = true;
+      } else {
+        ({ x, y, links } = this.spiel.position(s));
+      }
+      const zeigen = this.spiel.sichtbar(x, y, sicht);
+      boot.style.display = zeigen ? "" : "none";
+      if (!zeigen) continue;
+      const t = this.D.schiffe.typ[s.typ];
+      const groesse = t.groesse * BOOT_MASSSTAB;
+      boot.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+      boot.querySelector(".boot-koerper").setAttribute("transform", `scale(${links ? -groesse : groesse},${groesse})`);
+      const feind = this.spiel.diplomatie.feindlich(s.fraktion);
+      boot.classList.toggle("feind", feind);
+      const titel = `${s.name} (${stand.name})${feind ? ", dir feindlich" : ""}`;
+      const title = boot.querySelector("title");
+      if (title.textContent !== titel) title.textContent = titel;
+    }
+  }
+
   // Wird nach jedem Tag und nach Aktionen aufgerufen: Auswahl, Fahrzeiten, Routen
   aktualisiere() {
     const spiel = this.spiel;
@@ -260,10 +311,12 @@ export class Karte {
       g.classList.toggle("gewaehlt", stadt === this.auswahl.stadt);
       g.classList.toggle("gesperrt", stadt.gesperrt(welt.tag));
       g.classList.toggle("ereignis", stadt.ereignisse.length > 0);
+      const feindlich = spiel.diplomatie.hafenGesperrt(stadt);
+      g.classList.toggle("feindlich", feindlich);
       let text = "";
       if (schiff && !spiel.imHafen(schiff, stadt)) {
-        if (stadt.gesperrt(welt.tag)) {
-          text = "gesperrt";
+        if (stadt.gesperrt(welt.tag) || feindlich) {
+          text = feindlich ? "feindlich" : "gesperrt";
         } else {
           const w = spiel.nav.route([p.x, p.y], stadt.pos);
           if (w) text = `${(Math.round((2 * weglaenge(w)) / spiel.tempo(schiff)) / 2).toLocaleString("de-CH")} T.`;

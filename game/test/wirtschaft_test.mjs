@@ -10,6 +10,7 @@
 // 10.  Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz.
 // 11.  Automatik «Versorgen».
 // 12.  Flotten.
+// 13.  Stände, Kriege, Kaperbriefe und Gefechte.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -350,9 +351,10 @@ console.log("\nBootshandel");
       !!gekauft && gekauft.gebraucht && markt.unterhalt(gekauft) > D.schiffe.typ[angebot.typ].unterhalt);
   }
 
-  // Wirtschaftlichkeit: je ein Schiff jedes Typs handelt ein Jahr frei
+  // Wirtschaftlichkeit: je ein Handelsschiff jedes Typs handelt ein Jahr frei
+  // (Kriegsschiffe verdienen ihr Geld mit Prisen, nicht mit Handel)
   const rendite = {};
-  for (const t of D.schiffe.typen) {
+  for (const t of D.schiffe.typen.filter((x) => !x.kampfschiff)) {
     let summe = 0;
     for (const seed of [51, 52, 53]) {
       const sp = new Spiel(D, seed, { leer: false });
@@ -618,6 +620,105 @@ console.log("\nFlotten");
   pruefe("Flotte auflösen gibt drei Schiffe zurück", einzeln.length === 3 && spiel.schiffe.length === 3);
   pruefe("Ladung bleibt erhalten und passt in die Laderäume",
     Math.abs(einzeln.reduce((a, s) => a + spiel.ladungsmenge(s), 0) - menge) < 1e-9 && einzeln.every((s) => spiel.ladungsmenge(s) <= spiel.laderaum(s)));
+}
+
+// --- 13. Stände, Kriege, Kaperbriefe und Gefechte ---------------------------------
+console.log("\nStände und Kampf");
+{
+  const F = D.fraktionen;
+  const zuordnung = D.staedte.map((s) => F.fraktionen.filter((f) => f.staedte.includes(s.name)).length);
+  pruefe("Jede Stadt gehört genau einem Stand", zuordnung.every((n) => n === 1) && F.fraktionen.every((f) => f.staedte.length > 0));
+  pruefe("Kriegsschiffe der Stände sind bekannte Kriegsschiff-Typen",
+    F.fraktionen.every((f) => Object.keys(f.kriegsschiffe).every((t) => D.schiffe.typ[t]?.kampfschiff)));
+
+  // Kriege kommen und gehen (drei Jahre, drei Seeds)
+  let kriege = 0;
+  let kriegsTage = 0;
+  let friedensschluesse = 0;
+  for (const seed of [61, 62, 63]) {
+    const sp = new Spiel(D, seed);
+    let vorher = 0;
+    for (let t = 0; t < 1080; t++) {
+      sp.tagVoran();
+      const jetzt = Object.keys(sp.diplomatie.kriege).length;
+      kriegsTage += jetzt;
+      if (jetzt > vorher) kriege += jetzt - vorher;
+      if (jetzt < vorher) friedensschluesse += vorher - jetzt;
+      vorher = jetzt;
+    }
+  }
+  const proJahr = kriege / 9;
+  const dauer = kriegsTage / Math.max(1, kriege);
+  console.log(`   ${kriege} Kriege in 9 Jahren, mittlere Dauer ${dauer.toFixed(0)} Tage, ${friedensschluesse} Friedensschlüsse`);
+  pruefe(`Kriege kommen vor (${proJahr.toFixed(1)} pro Jahr, Ziel 0,4-3)`, proJahr >= 0.4 && proJahr <= 3);
+  pruefe(`Kriege enden wieder (mittlere Dauer ${dauer.toFixed(0)} Tage, Ziel 60-300)`, friedensschluesse > 0 && dauer >= 60 && dauer <= 300);
+
+  // Krieg Zürich gegen Schwyz von Hand, Kaperbrief in Zürich
+  const spiel = new Spiel(D, 64);
+  const d = spiel.diplomatie;
+  spiel.gulden = 200000;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  const lachen = spiel.welt.stadt["Lachen"];
+  pruefe("Ohne Krieg gibt es keinen Kaperbrief", d.pruefeKaperbrief(zuerich) !== null);
+  d.kriege["schwyz|zuerich"] = { seit: spiel.welt.tag, verluste: { schwyz: 0, zuerich: 0 } };
+  pruefe("Im Krieg ist Lachen für einen neutralen Händler offen", !d.hafenGesperrt(lachen) && spiel.segeln(spiel.schiffe[0], { stadt: lachen }).ok);
+  spiel.anhalten(spiel.schiffe[0]);
+  spiel.schiffe[0].ort = zuerich;
+  spiel.schiffe[0].pos = [...zuerich.pos];
+  pruefe("Kaperbrief vom Stand Zürich kaufen", d.kaufeKaperbrief(zuerich) && d.kaperbriefe.includes("zuerich"));
+  pruefe("Mit Kaperbrief ist Schwyz feindlich und Lachen gesperrt", d.feindlich("schwyz") && !spiel.segeln(spiel.schiffe[0], { stadt: lachen }).ok);
+  pruefe("Rapperswil bleibt offen", !d.hafenGesperrt(spiel.welt.stadt["Rapperswil"]));
+
+  // Eigener Kriegsnauen trifft vor Lachen auf das Schwyzer Wachtschiff
+  const krieger = spiel.werft.kaufeNeu(zuerich, "kriegsnauen");
+  pruefe("Kriegsnauen verteidigt sich von selbst", spiel.kampf.daten(krieger).haltung === "verteidigen");
+  const wache = spiel.kampf.schiffe.find((s) => s.fraktion === "schwyz" && s.typ === "wachtschiff");
+  const geld = spiel.gulden;
+  const anzahl = spiel.kampf.schiffe.length;
+  spiel.segeln(krieger, { punkt: [lachen.pos[0] - 4, lachen.pos[1] - 2] });
+  for (let t = 0; t < 12 && spiel.kampf.schiffe.includes(wache); t++) spiel.tagVoran();
+  const bericht = spiel.kampf.berichte.at(-1);
+  pruefe(`Es kommt zum Gefecht vor ${bericht?.ort ?? "?"} (${bericht?.runden.length ?? 0} Runden)`, !!bericht && bericht.seiten[0].titel.startsWith("Deine Schiffe"));
+  pruefe(`Das Wachtschiff wird versenkt, Prisengeld ${bericht?.prisengeld ?? 0} Gulden`,
+    !spiel.kampf.schiffe.includes(wache) && bericht.prisengeld === D.schiffe.typ.wachtschiff.preis * F.kaperbrief.prisengeld_anteil && spiel.gulden > geld);
+  pruefe(`Ruf steigt bei Zürich (${d.ruf.zuerich}) und sinkt bei Schwyz (${d.ruf.schwyz})`, d.ruf.zuerich > 0 && d.ruf.schwyz < 0);
+  pruefe("Schwyz ersetzt das Schiff später", spiel.kampf.neubau.some((n) => n.fraktion === "schwyz") && spiel.kampf.schiffe.length < anzahl);
+  const schaden = spiel.kampf.daten(krieger).schaden;
+  if (schaden > 0) {
+    spiel.segeln(krieger, { stadt: spiel.welt.stadt["Wädenswil"] });
+    for (let t = 0; t < 30; t++) spiel.tagVoran();
+    pruefe(`Schaden wird im Hafen repariert (${schaden.toFixed(0)} -> ${spiel.kampf.daten(krieger).schaden.toFixed(0)})`, spiel.kampf.daten(krieger).schaden < schaden);
+  }
+
+  // Handelsschiff ohne Geleit trifft auf dem Obersee einen Kriegsnauen: entkommt oder verliert die Ladung
+  const opfer = spiel.werft.kaufeNeu(zuerich, "nauen");
+  spiel.kaufen(opfer, "Korn", 50);
+  spiel.kampf.stelle("schwyz", "kriegsnauen");
+  const jaeger = spiel.kampf.schiffe.at(-1);
+  Object.assign(opfer, { ort: null, fahrt: null, pos: [88, 53] });
+  Object.assign(jaeger, { ort: null, fahrt: null, pos: [88.8, 53] });
+  const zahl = spiel.kampf.berichte.length;
+  spiel.kampf.kontakte();
+  const b2 = spiel.kampf.berichte.length > zahl ? spiel.kampf.berichte.at(-1) : null;
+  const ausgang = b2?.seiten[0].einheiten.find((e) => e.name === opfer.name)?.aus;
+  pruefe(`Handelsschiff mit «ausweichen» im Gefecht: ${ausgang ?? "kein Gefecht"}`, (ausgang === "entkommen" && opfer.ladung.Korn?.menge === 50) || (ausgang === "aufgebracht" && !opfer.ladung.Korn));
+  pruefe("Ein Handelsschiff wird nicht versenkt", spiel.schiffe.includes(opfer));
+
+  // Speichern und Laden mitten im Krieg, danach gleicher Verlauf
+  const stand = JSON.parse(JSON.stringify(speichere(spiel)));
+  const geladen = lade(D, stand);
+  for (let t = 0; t < 60; t++) {
+    spiel.tagVoran();
+    geladen.tagVoran();
+  }
+  pruefe("Stände und Kriegsschiffe überstehen Speichern und Laden (60 Tage gleich)",
+    JSON.stringify(spiel.kampf.zustand()) === JSON.stringify(geladen.kampf.zustand()) &&
+    JSON.stringify(spiel.diplomatie.zustand()) === JSON.stringify(geladen.diplomatie.zustand()) && spiel.gulden === geladen.gulden);
+
+  // Frieden beendet den Kaperbrief
+  delete d.kriege["schwyz|zuerich"];
+  d.kaperbriefeNachFrieden();
+  pruefe("Mit dem Frieden erlischt der Kaperbrief", !d.kaperbriefe.includes("zuerich"));
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

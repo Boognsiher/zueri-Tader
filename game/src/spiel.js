@@ -1,6 +1,7 @@
 // Spielzustand des Spielers: Geld, Schiffe, Handel, Kalender.
 // Die Welt (Städte, KI-Händler, Ereignisse) steht in wirtschaft.js, Kontore und Betriebe in
-// betriebe.js, der automatische Handel in automatik.js.
+// betriebe.js, der automatische Handel in automatik.js, Stände und Kaperbriefe in diplomatie.js,
+// Kriegsschiffe und Gefechte in kampf.js.
 
 import { Welt } from "./wirtschaft.js";
 import { Navigation, weglaenge, punktAufWeg } from "./navigation.js";
@@ -8,8 +9,12 @@ import { Ausbau } from "./betriebe.js";
 import { Werft } from "./werft.js";
 import * as automatik from "./automatik.js";
 import { neueKonten, buche } from "./bilanz.js";
+import { Diplomatie } from "./diplomatie.js";
+import { Kampf, neueKampfdaten } from "./kampf.js";
+import { Zufall } from "./zufall.js";
 
 const MELDUNGEN_JE_REIHE = 60;
+const SCHRITTE_JE_TAG = 16; // Prüfungen auf Gefechte pro Tag, wenn tagVoran ohne Zeitsteuerung läuft
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 export class Spiel {
@@ -29,6 +34,10 @@ export class Spiel {
     this.konten = neueKonten(); // Buchhaltung für die Bilanz (bilanz.js)
     this.ausbau = new Ausbau(this);
     this.werft = new Werft(this);
+    // Eigener Zufall für Kriege und Gefechte, damit sie die Ereignisse der Wirtschaft nicht verschieben
+    this.kriegszufall = new Zufall((seed ^ 0x2b1d5eed) | 0);
+    this.diplomatie = new Diplomatie(this);
+    this.kampf = new Kampf(this);
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
   }
 
@@ -86,13 +95,14 @@ export class Spiel {
     // typ = Schiffstyp (schiffe.json), gebraucht = höherer Unterhalt
     // ort = Hafen, in dem das Schiff liegt (null auf See), fahrt = laufende Fahrt oder null
     // auto = automatischer Handel (automatik.js) oder null
-    const schiff = { name, typ: typId, gebraucht, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null };
+    // kampf = Kampfhaltung, Schaden und Jagd (kampf.js)
+    const schiff = { name, typ: typId, gebraucht, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null, kampf: neueKampfdaten(t.kampfschiff) };
     this.schiffe.push(schiff);
     return schiff;
   }
 
   // Schiffstyp; eine Flotte bekommt einen zusammengesetzten Typ: Laderaum und Umschlag
-  // addieren sich, das Tempo ist das des langsamsten Schiffs
+  // addieren sich (auch Kampfkraft und Rumpf), das Tempo ist das des langsamsten Schiffs
   schiffstyp(schiff) {
     if (!schiff.mitglieder) return this.D.schiffe.typ[schiff.typ];
     const typen = schiff.mitglieder.map((m) => this.D.schiffe.typ[m.typ]);
@@ -104,6 +114,9 @@ export class Spiel {
       umschlag_pro_tag: typen.reduce((a, t) => a + t.umschlag_pro_tag, 0),
       groesse: Math.max(...typen.map((t) => t.groesse)),
       unterhalt: typen.reduce((a, t) => a + t.unterhalt, 0),
+      kampfkraft: typen.reduce((a, t) => a + t.kampfkraft, 0),
+      rumpf: typen.reduce((a, t) => a + t.rumpf, 0),
+      kampfschiff: typen.some((t) => t.kampfschiff),
     };
   }
 
@@ -138,6 +151,7 @@ export class Spiel {
       ziel.menge += p.menge;
     }
     a.auto = null;
+    a.kampf.schaden += b.kampf.schaden;
     this.schiffe = this.schiffe.filter((s) => s !== b);
     this.melde(`${b.name} schliesst sich der Flotte «${a.name}» an (${a.mitglieder.length} Schiffe, Laderaum ${this.laderaum(a)}).`);
     return true;
@@ -155,7 +169,11 @@ export class Spiel {
     const ladung = Object.entries(flotte.ladung).map(([g, p]) => ({ g, ...p }));
     const neu = flotte.mitglieder.map((m) => ({
       name: m.name, typ: m.typ, gebraucht: m.gebraucht, pos: [...flotte.pos], ort: flotte.ort, fahrt: null, ladung: {}, auto: null,
+      kampf: neueKampfdaten(this.D.schiffe.typ[m.typ].kampfschiff),
     }));
+    // Schaden nach Rumpf verteilen
+    const rumpf = this.schiffstyp(flotte).rumpf;
+    for (const s of neu) s.kampf.schaden = (flotte.kampf.schaden * this.schiffstyp(s).rumpf) / rumpf;
     for (const s of neu) {
       let frei = this.laderaum(s);
       for (const posten of ladung) {
@@ -291,6 +309,7 @@ export class Spiel {
     const stadt = ziel.stadt ?? null;
     if (stadt && this.imHafen(schiff, stadt)) return { ok: false, grund: `${schiff.name} liegt schon in ${stadt.name}.` };
     if (stadt && stadt.gesperrt(this.welt.tag)) return { ok: false, grund: `Föhnsturm: ${stadt.name} kann nicht angelaufen werden.` };
+    if (stadt && this.diplomatie.hafenGesperrt(stadt)) return { ok: false, grund: `Der ${this.diplomatie.vonStadt(stadt).name} ist dir feindlich gesinnt, ${stadt.name} lässt dich nicht ein.` };
     const p = this.position(schiff);
     const von = [p.x, p.y];
     const nach = stadt ? stadt.pos : ziel.punkt;
@@ -325,6 +344,7 @@ export class Spiel {
         s.pos = [...f.weg[f.weg.length - 1]];
         s.ort = f.ziel;
         s.fahrt = null;
+        if (f.jagd) continue; // Jagd eines Kriegsschiffs (kampf.js): kein Halt, keine Meldung
         ankuenfte.push(s);
         if (automatik.aktiv(s)) automatik.weiter(this, s);
         else if (s.ort) this.melde(`${s.name} ist in ${s.ort.name} angekommen.`, "ankunft");
@@ -342,6 +362,7 @@ export class Spiel {
     for (const s of this.schiffe) {
       if (automatik.aktiv(s) && !s.fahrt && s.auto.abfahrt != null && this.zeit >= s.auto.abfahrt) automatik.weiter(this, s);
     }
+    this.kampf.schritt();
     return ankuenfte;
   }
 
@@ -355,6 +376,13 @@ export class Spiel {
 
   // Ein Tag vergeht. Gibt Ereignisse und angekommene Schiffe zurück.
   tagVoran() {
+    // Ohne Zeitsteuerung (Tests) Gefechte auch innerhalb des Tages prüfen, sonst fahren
+    // Schiffe aneinander vorbei (zwei Schiffe nähern sich um bis zu 20 Karteneinheiten am Tag)
+    for (let i = 1; i < SCHRITTE_JE_TAG; i++) {
+      if (i / SCHRITTE_JE_TAG <= this.anteil) continue;
+      this.anteil = i / SCHRITTE_JE_TAG;
+      this.kampf.schritt();
+    }
     this.anteil = 0;
     const ereignisse = this.welt.naechsterTag();
     for (const e of ereignisse) this.melde(e.text, "ereignis");
@@ -363,9 +391,12 @@ export class Spiel {
     this.buche("schiffeUnterhalt", -unterhalt);
     this.ausbau.tag();
     this.werft.tag();
+    this.diplomatie.tag();
+    this.kampf.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
     for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
+    this.kampf.schritt();
     return { ereignisse, ankuenfte };
   }
 }

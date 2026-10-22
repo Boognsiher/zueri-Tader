@@ -4,6 +4,7 @@
 // Städte stehen als Namen bzw. Positionen in der Städteliste drin, Fahrtziele als Namen.
 
 import { Spiel } from "./spiel.js";
+import { neueKampfdaten } from "./kampf.js";
 
 export const VERSION = 1;
 
@@ -53,11 +54,15 @@ export function speichere(spiel) {
         gebraucht: s.gebraucht,
         pos: s.pos,
         ort: nr(s.ort),
-        fahrt: s.fahrt ? { weg: s.fahrt.weg, start: s.fahrt.start, ende: s.fahrt.ende, ziel: nr(s.fahrt.ziel) } : null,
+        fahrt: s.fahrt ? { weg: s.fahrt.weg, start: s.fahrt.start, ende: s.fahrt.ende, ziel: nr(s.fahrt.ziel), ...(s.fahrt.jagd ? { jagd: true } : {}) } : null,
         ladung: s.ladung,
         auto: s.auto,
         mitglieder: s.mitglieder ?? null,
+        kampf: s.kampf,
       })),
+      kriegszufall: spiel.kriegszufall.zustand,
+      diplomatie: spiel.diplomatie.zustand(),
+      kampf: spiel.kampf.zustand(),
       ausbau: spiel.ausbau.zustand(),
     },
   };
@@ -112,6 +117,11 @@ export function lade(D, stand) {
     auto: z.auto,
     ...(z.mitglieder ? { mitglieder: z.mitglieder } : {}),
   }));
+  // Spielstände vor dem Kampfsystem: Kampfdaten nach Schiffstyp
+  for (const [i, s] of spiel.schiffe.entries()) s.kampf = sp.schiffe[i].kampf ?? neueKampfdaten(spiel.schiffstyp(s).kampfschiff);
+  if (sp.kriegszufall !== undefined) spiel.kriegszufall.zustand = sp.kriegszufall;
+  spiel.diplomatie.laden(sp.diplomatie);
+  spiel.kampf.laden(sp.kampf);
   spiel.ausbau.laden(sp.ausbau);
   spiel.werft.laden(sp.werft);
   return spiel;

@@ -8,10 +8,13 @@
 // eine Stadt sie nur hervor und zeigt sie in der Marktübersicht. Von dort öffnet ein Knopf das
 // Stadtfenster (Markt, Kontor, Betriebe, Werft) ohne Schiff.
 // Lenkt der Spieler ein Schiff mit Automatik von Hand, pausiert die Automatik.
+// Stände: Übersicht in der Seitenleiste, Kaperbriefe im Reiter «Rathaus» des Stadtfensters,
+// Gefechtsberichte in einem eigenen Fenster (statische Ansicht).
 
 import { weglaenge } from "./navigation.js";
 import * as automatik from "./automatik.js";
 import { KONTEN, ergebnis, investitionen } from "./bilanz.js";
+import { HALTUNGEN } from "./kampf.js";
 
 const zahl = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
 const f = (n) => zahl.format(Math.round(n));
@@ -45,6 +48,10 @@ export class Oberflaeche {
     this.fensterStadt = null;
     this.routenfenster = null; // wird von main.js gesetzt
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
+    this.e.gefecht.addEventListener("click", (ev) => {
+      if (ev.target.closest("[data-gefecht-zu]")) this.schliesseGefecht();
+    });
+    this.e.gefecht.addEventListener("close", () => this.schliesseGefecht());
     this.e.meldungen.addEventListener("click", (ev) => {
       const k = ev.target.closest("[data-meldreiter]");
       if (!k) return;
@@ -176,11 +183,13 @@ export class Oberflaeche {
 
   // --- Darstellung -----------------------------------------------------------
   aktualisiere() {
+    if (this.schiff && !this.spiel.schiffe.includes(this.schiff)) this.schiff = null; // gesunken
     if (this.handelOffen && this.fensterSchiff && !this.spiel.imHafen(this.fensterSchiff)) this.schliesseHandel();
     this.kopf();
     this.flotte();
     this.besitz();
     this.marktuebersicht();
+    this.staende();
     if (this.handelOffen) this.handelsfenster();
     this.meldungen();
     this.karte.waehle({ stadt: this.stadt, schiff: this.schiff });
@@ -232,6 +241,7 @@ export class Oberflaeche {
         <span class="schiffsname">${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}»${schiff.gebraucht ? " <small>gebraucht</small>" : ""}</span>
         ${schiff.mitglieder ? `<span class="mitglieder">${schiff.mitglieder.length} Schiffe: ${esc(schiff.mitglieder.map((m) => `${this.D.schiffe.typ[m.typ].name} «${m.name}»`).join(", "))} · Tempo ${f(s.schiffstyp(schiff).tempo * 100)} %</span>` : ""}
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)}</span>
+        ${this.kampfzeile(schiff)}
         <span class="status">${this.status(schiff)}</span>
         ${schiff.auto ? `<span class="modus ${schiff.auto.pausiert ? "pausiert" : ""}">${schiff.auto.pausiert ? "pausiert: " : ""}${esc(this.modus(schiff))}</span>` : ""}
         ${ladung ? `<span class="ladung">${ladung}</span>` : ""}
@@ -256,6 +266,10 @@ export class Oberflaeche {
         if (schiff.mitglieder) aktionen.push(`<button data-aufloesen>Flotte auflösen</button>`);
       }
       html += `<div class="schiffsaktionen">${aktionen.join("")}</div>`;
+      const haltung = s.kampf.daten(schiff).haltung;
+      html += `<div class="haltung" role="group" aria-label="Kampfhaltung">Kampfhaltung: ${HALTUNGEN.map(
+        ([h, text, hilfe]) => `<button data-haltung="${h}" aria-pressed="${h === haltung}" title="${esc(hilfe)}">${text}</button>`,
+      ).join("")}</div>`;
     }
     if (schiff) html += `<p class="steuerhilfe">${
       automatik.aktiv(schiff)
@@ -348,6 +362,9 @@ export class Oberflaeche {
       .map(([g]) => `${g} aus ${Object.keys(D.rezepte[g]).join(" und ")}`)
       .join(", ");
     const werft = s.werft.istWerft(stadt) ? "<br><b>Werft:</b> neue Schiffe zu kaufen" : "";
+    const stand = s.diplomatie.vonStadt(stadt);
+    html += `<p class="profil"><span class="standfarbe" style="background:${stand.farbe}"></span><b>${esc(stand.name)}</b> (${esc(stand.konfession)})${
+      s.diplomatie.hafenGesperrt(stadt) ? ` · <span class="minus">dir feindlich, Hafen gesperrt</span>` : ""}</p>`;
     html += `<p class="profil"><b>Erzeugt:</b> ${esc(erzeugt || "nichts")}${werk ? `<br><b>Werkstätten:</b> ${esc(werk)}` : ""}${werft}</p>`;
     return html;
   }
@@ -441,6 +458,7 @@ export class Oberflaeche {
       ["kontor", kontor ? "Kontor" : "Kontor (keins)"],
       ["betriebe", `Betriebe${eigene ? ` (${eigene} eigene)` : ""}`],
       ["werft", werftReiter],
+      ["rathaus", "Rathaus"],
     ]
       .map(([w, t]) => `<button role="tab" data-reiter="${w}" aria-selected="${this.reiter === w}">${t}</button>`)
       .join("")}</nav>`;
@@ -459,6 +477,10 @@ export class Oberflaeche {
       this.e.handelInhalt.innerHTML = html + this.werftReiter(stadt);
       return;
     }
+    if (this.reiter === "rathaus") {
+      this.e.handelInhalt.innerHTML = html + this.rathausReiter(stadt);
+      return;
+    }
     html += this.stadtprofil(stadt);
     if (!schiff) {
       html += this.markttabelle(stadt, null);
@@ -471,10 +493,11 @@ export class Oberflaeche {
     html += `<details class="direktfahrt"><summary>Direkt zu einem Hafen segeln</summary><div class="ziele">`;
     for (const ziel of welt.staedte) {
       if (ziel === stadt) continue;
-      const gesperrt = ziel.gesperrt(welt.tag);
+      const feindlich = s.diplomatie.hafenGesperrt(ziel);
+      const gesperrt = ziel.gesperrt(welt.tag) || feindlich;
       const tage = this.tage(stadt.pos, ziel.pos, s.tempo(schiff));
       html += `<button class="ziel" data-ziel="${welt.staedte.indexOf(ziel)}" ${gesperrt || tage === null ? "disabled" : ""}
-        title="${gesperrt ? "Föhnsturm: Der Hafen ist gesperrt" : ""}">${esc(ziel.name)}
+        title="${feindlich ? "Der Stand ist dir feindlich gesinnt" : gesperrt ? "Föhnsturm: Der Hafen ist gesperrt" : ""}">${esc(ziel.name)}
         <small>${gesperrt ? "gesperrt" : `${tage.toLocaleString("de-CH")} T.`}</small></button>`;
     }
     html += `</div></details>`;
@@ -615,7 +638,7 @@ export class Oberflaeche {
     const s = this.spiel;
     const w = s.werft;
     const daten = this.D.schiffe;
-    const schiffzeile = (t) => `<span class="klein">Laderaum ${t.laderaum} · Tempo ${f(t.tempo * 100)} % · Unterhalt ${t.unterhalt} Gulden/Tag</span>`;
+    const schiffzeile = (t) => `<span class="klein">Laderaum ${t.laderaum} · Tempo ${f(t.tempo * 100)} % · Kampfkraft ${t.kampfkraft} · Rumpf ${t.rumpf} · Unterhalt ${t.unterhalt} Gulden/Tag</span>`;
     let html = "";
     if (w.istWerft(stadt)) {
       html += `<h3>Neue Schiffe</h3><ul class="betriebe">`;
@@ -657,6 +680,101 @@ export class Oberflaeche {
     }
     return html;
   }
+
+  // Rathaus: Stand der Stadt, Ruf, Kriege, Kaperbrief
+  rathausReiter(stadt) {
+    const s = this.spiel;
+    const d = s.diplomatie;
+    const fr = this.D.fraktionen;
+    const k = fr.kaperbrief;
+    const stand = d.vonStadt(stadt);
+    const feinde = d.feinde(stand.id).map((id) => d.fraktion(id).name);
+    let html = `<h3><span class="standfarbe" style="background:${stand.farbe}"></span>${esc(stand.name)} <small>${esc(stand.konfession)} · Orte: ${esc(stand.staedte.join(", "))}</small></h3>`;
+    html += `<p>Dein Ruf: ${this.rufAnzeige(stand.id)}</p>`;
+    html += `<p>${feinde.length ? `Im Krieg mit <b>${esc(feinde.join(", "))}</b>.` : "Lebt mit allen Ständen in Frieden."}</p>`;
+    if (d.kaperbriefe.includes(stand.id)) {
+      html += `<p>Du fährst mit einem Kaperbrief dieses Stands. Für jedes versenkte Kriegsschiff des Gegners zahlt er ${f(k.prisengeld_anteil * 100)} % des Schiffspreises als Prisengeld.</p>
+        <button data-kaperbrief-zurueck="${stand.id}">Kaperbrief zurückgeben</button>`;
+    } else if (feinde.length) {
+      const grund = d.pruefeKaperbrief(stadt);
+      html += `<p class="hilfe">Mit einem Kaperbrief darfst du Kriegsschiffe von ${esc(feinde.join(", "))} angreifen und bekommst Prisengeld (${f(k.prisengeld_anteil * 100)} % des Schiffspreises). Dafür sind dir deren Häfen verschlossen, und ihre Kriegsschiffe jagen deine Schiffe. Der Brief erlischt mit dem Frieden.</p>
+        <button class="haupt" data-kaperbrief ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">Kaperbrief kaufen: ${f(k.gebuehr)} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}`;
+    }
+    html += `<p class="hilfe">Ruf ab ${fr.ruf.vorzug}: ${f(fr.ruf.spanne_rabatt * 100)} Prozentpunkt weniger Handelsspanne in den Städten des Stands. Ruf bei ${fr.ruf.feindlich} oder tiefer: Der Stand ist dir feindlich gesinnt.</p>`;
+    return html;
+  }
+
+  rufAnzeige(id) {
+    const d = this.spiel.diplomatie;
+    const r = Math.round(d.ruf[id]);
+    const text = d.feindlich(id) ? "feindlich" : r >= this.D.fraktionen.ruf.vorzug ? "geschätzt" : r > 0 ? "wohlgesinnt" : r < 0 ? "misstrauisch" : "neutral";
+    return `<span class="${d.feindlich(id) ? "minus" : ""}">${r > 0 ? "+" : ""}${r} (${text})</span>`;
+  }
+
+  // Seitenleiste: Stände, Kriege, Ruf, Kaperbriefe
+  staende() {
+    const d = this.spiel.diplomatie;
+    let html = `<h2>Stände</h2><ul class="staende">`;
+    for (const stand of d.liste) {
+      const feinde = d.feinde(stand.id).map((id) => d.fraktion(id).name.replace(/^(Stand|Stadt) /, ""));
+      const schiffe = this.spiel.kampf.schiffe.filter((x) => x.fraktion === stand.id).length;
+      html += `<li><span class="standfarbe" style="background:${stand.farbe}"></span><b>${esc(stand.name)}</b>${d.kaperbriefe.includes(stand.id) ? ` <span class="marke">Kaperbrief</span>` : ""}
+        <small>${esc(stand.staedte.join(", "))} · ${schiffe} Kriegsschiff${schiffe === 1 ? "" : "e"} · Ruf ${this.rufAnzeige(stand.id)}</small>
+        ${feinde.length ? `<small class="krieg">Krieg mit ${esc(feinde.join(", "))}</small>` : ""}</li>`;
+    }
+    html += `</ul>`;
+    this.e.staende.innerHTML = html;
+  }
+
+  kampfzeile(schiff) {
+    const s = this.spiel;
+    const t = s.schiffstyp(schiff);
+    const kd = s.kampf.daten(schiff);
+    if (!t.kampfschiff && kd.schaden <= 0) return "";
+    const rumpf = Math.round(t.rumpf - kd.schaden);
+    return `<span class="kampfwerte">Kampfkraft ${t.kampfkraft} · Rumpf <span class="${kd.schaden > 0.5 * t.rumpf ? "minus" : ""}">${rumpf} / ${t.rumpf}</span>${kd.schaden > 0 ? (s.imHafen(schiff) && !s.diplomatie.hafenGesperrt(schiff.ort) ? " · wird repariert" : " · Reparatur im Hafen") : ""}</span>`;
+  }
+
+  // --- Gefechtsbericht (statische Ansicht) ----------------------------------------------
+  get gefechtOffen() {
+    return this.e.gefecht.open;
+  }
+
+  zeigeGefecht(bericht) {
+    const farbe = (e) => (e.fraktion ? this.D.fraktionen.nach[e.fraktion].farbe : "#fbf4e2");
+    const seite = (s) => `<div class="gefechtseite"><h3>${esc(s.titel)}</h3>${s.einheiten
+      .map((e) => {
+        const rest = Math.max(0, e.rumpf - e.nachher);
+        return `<div class="gefechtschiff ${e.aus ?? ""}"><svg viewBox="-2 -3 4 4" aria-hidden="true"><path d="M-1.5,0 L1.5,0 L1.1,0.75 L-1.1,0.75 Z" fill="#6b4a2b"/><path d="M-0.08,0 L-0.08,-2.3 L0.08,-2.3 L0.08,0 Z" fill="#2b1d10"/><path d="M-0.95,-2 Q0,-1.75 0.95,-2 L0.85,-0.45 Q0,-0.25 -0.85,-0.45 Z" fill="${farbe(e)}" stroke="#33261a" stroke-width="0.1"/></svg>
+          <div><b>${esc(e.name)}</b> <small>${esc(e.typ)}</small>
+          <span class="balken rumpf"><span style="width:${(100 * rest) / e.rumpf}%"></span></span>
+          <small>Rumpf ${f(e.rumpf - e.vorher)} → ${f(rest)}${e.aus ? ` · <b>${e.aus}</b>` : ""}</small></div></div>`;
+      })
+      .join("")}</div>`;
+    this.e.gefechtInhalt.innerHTML = `<header><div><h2>Gefecht vor ${esc(bericht.ort)}</h2><span class="untertitel">${esc(bericht.datum)}</span></div>
+        <button class="schliessen" data-gefecht-zu title="Schliessen (Esc)" aria-label="Schliessen">×</button></header>
+      <div class="gefechtseiten">${seite(bericht.seiten[0])}<div class="gegen">gegen</div>${seite(bericht.seiten[1])}</div>
+      <p class="gefechtergebnis">${esc(bericht.ergebnis)}${bericht.prisengeld ? ` Prisengeld: <b>${f(bericht.prisengeld)} Gulden</b>.` : ""}</p>
+      <ol class="runden">${bericht.runden.map((r) => `<li>${esc(r)}</li>`).join("")}</ol>
+      <div class="fensterknoepfe"><button class="haupt" data-gefecht-zu>Weiter</button></div>`;
+    if (!this.gefechtOffen) {
+      if (this.handelOffen) this.schliesseHandel();
+      this.zeit.anhalten();
+      this.e.gefecht.show();
+    }
+    this.aktualisiere();
+  }
+
+  schliesseGefecht() {
+    if (!this.gefechtOffen) return;
+    this.e.gefecht.close();
+    // weitere Berichte nacheinander zeigen
+    const naechster = this.spiel.kampf.berichte.shift();
+    if (naechster) return this.zeigeGefecht(naechster);
+    this.zeit.fortsetzen();
+    this.aktualisiere();
+  }
+
 
   // --- Bilanz ------------------------------------------------------------------------
   bilanz() {
@@ -764,6 +882,9 @@ export class Oberflaeche {
       const neu = this.spiel.aufloesen(this.schiff);
       if (neu) this.schiff = neu[0];
       this.aktualisiere();
+    } else if (knopf.dataset.haltung !== undefined) {
+      this.spiel.kampf.setzeHaltung(this.schiff, knopf.dataset.haltung);
+      this.aktualisiere();
     } else if (knopf.dataset.automatik !== undefined) {
       this.schliesseHandel();
       this.zeit.anhalten();
@@ -827,6 +948,10 @@ export class Oberflaeche {
     } else if (knopf.dataset.ziel !== undefined) {
       this.segle({ stadt: s.welt.staedte[Number(knopf.dataset.ziel)] });
       return;
+    } else if (d.kaperbrief !== undefined) {
+      s.diplomatie.kaufeKaperbrief(stadt);
+    } else if (d.kaperbriefZurueck) {
+      s.diplomatie.gibZurueck(d.kaperbriefZurueck);
     } else if (d.neuschiff) {
       s.werft.kaufeNeu(stadt, d.neuschiff);
     } else if (d.gebraucht) {

@@ -1,6 +1,6 @@
 # Diplomatie
 
-Stand: **Entwurf aus der Konzeptphase.** Nichts davon ist entschieden oder in der Simulation umgesetzt. Die Diplomatie soll das Spiel vom Vorbild abheben, deshalb lohnt es sich, sie früh zu durchdenken. Dieses Dokument sammelt Bausteine und offene Fragen.
+Stand: **Teilweise im Spiel umgesetzt** (22.10.2026): Stände mit Städten, Krieg und Frieden zwischen den Ständen, Ruf des Spielers pro Stand, Kaperbriefe, gesperrte Häfen bei Feindschaft, Kriegsschiffe und Gefechte (`data/fraktionen.json`, `game/src/diplomatie.js`, `game/src/kampf.js`). Nicht in der Simulation, Kriege ändern die Wirtschaft noch nicht. Der Rest dieses Dokuments ist weiter ein Entwurf. Die Diplomatie soll das Spiel vom Vorbild abheben, deshalb lohnt es sich, sie früh zu durchdenken. Dieses Dokument sammelt Bausteine und offene Fragen.
 
 ## Ausgangspunkt
 

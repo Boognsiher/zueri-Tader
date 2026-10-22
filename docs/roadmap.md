@@ -11,7 +11,7 @@ Grundsatz: **Erst Spielspass im Kern beweisen, dann Inhalt und Optik ausbauen.**
 - [x] **M5 Engine wählen und Grundgerüst:** Web (reines JavaScript), Daten aus `data/` laden, Wirtschaft als Port der Simulation mit Test
 - [x] **M6 Minimale Oberfläche:** Karte, Stadtansicht, Handelsfenster. Ein Schiff, eine Route, ein Handel. Erste spielbare Demo in `game/`, vorgezogen vor M3 und M4
 - [ ] **M7 Vertical Slice:** kleine, komplette Spielrunde mit wenigen Städten, Flotte, einer Nation und einer Kampfbegegnung
-- [ ] **M8 Kampf:** statische Ansicht, Auflösung aus Schiffswerten, Risiko für Ladung und Schiff
+- [ ] **M8 Kampf:** statische Ansicht, Auflösung aus Schiffswerten, Risiko für Ladung und Schiff. Erste Fassung im Spiel: Kriegsschiffe, Kampfhaltungen, automatische Gefechte mit Bericht. Offen: taktische Entscheidungen im Gefecht, Besatzung und Ausrüstung
 - [ ] **M9 Ausbau und Politur:** mehr Städte und Waren, Balance, Sound, Menüs. Speichern und Laden sowie automatischer Handel sind schon in der Demo
 
 ## Hinweise zur Reihenfolge

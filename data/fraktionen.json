@@ -1,0 +1,28 @@
+{
+  "_info": "Stände (Fraktionen) am See, Krieg und Frieden, Ruf des Spielers, Kaperbriefe. Wird nur vom Spiel gelesen, nicht von der Simulation: Kriege ändern den Handel der KI-Händler nicht, damit die Balance-Checks gültig bleiben. Jede Stadt gehört genau einem Stand, der erste Ort in staedte ist der Hauptort (Heimathafen der Kriegsschiffe). kriegsschiffe = Flotte des Stands (Typen aus schiffe.json). krieg: Pro Paar von Ständen und Tag beginnt ein Krieg mit chance_pro_tag, mal konfession_faktor bei verschiedener Konfession (gemischt zählt halb). Frühestens nach mindestdauer_tage schliessen sie Frieden, mit frieden_chance_pro_tag plus frieden_je_verlust für jedes verlorene Kriegsschiff beider Seiten. Nach einem Frieden ruht das Paar ruhe_tage. ruf: Werte von -100 bis +100, Start 0, erholt sich um erholung_pro_tag Richtung 0. Ab feindlich (oder darunter) greifen die Kriegsschiffe des Stands den Spieler an und seine Häfen sind gesperrt. Ab vorzug (oder darüber) zahlt der Spieler in den Städten des Stands spanne_rabatt weniger Handelsspanne. kaperbrief: Ein Stand im Krieg stellt ihn gegen Gebühr aus, wenn der Ruf mindestens ruf_min ist. Wer einen hat, gilt beim Gegner als feindlich. Für jedes versenkte gegnerische Kriegsschiff zahlt der Stand prisengeld_anteil vom Neupreis des Schiffs, der Ruf steigt um ruf_sieg beim Auftraggeber und sinkt um ruf_verlust beim Gegner. neubau_tage = so lange dauert es, bis ein Stand ein verlorenes Kriegsschiff ersetzt.",
+  "fraktionen": [
+    {"id": "zuerich", "name": "Stand Zürich", "adjektiv": "Zürcher", "konfession": "reformiert", "farbe": "#2f5d8a",
+     "staedte": ["Zürich", "Küsnacht", "Meilen", "Horgen", "Wädenswil"],
+     "kriegsschiffe": {"kriegsnauen": 2, "wachtschiff": 2}},
+    {"id": "schwyz", "name": "Stand Schwyz", "adjektiv": "Schwyzer", "konfession": "katholisch", "farbe": "#a3322a",
+     "staedte": ["Lachen"],
+     "kriegsschiffe": {"kriegsnauen": 1, "wachtschiff": 1}},
+    {"id": "rapperswil", "name": "Stadt Rapperswil", "adjektiv": "Rapperswiler", "konfession": "katholisch", "farbe": "#4f7a36",
+     "staedte": ["Rapperswil"],
+     "kriegsschiffe": {"kriegsnauen": 1, "wachtschiff": 1}},
+    {"id": "glarus", "name": "Stand Glarus", "adjektiv": "Glarner", "konfession": "gemischt", "farbe": "#8a6a22",
+     "staedte": ["Schmerikon"],
+     "kriegsschiffe": {"wachtschiff": 2}}
+  ],
+  "krieg": {
+    "chance_pro_tag": 0.0002,
+    "konfession_faktor": 4,
+    "mindestdauer_tage": 60,
+    "frieden_chance_pro_tag": 0.008,
+    "frieden_je_verlust": 0.006,
+    "ruhe_tage": 120
+  },
+  "ruf": {"erholung_pro_tag": 0.05, "feindlich": -40, "vorzug": 50, "spanne_rabatt": 0.01},
+  "kaperbrief": {"gebuehr": 2000, "ruf_min": 0, "prisengeld_anteil": 0.4, "ruf_sieg": 8, "ruf_verlust": 12},
+  "neubau_tage": 90
+}
