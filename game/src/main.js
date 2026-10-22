@@ -22,19 +22,38 @@ async function start() {
   const spiel = new Spiel(D, seed);
   let ui;
   const karte = new Karte($("karte"), spiel, {
-    stadt: (stadt) => ui.waehleStadt(stadt),
+    stadt: (stadt) => ui.klickStadt(stadt),
     schiff: (schiff) => ui.waehleSchiff(schiff),
+    see: (punkt) => ui.klickSee(punkt),
   });
-  ui = new Oberflaeche(spiel, karte, {
-    datum: $("datum"),
-    gulden: $("gulden"),
-    warenwert: $("warenwert"),
-    flotte: $("flotte"),
-    stadt: $("stadt"),
-    meldungen: $("meldungen"),
-  });
+  // Das Handelsfenster hält die Zeit an und setzt sie beim Schliessen fort
+  let tempoVorHandel = 0;
+  const zeit = {
+    anhalten: () => {
+      tempoVorHandel = tempo;
+      setzeTempo(0);
+    },
+    fortsetzen: () => {
+      if (tempoVorHandel && tempo === 0) setzeTempo(tempoVorHandel);
+      tempoVorHandel = 0;
+    },
+  };
+  ui = new Oberflaeche(
+    spiel,
+    karte,
+    {
+      datum: $("datum"),
+      gulden: $("gulden"),
+      warenwert: $("warenwert"),
+      flotte: $("flotte"),
+      markt: $("markt"),
+      meldungen: $("meldungen"),
+      handel: $("handel"),
+      handelInhalt: $("handel-inhalt"),
+    },
+    zeit,
+  );
   spiel.melde(`Dein ${D.spiel.schiffstyp} «${spiel.schiffe[0].name}» liegt in ${D.spiel.start.stadt} bereit.`);
-  ui.aktualisiere();
 
   // --- Zeit ----------------------------------------------------------------
   let tempo = 0;
@@ -51,6 +70,10 @@ async function start() {
   }
   knoepfe.forEach((k) => k.addEventListener("click", () => setzeTempo(Number(k.dataset.tempo))));
   document.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && ui.handelOffen) {
+      ui.schliesseHandel();
+      return;
+    }
     if (e.code === "Space" && !e.target.closest("button, input, dialog")) {
       e.preventDefault();
       setzeTempo(tempo ? 0 : letzteStufe);
@@ -63,22 +86,31 @@ async function start() {
     const dauer = D.spiel.tageslaenge_ms[tempo || letzteStufe];
     if (tempo) {
       vorrat += dt;
-      while (vorrat >= dauer) {
+      let ankuenfte = [];
+      let neuerTag = false;
+      while (vorrat >= dauer && !ankuenfte.length) {
         vorrat -= dauer;
-        const r = spiel.tagVoran();
-        if (r.ankuenfte.length && $("anhalten").checked) {
-          vorrat = 0;
-          setzeTempo(0);
-          if (r.ankuenfte.length === 1) ui.waehleSchiff(r.ankuenfte[0]);
+        ankuenfte = spiel.tagVoran().ankuenfte;
+        neuerTag = true;
+      }
+      if (!ankuenfte.length) ankuenfte = spiel.vorruecken(vorrat / dauer);
+      if (ankuenfte.length) {
+        if ($("anhalten").checked) {
+          // Im Hafen hält das Handelsfenster die Zeit an und setzt sie beim Schliessen fort
+          if (!ankuenfte[0].ort) setzeTempo(0);
+          ui.angekommen(ankuenfte[0]);
+        } else {
+          ui.aktualisiere();
         }
+      } else if (neuerTag) {
         ui.aktualisiere();
-        if (!tempo) break;
       }
     }
     karte.zeichne(Math.min(vorrat / dauer, 1));
     requestAnimationFrame(bild);
   }
   setzeTempo(0);
+  ui.aktualisiere();
   requestAnimationFrame(bild);
 
   const einleitung = $("einleitung");

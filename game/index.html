@@ -23,17 +23,18 @@
       <button data-tempo="2" aria-pressed="false" title="Schnell">▶▶</button>
       <button data-tempo="3" aria-pressed="false" title="Sehr schnell">▶▶▶</button>
     </div>
-    <label class="anhalten"><input type="checkbox" id="anhalten" checked> bei Ankunft anhalten</label>
+    <label class="anhalten"><input type="checkbox" id="anhalten" checked> bei Ankunft anhalten und Handelsfenster öffnen</label>
   </header>
 
   <main>
     <div id="kartenbereich">
       <svg id="karte" role="img" aria-label="Karte des Zürichsees mit Städten und Schiffen"></svg>
       <ol id="meldungen" aria-live="polite"></ol>
+      <dialog id="handel" class="fenster" aria-label="Handelsfenster"><div id="handel-inhalt"></div></dialog>
     </div>
     <aside id="seite">
       <section id="flotte" class="tafel"></section>
-      <section id="stadt" class="tafel"></section>
+      <section id="markt" class="tafel"></section>
     </aside>
   </main>
 
@@ -42,9 +43,9 @@
       <h2>Zürich, im Frühling 1650</h2>
       <p>Mit einem <b>Nauen</b> und <b>12'000 Gulden</b> beginnt dein Handelshaus. Am See leben acht Gemeinden von dem, was die anderen haben: In Wädenswil wird gekeltert, in Horgen und Meilen gewoben, über die Linth kommen Eisenerz und Käse nach Rapperswil.</p>
       <ul>
-        <li><b>Stadt anklicken</b> zeigt ihren Markt. Grün heisst günstig, rot heisst teuer.</li>
-        <li><b>Kaufen</b> und <b>verkaufen</b> geht, wenn dein Schiff im Hafen liegt. Grosse Mengen verschieben den Preis.</li>
-        <li><b>Ablegen nach…</b> schickt das Schiff los. Die grauen Punkte sind andere Händler.</li>
+        <li><b>Klick auf den See:</b> Dein Schiff segelt dorthin. Unterwegs kannst du jederzeit einen neuen Kurs setzen.</li>
+        <li><b>Klick auf eine Stadt:</b> Das Schiff läuft den Hafen an. Bei der Ankunft öffnet sich das <b>Handelsfenster</b>. Grün heisst günstig, rot heisst teuer, grosse Mengen verschieben den Preis.</li>
+        <li>Die <b>Marktübersicht</b> rechts zeigt die Preise jeder Stadt. Die grauen Punkte auf dem See sind andere Händler.</li>
         <li>Die <b>Leertaste</b> hält die Zeit an und lässt sie weiterlaufen.</li>
       </ul>
       <p class="klein">Dies ist eine frühe Demo. Ein Spielziel gibt es noch nicht: Schau, wie weit du es bringst.</p>

@@ -12,8 +12,10 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 ## Was die Demo kann
 
 - Seekarte des Zürichsees mit acht Seegemeinden von Zürich bis Schmerikon, Durchfahrt am Seedamm
-- Markt jeder Stadt: Lager, Kauf- und Verkaufspreis, bestes Gebot in einer anderen Stadt. Grosse Mengen verschieben den Preis (Mengeneffekt).
-- Eigene Schiffe (Nauen): laden, ablegen, Fahrzeit nach Weglänge, neue Schiffe kaufen, Unterhalt pro Tag
+- Marktübersicht jeder Stadt in der Seitenleiste: Lager, Kauf- und Verkaufspreis, bestes Gebot in einer anderen Stadt. Grosse Mengen verschieben den Preis (Mengeneffekt).
+- **Steuerung mit der Maus:** Klick auf den See, und das gewählte Schiff segelt dorthin (auch Kurswechsel unterwegs). Klick auf eine Stadt, und es legt dort an. Der Weg führt automatisch über Wasser, zum Obersee durch den Seedamm.
+- **Handelsfenster:** öffnet sich bei der Ankunft im Hafen (oder per Klick auf die Stadt, in der das Schiff liegt) und hält die Zeit an. Darin auch die Option, direkt zu einem anderen Hafen zu segeln, und der Schiffskauf.
+- Eigene Schiffe (Nauen): Laderaum 120, Unterhalt pro Tag, weitere Schiffe kaufbar
 - 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
 - Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft
@@ -27,9 +29,10 @@ Noch nicht dabei: Spielziel, Speichern, Stadtausbau, Diplomatie, Kampf (siehe `d
 | `index.html`, `style.css` | Seite und Stil (Pergament und Seekarte, siehe `docs/optik.md`) |
 | `src/daten.js` | lädt `data/*.json` |
 | `src/wirtschaft.js` | Wirtschaftsmodell: Preise, Städte, KI-Händler, Ereignisse. Entspricht `tools/sim/wirtschaft_sim.py` |
-| `src/spiel.js` | Spielerzustand: Geld, Schiffe, Handel, Kalender |
+| `src/spiel.js` | Spielerzustand: Geld, Schiffe, Fahrten, Handel, Kalender |
+| `src/navigation.js` | Wegsuche über Wasser für die frei gesteuerten Schiffe |
 | `src/karte.js` | Seekarte als SVG |
-| `src/oberflaeche.js` | Seitenleiste: Flotte, Markt, Meldungen |
+| `src/oberflaeche.js` | Seitenleiste (Flotte, Marktübersicht), Handelsfenster, Meldungen |
 | `src/main.js` | Einstieg und Zeitsteuerung |
 | `src/zufall.js` | reproduzierbarer Zufallsgenerator |
 | `test/wirtschaft_test.mjs` | Test ohne Browser (`node game/test/wirtschaft_test.mjs`) |
@@ -39,6 +42,7 @@ Reines JavaScript (ES-Module), ohne Build-Schritt und ohne Pakete. Wirtschaft un
 ## Regeln für Änderungen
 
 - Zahlen gehören nach `data/`. Startwerte und Tempo der Demo stehen in `data/spiel.json`, die Karte in `data/karte.json`.
+- Die Schiffe des Spielers fahren stufenlos und frei, die KI-Händler in ganzen Tagen auf festen Wegen wie in der Simulation.
 - `src/wirtschaft.js` und `tools/sim/wirtschaft_sim.py` müssen dieselbe Logik haben. Wer eine Seite ändert, ändert die andere mit und lässt beide Tests laufen. Der Spieltest prüft dieselben Balance-Checks wie die Simulation.
 
 ## Engine

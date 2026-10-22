@@ -1,5 +1,8 @@
 // Seekarte des Zürichsees als SVG: Ufer, Flüsse, Städte, Schiffe.
 // Alle Formen kommen aus data/karte.json und data/cities.json, hier steht nur die Darstellung.
+// Klicks auf den See, auf Städte und auf eigene Schiffe gehen an die Oberfläche.
+
+import { punktAufWeg, weglaenge } from "./navigation.js";
 
 const NS = "http://www.w3.org/2000/svg";
 
@@ -25,27 +28,6 @@ function glatt(punkte, geschlossen = true) {
   return geschlossen ? d + "Z" : d;
 }
 
-// Punkt auf einer Punktliste bei Anteil t (0..1) der Gesamtlänge, dazu die Fahrtrichtung
-function punktAufWeg(punkte, t) {
-  const laengen = [];
-  let gesamt = 0;
-  for (let i = 1; i < punkte.length; i++) {
-    const l = Math.hypot(punkte[i][0] - punkte[i - 1][0], punkte[i][1] - punkte[i - 1][1]);
-    laengen.push(l);
-    gesamt += l;
-  }
-  let rest = Math.max(0, Math.min(1, t)) * gesamt;
-  for (let i = 0; i < laengen.length; i++) {
-    if (rest <= laengen[i] || i === laengen.length - 1) {
-      const f = laengen[i] ? rest / laengen[i] : 0;
-      const [a, b] = [punkte[i], punkte[i + 1]];
-      return { x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, links: b[0] < a[0] };
-    }
-    rest -= laengen[i];
-  }
-  return { x: punkte[0][0], y: punkte[0][1], links: false };
-}
-
 // Eigenes, schlichtes Symbol eines Lastseglers mit Rahsegel
 function bootSymbol(eltern, klasse) {
   const g = el("g", { class: klasse }, eltern);
@@ -62,7 +44,7 @@ export class Karte {
     this.svg = svg;
     this.spiel = spiel;
     this.D = spiel.D;
-    this.rueckrufe = rueckrufe; // { stadt(stadt), schiff(schiff) }
+    this.rueckrufe = rueckrufe; // { stadt(stadt), schiff(schiff), see([x, y]) }
     this.auswahl = { stadt: null, schiff: null };
     this.baue();
   }
@@ -72,6 +54,17 @@ export class Karte {
     const D = this.D;
     svg.setAttribute("viewBox", "-3 -5 110 62");
     svg.innerHTML = "";
+    if (!this.klickBereit) {
+      // Klick auf die Karte (nicht auf Stadt oder Schiff): Ziel auf dem See
+      svg.addEventListener("click", (e) => {
+        const pt = svg.createSVGPoint();
+        pt.x = e.clientX;
+        pt.y = e.clientY;
+        const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+        this.rueckrufe.see([p.x, p.y]);
+      });
+      this.klickBereit = true;
+    }
 
     const defs = el("defs", {}, svg);
     const wellen = el("pattern", { id: "wellen", width: 6, height: 3, patternUnits: "userSpaceOnUse" }, defs);
@@ -136,7 +129,10 @@ export class Karte {
       const dy = unten.has(stadt.name) ? 3.4 : -2.2;
       el("text", { y: dy, class: "stadtname" }, g).textContent = stadt.name;
       const info = el("text", { y: unten.has(stadt.name) ? 5.6 : -4.6, class: "stadtinfo" }, g);
-      g.addEventListener("click", () => this.rueckrufe.stadt(stadt));
+      g.addEventListener("click", (e) => {
+        e.stopPropagation();
+        this.rueckrufe.stadt(stadt);
+      });
       g.addEventListener("keydown", (e) => {
         if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
@@ -215,9 +211,8 @@ export class Karte {
       let x;
       let y;
       let links = false;
-      if (schiff.ziel) {
-        const t = (jetzt - schiff.abfahrt) / Math.max(1, schiff.ankunft - schiff.abfahrt);
-        ({ x, y, links } = punktAufWeg(schiff.weg, t));
+      if (!this.spiel.imHafen(schiff)) {
+        ({ x, y, links } = this.spiel.position(schiff));
       } else {
         const n = imHafen.get(schiff.ort) ?? 0;
         imHafen.set(schiff.ort, n + 1);
@@ -232,24 +227,35 @@ export class Karte {
     }
   }
 
-  // Wird nach jedem Tag und nach Aktionen aufgerufen: Auswahl, Ziele, Ereignisse
+  // Wird nach jedem Tag und nach Aktionen aufgerufen: Auswahl, Fahrzeiten, Routen
   aktualisiere() {
-    const welt = this.spiel.welt;
+    const spiel = this.spiel;
+    const welt = spiel.welt;
     const schiff = this.auswahl.schiff;
-    const imHafen = schiff && !schiff.ziel;
+    const p = schiff ? spiel.position(schiff) : null;
     for (const [stadt, { g, info }] of this.stadtElemente) {
       g.classList.toggle("gewaehlt", stadt === this.auswahl.stadt);
       g.classList.toggle("gesperrt", stadt.gesperrt(welt.tag));
       g.classList.toggle("ereignis", stadt.ereignisse.length > 0);
       let text = "";
-      if (imHafen && stadt !== schiff.ort) {
-        text = stadt.gesperrt(welt.tag) ? "gesperrt" : `${welt.fahrtage(schiff.ort, stadt)} T.`;
+      if (schiff && !spiel.imHafen(schiff, stadt)) {
+        if (stadt.gesperrt(welt.tag)) {
+          text = "gesperrt";
+        } else {
+          const w = spiel.nav.route([p.x, p.y], stadt.pos);
+          if (w) text = `${(Math.round((2 * weglaenge(w)) / this.D.p.SPEED) / 2).toLocaleString("de-CH")} T.`;
+        }
       }
       info.textContent = text;
     }
     this.ebeneRoute.innerHTML = "";
-    if (schiff && schiff.ziel) {
-      el("path", { d: "M" + schiff.weg.map((p) => p.join(",")).join(" L"), class: "route" }, this.ebeneRoute);
+    for (const s of spiel.schiffe) {
+      if (!s.fahrt) continue;
+      const w = s.fahrt.weg;
+      const klasse = s === schiff ? "route gewaehlt" : "route";
+      el("path", { d: "M" + w.map((q) => q.join(",")).join(" L"), class: klasse }, this.ebeneRoute);
+      const [x, y] = w[w.length - 1];
+      if (!s.fahrt.ziel) el("path", { d: `M${x - 0.8},${y - 0.8} L${x + 0.8},${y + 0.8} M${x - 0.8},${y + 0.8} L${x + 0.8},${y - 0.8}`, class: "zielkreuz" }, this.ebeneRoute);
     }
   }
 }

@@ -6,6 +6,7 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 
 | Datum | Entscheidung | Begründung |
 |---|---|---|
+| 22.10.2026 | Schiffe des Spielers werden frei per Mausklick gesteuert: Klick auf den See = dorthin segeln (Kurswechsel jederzeit), Klick auf eine Stadt = anlegen. Gehandelt wird in einem eigenen Handelsfenster, das bei der Ankunft aufgeht und die Zeit anhält. Die Direktfahrt zu einem Hafen ist nur noch eine Option im Handelsfenster | Vom Projektinhaber entschieden. Ersetzt für den Spieler das Nicht-Ziel "keine freie Navigation". Die KI-Händler fahren weiter auf festen Wegen zwischen den Häfen, damit Simulation und Balance-Checks gültig bleiben. Fahrzeit des Spielers stufenlos nach Weglänge (Wegsuche über Wasser in `game/src/navigation.js`) |
 | 22.10.2026 | Erste Demo als Web-Spiel in reinem JavaScript (ohne Build-Schritt), Start über einen lokalen Python-Webserver | Der Projektinhaber wollte eine spielbare Demo. Web läuft ohne Installation, lässt sich mit Node automatisch gegen die Balance-Checks testen und liest `data/*.json` direkt. Godot bleibt für später möglich (siehe `game/README.md`) |
 | 22.10.2026 | Fahrten zwischen Untersee und Obersee führen über den Seedamm (`data/karte.json`), in Simulation und Spiel | Sonst würden Schiffe auf der Karte über Land fahren. Die Fahrzeiten änderten sich kaum, alle Checks bestehen |
 | 22.10.2026 | Setting: Zürichsee im 17. Jahrhundert statt Karibik. 8 Seegemeinden von Zürich bis Schmerikon, Lastschiffe (Nauen, Ledischiffe), Währung Gulden | Vom Projektinhaber entschieden, passt zum Titel "Züri-Trade". Die Waren wurden eins zu eins übertragen (gleiche Preise und Mengen), damit die getestete Balance erhalten bleibt. Annahme: Das Jahrhundert bleibt, weil Konzept und Waren darauf aufbauen |
@@ -13,7 +14,7 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 | 22.10.2026 | Hobbyprojekt, das die Spielidee der Port-Royale-Reihe weiterentwickelt | Eigenes Spiel ist realistischer als Modifikationen des geschlossenen Originals |
 | 22.10.2026 | Schwerpunkte: Handel, Management, Diplomatie. Kampf bleibt klein | Persönliche Gewichtung, Kampf nur als Würze |
 | 22.10.2026 | Kampf mit statischer Ansicht, keine 3D-Schlachten | Spart den grössten Entwicklungsaufwand |
-| 22.10.2026 | 2D-Karte mit Städten als Knoten und Seewegen | Passt zu einem Managementspiel, spart Aufwand |
+| 22.10.2026 | 2D-Karte mit Städten als Knoten und Seewegen | Passt zu einem Managementspiel, spart Aufwand. Gilt weiter für die KI-Händler, der Spieler steuert frei (siehe oben) |
 | 22.10.2026 | Stadtausbau als Slot-System | Schnell testbar, später auf Raster erweiterbar |
 | 22.10.2026 | Bauen nur in freigeschalteten Städten, keine eigenen Siedlungen am Anfang | Einfacher Start, Tiefe später |
 | 22.10.2026 | Eine Zufriedenheitszahl pro Stadt statt Bevölkerungsschichten | Einfacher Start, Tiefe später |

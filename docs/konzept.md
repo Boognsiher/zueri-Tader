@@ -36,14 +36,13 @@ Das Vorbild wurde von einem grossen Team gebaut. Für ein Hobbyprojekt gilt:
 
 - **15-25 Städte** statt 60 oder mehr, dafür gut ausbalanciert (die Simulation startet mit 8)
 - **10-15 Waren** mit sinnvollen Abhängigkeiten (die Simulation hat 14)
-- **2D-Karte** des Zürichsees mit Städten als Knoten und Seewegen statt freier Navigation
+- **2D-Karte** des Zürichsees. Der Spieler steuert seine Schiffe frei per Mausklick, die KI-Händler fahren feste Wege zwischen den Städten
 - **Kein Zwang zu Echtzeit-Aufwand:** Echtzeit mit Pause, intern in festen Tagen gerechnet (Empfehlung, noch nicht bestätigt)
 - **Oberfläche vor Grafik:** ein stimmiger UI-Stil (Seekarte, Pergament, Kontor) bringt mehr als aufwändige Grafik
 
 ## Nicht-Ziele (vorerst)
 
 - 3D-Ansicht der Schlachten oder der Welt
-- Freie Navigation der Schiffe auf einer Seekarte
 - Eigene Siedlungen gründen (der Spieler baut in freigeschalteten Städten)
 
 ## Offene Fragen
