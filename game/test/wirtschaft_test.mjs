@@ -8,6 +8,7 @@
 // 4.-9. Betriebe und Kontor, automatischer Handel, Speichern und Laden, Bootshandel, Eigenversorgung,
 //      Stufen, Stadtgebäude und Kontorhandel.
 // 10.  Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz.
+// 11.  Automatik «Versorgen».
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -17,7 +18,7 @@ import path from "node:path";
 import { ladeDaten } from "../src/daten.js";
 import { Welt, neueStatistik, weg } from "../src/wirtschaft.js";
 import { Spiel } from "../src/spiel.js";
-import { starteRoute, starteFrei, beende } from "../src/automatik.js";
+import { starteRoute, starteFrei, beende, starteVersorgung } from "../src/automatik.js";
 import { speichere, lade, pruefe as pruefeStand } from "../src/speicher.js";
 
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "data");
@@ -551,6 +552,41 @@ console.log("\nBevölkerung, Versorgung, Kontor, Bilanz");
   pruefe("Bevölkerung, Sperren und Bilanz überstehen Speichern und Laden",
     Math.abs(geladen.welt.stadt["Zürich"].einwohner - zuerich.einwohner) < 1e-9 && geladen.ausbau.kontor(zuerich).sperren.Rohseide === 5 &&
     geladen.konten.gesamt.bauten === kn.gesamt.bauten && geladen.welt.stadt["Zürich"].wohnraumBonus === zuerich.wohnraumBonus);
+}
+
+// --- 11. Automatik «Versorgen» -----------------------------------------------------
+console.log("\nVersorgen");
+{
+  const spiel = new Spiel(D, 91);
+  const a = spiel.ausbau;
+  const schiff = spiel.schiffe[0];
+  const zuerich = spiel.welt.stadt["Zürich"];
+  const rapperswil = spiel.welt.stadt["Rapperswil"];
+  spiel.gulden = 500000;
+  // Kontore in beiden Städten (Holz an Bord, Präsenz über das Schiff)
+  for (const stadt of [zuerich, rapperswil]) {
+    schiff.ort = stadt;
+    schiff.pos = [...stadt.pos];
+    schiff.ladung.Holz = { menge: 40, einstand: 30 };
+    a.kontorBauen(stadt);
+  }
+  // Rapperswil: Seidenhandel liefert Rohseide ins Kontor; Zürich: Seidenweberei aus dem Kontor
+  const handel = a.betriebeIn(rapperswil).find((b) => b.typ === "seidenhandel");
+  const weberei = a.betriebeIn(zuerich).find((b) => b.typ === "seidenweberei");
+  a.kaufen(handel);
+  a.kaufen(weberei);
+  a.setzeZiel(handel, "kontor");
+  a.setzeZiel(weberei, "kontor");
+  pruefe("Versorgen braucht zwei Städte mit Kontor", starteVersorgung(spiel, schiff, ["Zürich", "Meilen"]) !== null);
+  pruefe("Versorgen Zürich - Rapperswil startet", starteVersorgung(spiel, schiff, ["Zürich", "Rapperswil"]) === null);
+  let seideProduziert = 0;
+  for (let t = 0; t < 120; t++) {
+    spiel.tagVoran();
+    seideProduziert += weberei.gestern?.menge ?? 0;
+  }
+  const lieferungen = spiel.meldungen.filter((m) => m.text.includes("(Versorgen)") && m.text.includes("ausgeladen")).length;
+  pruefe(`Rohseide kommt nach Zürich (${lieferungen}+ Lieferungen), die Weberei arbeitet (${seideProduziert} Seide in 120 Tagen)`,
+    lieferungen >= 3 && seideProduziert > 0.5 * 120 * a.leistung(weberei));
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

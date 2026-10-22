@@ -23,7 +23,7 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Bevölkerung:** Städte wachsen, wenn sie zufrieden sind, bis zur Grenze ihres Wohnraums. Versorgungsgebäude: Brunnen und Spital (Zufriedenheit), Wohnhäuser (Wohnraum)
 - **Kontor als Anwesenheit:** Mit einem Kontor geht in der Stadt alles wie mit einem Schiff im Hafen. Im Kontor lassen sich Tage Bedarf der eigenen Werkstätten sperren
 - **Bilanz:** Einnahmen und Ausgaben nach Konten pro Monat und gesamt, Vermögen, Monatsergebnis (Knopf «Bilanz» oben)
-- **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung). Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf. Laden und Löschen braucht Liegezeit (voller Laderaum rund 0,8 Tage).
+- **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung), oder **Versorgen**: nur Städte wählen, das Schiff verteilt Kontor-Ware dorthin, wo deine Werkstätten sie brauchen. Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf. Laden und Löschen braucht Liegezeit (voller Laderaum rund 0,8 Tage).
 - **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
 - 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage

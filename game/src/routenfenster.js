@@ -1,7 +1,7 @@
 // Fenster für den automatischen Handel eines Schiffs: selbst steuern, Handelsroute oder
 // freier Handel. Bearbeitet einen Entwurf und übernimmt ihn erst mit "Übernehmen".
 
-import { AUFTRAGSARTEN, starteRoute, starteFrei, beende } from "./automatik.js";
+import { AUFTRAGSARTEN, starteRoute, starteFrei, beende, starteVersorgung } from "./automatik.js";
 
 function esc(text) {
   return String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
@@ -34,6 +34,8 @@ export class Routenfenster {
       art: a ? a.art : "selbst",
       einsatz: a?.art === "frei" ? a.einsatz : Math.max(1000, Math.round(this.spiel.gulden / 2 / 100) * 100),
       halte: a?.art === "route" ? JSON.parse(JSON.stringify(a.halte)) : standard,
+      // Versorgen: vorausgewählt alle Städte mit Kontor
+      versorgen: a?.art === "versorgen" ? [...a.staedte] : this.spiel.welt.staedte.filter((s) => this.spiel.ausbau.kontor(s)).map((s) => s.name),
     };
     this.fehler = "";
     this.zeichne();
@@ -64,12 +66,21 @@ export class Routenfenster {
     let html = `<header><div><h2>Automatik</h2><span class="untertitel">${esc(this.spiel.schiffstyp(this.schiff).name)} «${esc(this.schiff.name)}»</span></div>
       <button class="schliessen" data-abbrechen title="Schliessen ohne Änderung" aria-label="Schliessen">×</button></header>
       <div class="modi" role="radiogroup" aria-label="Steuerung">
-        ${[["selbst", "Selbst steuern"], ["route", "Handelsroute"], ["frei", "Freier Handel"]]
+        ${[["selbst", "Selbst steuern"], ["route", "Handelsroute"], ["versorgen", "Versorgen"], ["frei", "Freier Handel"]]
           .map(([w, t]) => `<label class="${e.art === w ? "aktiv" : ""}"><input type="radio" name="art" value="${w}" data-feld="art" ${e.art === w ? "checked" : ""}> ${t}</label>`)
           .join("")}
       </div>`;
     if (e.art === "selbst") {
       html += `<p class="hilfe">Du steuerst das Schiff mit Klicks auf die Karte und handelst im Handelsfenster.</p>`;
+    } else if (e.art === "versorgen") {
+      const tage = this.spiel.ausbau.bau.versorgung.vorrat_tage;
+      html += `<p class="hilfe">Wähle nur die Städte, der Rest geht von selbst: Das Schiff lädt in deinen Kontoren, was in einer anderen gewählten Stadt gebraucht wird, und lädt es dort aus. Gebraucht wird, was deine Werkstätten mit Kontor-Versorgung für ${tage} Tage plus die Zeit bis zur nächsten Lieferung brauchen. Gesperrte Ware und der eigene Vorrat bleiben im Kontor.</p>
+        <div class="versorgstaedte">${this.spiel.welt.staedte
+          .map((s) => {
+            const k = !!this.spiel.ausbau.kontor(s);
+            return `<label class="${k ? "" : "ohne"}"><input type="checkbox" data-versorgen="${esc(s.name)}" ${e.versorgen.includes(s.name) ? "checked" : ""} ${k ? "" : "disabled"}> ${esc(s.name)}${k ? "" : " <small>kein Kontor</small>"}</label>`;
+          })
+          .join("")}</div>`;
     } else if (e.art === "frei") {
       html += `<p class="hilfe">Der Kapitän sucht in jedem Hafen das Geschäft mit dem höchsten Gewinn pro Tag, kauft, fährt hin und verkauft. Findet er länger nichts, wechselt er den Hafen.</p>
         <label class="einsatz">Einsatz pro Fahrt höchstens <input type="number" min="0" step="500" value="${e.einsatz}" data-feld="einsatz"> Gulden</label>`;
@@ -116,6 +127,14 @@ export class Routenfenster {
   }
 
   aenderung(ev, endgueltig) {
+    const versorgt = ev.target.dataset?.versorgen;
+    if (versorgt) {
+      if (!endgueltig) return;
+      const liste = this.entwurf.versorgen.filter((n) => n !== versorgt);
+      if (ev.target.checked) liste.push(versorgt);
+      this.entwurf.versorgen = liste;
+      return;
+    }
     const feld = ev.target.dataset?.feld;
     if (!feld) return;
     let wert = ev.target.value;
@@ -166,6 +185,13 @@ export class Routenfenster {
     const spiel = this.spiel;
     if (e.art === "selbst") {
       beende(spiel, this.schiff);
+    } else if (e.art === "versorgen") {
+      const reihenfolge = spiel.welt.staedte.map((s) => s.name).filter((n) => e.versorgen.includes(n));
+      const fehler = starteVersorgung(spiel, this.schiff, reihenfolge);
+      if (fehler) {
+        this.fehler = fehler;
+        return this.zeichne();
+      }
     } else if (e.art === "frei") {
       if (!(e.einsatz > 0)) {
         this.fehler = "Der Einsatz muss grösser als 0 sein.";

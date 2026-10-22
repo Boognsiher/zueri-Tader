@@ -202,6 +202,7 @@ export class Oberflaeche {
     const a = schiff.auto;
     if (!a) return "";
     if (a.art === "route") return `Route: ${a.halte.map((h) => h.stadt).join(" – ")}`;
+    if (a.art === "versorgen") return `Versorgen: ${a.staedte.join(", ")}`;
     return `Freier Handel, Einsatz bis ${f(a.einsatz)} Gulden`;
   }
 

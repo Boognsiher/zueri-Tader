@@ -2,6 +2,8 @@
 //
 // Handelsroute: Das Schiff fährt eine Liste von Häfen endlos ab und erledigt dort Aufträge
 //   (verkaufen, kaufen, ins Kontor entladen, aus dem Kontor laden), auf Wunsch mit Preisgrenze.
+// Versorgen: Das Schiff verteilt Kontor-Ware zwischen gewählten Städten dorthin, wo eigene
+//   Werkstätten sie brauchen (siehe unten).
 // Freier Handel: Der Kapitän sucht selbst das beste Geschäft, mit derselben Bewertung wie die
 //   KI-Händler (Gewinn pro Tag), und setzt höchstens den festgelegten Einsatz ein. Den restlichen
 //   Laderaum füllt er mit weiteren Waren, die sich am selben Ziel lohnen.
@@ -13,6 +15,7 @@
 // schiff.auto = null (selbst steuern)
 //   | { art: "route", halte: [{ stadt, auftraege: [{ art, ware, menge, preis }] }], index, erledigt, pausiert }
 //   | { art: "frei", einsatz, plan: { waren, ziel } | null, wartetage, pausiert }
+//   | { art: "versorgen", staedte: [Name], ziel, wartetage, pausiert }
 // Städte stehen als Namen drin, damit sich der Zustand speichern lässt.
 
 import { Haendler, angebot } from "./wirtschaft.js";
@@ -90,6 +93,7 @@ export function weiter(spiel, schiff) {
   // Noch beim Laden oder Löschen
   if (schiff.auto.abfahrt != null && spiel.zeit < schiff.auto.abfahrt) return;
   if (schiff.auto.art === "route") route(spiel, schiff);
+  else if (schiff.auto.art === "versorgen") versorgen(spiel, schiff);
   else frei(spiel, schiff);
 }
 
@@ -241,4 +245,131 @@ function frei(spiel, schiff) {
   if (teile.length) spiel.melde(`${schiff.name} (frei) in ${stadt.name}: ${teile.join(", ")}.`, "handel");
   // Ohne nennenswerte Liegezeit gleich ablegen
   if (a.abfahrt != null && spiel.zeit >= a.abfahrt) frei(spiel, schiff);
+}
+
+// --- Versorgen ------------------------------------------------------------------
+// Das Schiff verteilt Kontor-Ware zwischen den gewählten Städten: Es lädt, was in einer
+// anderen gewählten Stadt gebraucht wird, und lädt es dort aus. Gebraucht wird, was die
+// eigenen Werkstätten mit Kontor-Versorgung für versorgung.vorrat_tage plus die Zeit bis zur
+// nächsten Lieferung (eine Rundreise) brauchen.
+
+// Fehlmenge einer Ware im Kontor einer Stadt: Bedarf für den Vorrat plus zusatzTage
+// (die Zeit bis zur nächsten Lieferung) minus Bestand
+export function fehlmenge(spiel, stadtName, g, zusatzTage = 0) {
+  const a = spiel.ausbau;
+  const k = a.kontor(stadtName);
+  if (!k) return 0;
+  const stadt = spiel.welt.stadt[stadtName];
+  const ziel = a.bedarfProTag(stadt, g) * (a.bau.versorgung.vorrat_tage + zusatzTage);
+  return Math.max(0, ziel - (k.lager[g]?.menge ?? 0));
+}
+
+// Überschuss einer Ware im Kontor: was über dem eigenen Vorrat liegt und nicht gesperrt ist
+export function ueberschuss(spiel, stadtName, g) {
+  const a = spiel.ausbau;
+  if (!a.kontor(stadtName)) return 0;
+  const stadt = spiel.welt.stadt[stadtName];
+  const eigen = a.bedarfProTag(stadt, g) * a.bau.versorgung.vorrat_tage;
+  const verfuegbar = a.verfuegbar(stadt, g);
+  const vorhanden = a.kontor(stadtName).lager[g]?.menge ?? 0;
+  return Math.max(0, Math.min(verfuegbar, vorhanden - eigen));
+}
+
+export function pruefeVersorgung(spiel, staedte) {
+  const mitKontor = staedte.filter((s) => spiel.ausbau.kontor(s));
+  if (mitKontor.length < 2) return "Wähle mindestens zwei Städte, in denen du ein Kontor hast.";
+  return null;
+}
+
+export function starteVersorgung(spiel, schiff, staedte) {
+  const fehler = pruefeVersorgung(spiel, staedte);
+  if (fehler) return fehler;
+  schiff.auto = { art: "versorgen", staedte: staedte.filter((s) => spiel.ausbau.kontor(s)), ziel: null, wartetage: 0 };
+  spiel.melde(`${schiff.name} versorgt jetzt die Kontore in ${schiff.auto.staedte.join(", ")}.`);
+  weiter(spiel, schiff);
+  return null;
+}
+
+function versorgen(spiel, schiff) {
+  const a = schiff.auto;
+  const waren = Object.keys(spiel.D.waren);
+  // Nicht in einer gewählten Stadt: zur nächsten gewählten fahren
+  if (!schiff.ort || !a.staedte.includes(schiff.ort.name)) {
+    const p = spiel.position(schiff);
+    const naechste = a.staedte
+      .map((n) => spiel.welt.stadt[n])
+      .sort((x, y) => Math.hypot(x.pos[0] - p.x, x.pos[1] - p.y) - Math.hypot(y.pos[0] - p.x, y.pos[1] - p.y))[0];
+    spiel.segeln(schiff, { stadt: naechste }, { still: true });
+    return;
+  }
+  const hier = schiff.ort.name;
+  // Geladen und Liegezeit vorbei: zum Ziel ablegen
+  if (a.abfahrt != null && a.ziel) {
+    if (spiel.segeln(schiff, { stadt: spiel.welt.stadt[a.ziel] }, { still: true }).ok) {
+      a.abfahrt = null;
+      a.ziel = null;
+    }
+    return;
+  }
+  a.abfahrt = null;
+  const teile = [];
+  let umschlag = 0;
+  // Bis zur nächsten Lieferung vergeht etwa eine Rundreise
+  const rundreise = (ziel) => 2 * spiel.welt.fahrtage(spiel.welt.stadt[hier], spiel.welt.stadt[ziel]);
+  const laengste = Math.max(...a.staedte.filter((s) => s !== hier).map(rundreise));
+  // 1. Ausladen, was hier gebraucht wird
+  for (const g of Object.keys(schiff.ladung)) {
+    const m = spiel.ausbau.umlagern(schiff, g, Math.ceil(fehlmenge(spiel, hier, g, laengste)), "insKontor");
+    if (m) {
+      umschlag += m;
+      teile.push(`${m} ${g} ausgeladen`);
+    }
+  }
+  // 2. Ziel mit dem grössten deckbaren Bedarf suchen (Ladung an Bord zählt mit)
+  let beste = null;
+  for (const ziel of a.staedte) {
+    if (ziel === hier) continue;
+    let menge = 0;
+    for (const g of waren) {
+      const fehlt = fehlmenge(spiel, ziel, g, rundreise(ziel));
+      if (fehlt > 0) menge += Math.min(fehlt, ueberschuss(spiel, hier, g) + (schiff.ladung[g]?.menge ?? 0));
+    }
+    if (menge >= 1 && (!beste || menge > beste.menge)) beste = { ziel, menge };
+  }
+  if (beste) {
+    // 3. Laden, was dort fehlt, die grösste Lücke zuerst
+    const liste = waren
+      .map((g) => ({ g, fehlt: fehlmenge(spiel, beste.ziel, g, rundreise(beste.ziel)) - (schiff.ladung[g]?.menge ?? 0) }))
+      .filter((x) => x.fehlt > 0)
+      .sort((x, y) => y.fehlt - x.fehlt);
+    for (const { g, fehlt } of liste) {
+      const m = spiel.ausbau.umlagern(schiff, g, Math.min(Math.ceil(fehlt), Math.floor(ueberschuss(spiel, hier, g))), "insSchiff");
+      if (m) {
+        umschlag += m;
+        teile.push(`${m} ${g} geladen`);
+      }
+    }
+    a.ziel = beste.ziel;
+    a.wartetage = 0;
+    a.abfahrt = spiel.zeit + liegezeit(spiel, schiff, umschlag);
+    teile.push(`Ziel ${beste.ziel}${tageText(liegezeit(spiel, schiff, umschlag))}`);
+  } else if (++a.wartetage > WARTETAGE_FREI) {
+    // Hier gibt es nichts zu verteilen: in die Stadt mit dem meisten Überschuss für andere
+    let quelle = null;
+    for (const s of a.staedte) {
+      if (s === hier) continue;
+      let menge = 0;
+      for (const ziel of a.staedte) {
+        if (ziel === s) continue;
+        for (const g of waren) menge += Math.min(fehlmenge(spiel, ziel, g, rundreise(ziel)), ueberschuss(spiel, s, g));
+      }
+      if (menge >= 1 && (!quelle || menge > quelle.menge)) quelle = { s, menge };
+    }
+    if (quelle && spiel.segeln(schiff, { stadt: spiel.welt.stadt[quelle.s] }, { still: true }).ok) {
+      a.wartetage = 0;
+      teile.push(`nichts zu verteilen, fährt nach ${quelle.s}`);
+    }
+  }
+  if (teile.length) spiel.melde(`${schiff.name} (Versorgen) in ${hier}: ${teile.join(", ")}.`, "handel");
+  if (a.abfahrt != null && spiel.zeit >= a.abfahrt) versorgen(spiel, schiff);
 }
