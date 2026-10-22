@@ -49,6 +49,8 @@ BASIC = []        # Grundbedarf (Zufriedenheit)
 COMFORT = []      # gehobener Bedarf (Zufriedenheit)
 CITIES = []       # Staedte (intern: name, pop, pos, prod, work)
 EVENTS = []       # Zufallsereignisse (events.json)
+SEETEIL = {}      # Stadt -> Seeteil (karte.json)
+DURCHFAHRTEN = [] # Durchfahrten zwischen Seeteilen (karte.json)
 # Parameter (SPREAD, PRICE_MIN, ...) werden ebenfalls aus params.json als
 # Modulvariablen gesetzt.
 
@@ -60,7 +62,7 @@ def _read(data_dir, name):
 
 def load_data(data_dir=DEFAULT_DATA_DIR):
     """Liest data/*.json in die Modulvariablen."""
-    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS
+    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, SEETEIL, DURCHFAHRTEN
     GOODS = {n: v["basispreis"] for n, v in _read(data_dir, "goods.json")["waren"].items()}
     RECIPES = _read(data_dir, "recipes.json")["rezepte"]
     c = _read(data_dir, "consumption.json")
@@ -71,6 +73,12 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
                "prod": s["produktion"], "work": s["werkstaetten"]}
               for s in _read(data_dir, "cities.json")["staedte"]]
     EVENTS = _read(data_dir, "events.json")["ereignisse"]
+    karte = _read(data_dir, "karte.json")
+    SEETEIL = {stadt: teil for teil, v in karte["seeteile"].items() for stadt in v["staedte"]}
+    DURCHFAHRTEN = karte["durchfahrten"]
+    for c in CITIES:
+        if c["name"] not in SEETEIL:
+            raise ValueError(f"Stadt {c['name']} fehlt in karte.json (seeteile)")
     for name, p in _read(data_dir, "params.json")["parameter"].items():
         globals()[name] = p["wert"]
 
@@ -178,9 +186,19 @@ class City:
         return shortage
 
 
+def route_length(a, b):
+    """Weglaenge ueber Wasser: direkt im selben Seeteil, sonst ueber die Durchfahrt."""
+    ta, tb = SEETEIL[a.name], SEETEIL[b.name]
+    if ta == tb:
+        return math.dist(a.pos, b.pos)
+    for d in DURCHFAHRTEN:
+        if set(d["verbindet"]) == {ta, tb}:
+            return math.dist(a.pos, d["position"]) + math.dist(d["position"], b.pos)
+    raise ValueError(f"Keine Durchfahrt zwischen {ta} und {tb} (karte.json)")
+
+
 def travel_days(a, b):
-    d = math.dist(a.pos, b.pos)
-    return max(1, math.ceil(d / SPEED))
+    return max(1, math.ceil(route_length(a, b) / SPEED))
 
 
 def quote(src, dst, g, money, k):
@@ -513,14 +531,18 @@ def report(args, cities, ships, stats):
 def main():
     ap = argparse.ArgumentParser(description="Wirtschaftssimulation Handelsspiel")
     ap.add_argument("--days", type=int, default=720)
-    ap.add_argument("--ships", type=int, default=45, help="Anzahl KI-Haendlerschiffe")
-    ap.add_argument("--k", type=float, default=0.7, help="Preisempfindlichkeit")
+    ap.add_argument("--ships", type=int, help="Anzahl KI-Haendlerschiffe (Standard: AI_SHIPS)")
+    ap.add_argument("--k", type=float, help="Preisempfindlichkeit (Standard: K)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--no-events", action="store_true")
     ap.add_argument("--csv", help="Preisverlauf in CSV schreiben (alle 5 Tage)")
     ap.add_argument("--data", default=DEFAULT_DATA_DIR, help="Ordner mit den JSON-Daten")
     args = ap.parse_args()
     load_data(args.data)
+    if args.ships is None:
+        args.ships = AI_SHIPS
+    if args.k is None:
+        args.k = K
     cities, ships, stats = run(args)
     all_ok = report(args, cities, ships, stats)
     sys.exit(0 if all_ok else 1)
