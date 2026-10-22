@@ -7,9 +7,10 @@
 // Zutaten am Markt der Stadt (oder nimmt sie aus dem Kontor), verkauft die Erzeugnisse dort
 // (oder lagert sie im Kontor) und trägt Gewinn oder Verlust. Solange er an den Markt liefert,
 // bleibt der Warenfluss der Stadt gleich, die Balance der Simulation also gültig.
-// Betriebe handeln mit dem Markt ihrer Stadt zum Mittelpreis, ohne Handelsspanne: Sie
-// beliefern die Stadt direkt wie deren eigene Werkstätten. Die Spanne ist die Marge des
-// Schiffshandels (siehe docs/entscheidungen.md).
+// Am Markt ihrer Stadt kaufen und verkaufen Betriebe wie Händler, mit Handelsspanne. Über das
+// Kontor fällt die Spanne weg: Wer Zutaten günstig anderswo kauft, ins Kontor bringt und die
+// Erzeugnisse dorthin fährt, wo sie teuer sind, verdient an der ganzen Kette. Eigenversorgung
+// soll sich lohnen (siehe docs/entscheidungen.md).
 // Neu gebaute Betriebe kommen dazu und erhöhen das Angebot. Verkauft der Spieler einen
 // Betrieb, geht er an die Stadt und arbeitet als Teil ihrer Produktion weiter.
 
@@ -54,23 +55,53 @@ export class Ausbau {
     return this.typen[b.typ ?? b];
   }
 
-  // Erwarteter Tagesgewinn nach Unterhalt, zu den heutigen Mittelpreisen der Stadt
-  // (ohne Stadt oder für Waren ohne Markt dort: Basispreise)
+  // Erwarteter Tagesgewinn nach Unterhalt bei Versorgung über den Markt der Stadt, zu den
+  // heutigen Preisen mit Handelsspanne (für Waren ohne Markt dort: Basispreise)
   tagesgewinn(typId, stadt = null) {
     const t = this.typen[typId];
     const D = this.D;
-    const preis = (g) => (stadt && stadt.handelt(g) ? stadt.mittelpreis(g) : D.waren[g]);
-    let brutto = preis(t.ware);
+    const s = D.p.SPREAD / 2;
+    const verkauf = (g) => (stadt && stadt.handelt(g) ? stadt.verkaufspreis(g) : D.waren[g] * (1 - s));
+    const kauf = (g) => (stadt && stadt.handelt(g) ? stadt.kaufpreis(g) : D.waren[g] * (1 + s));
+    let brutto = verkauf(t.ware);
     if (t.art === "werkstatt") {
-      for (const [z, m] of Object.entries(D.rezepte[t.ware])) brutto -= preis(z) * m;
+      for (const [z, m] of Object.entries(D.rezepte[t.ware])) brutto -= kauf(z) * m;
     }
     return t.leistung * brutto - t.unterhalt;
   }
 
-  // Marktwert: erwarteter Tagesgewinn x amortisation_tage, mindestens der Mindestwert
+  // Möglicher Tagesgewinn bei Eigenversorgung: Zutaten in der günstigsten Stadt gekauft,
+  // Erzeugnisse in der teuersten verkauft, ohne Fahrtkosten. Ein Richtwert für die Anzeige.
+  potenzial(typId) {
+    const t = this.typen[typId];
+    const staedte = this.spiel.welt.staedte;
+    const bester = (g) => Math.max(...staedte.filter((x) => x.handelt(g)).map((x) => x.verkaufspreis(g)));
+    const billigster = (g) => Math.min(...staedte.filter((x) => x.handelt(g)).map((x) => x.kaufpreis(g)));
+    let brutto = bester(t.ware);
+    if (t.art === "werkstatt") {
+      const faktor = this.bau.eigenversorgung.zutaten_faktor;
+      for (const [z, m] of Object.entries(this.D.rezepte[t.ware])) brutto -= billigster(z) * m * faktor;
+    }
+    return t.leistung * brutto - t.unterhalt;
+  }
+
+  // Wertschöpfung bei Basispreisen ohne Handelsspanne, also bei Eigenversorgung über das Kontor
+  basisgewinn(typId) {
+    const t = this.typen[typId];
+    let brutto = this.D.waren[t.ware];
+    if (t.art === "werkstatt") {
+      for (const [z, m] of Object.entries(this.D.rezepte[t.ware])) brutto -= this.D.waren[z] * m;
+    }
+    return t.leistung * brutto - t.unterhalt;
+  }
+
+  // Kaufpreis: der höhere Wert aus Marktversorgung (heutige Preise der Stadt) und
+  // Eigenversorgung (Basispreise), jeweils x amortisation_tage, mindestens der Mindestwert.
+  // So ist eine Werkstatt nicht spottbillig, nur weil sie am Markt kaum etwas abwirft.
   wert(typId, stadt = null) {
-    const roh = Math.round((this.tagesgewinn(typId, stadt) * this.bau.amortisation_tage) / 100) * 100;
-    return Math.max(this.bau.mindestwert, roh);
+    const tage = this.bau.amortisation_tage;
+    const roh = Math.max(this.tagesgewinn(typId, stadt), this.basisgewinn(typId)) * tage;
+    return Math.max(this.bau.mindestwert, Math.round(roh / 100) * 100);
   }
 
   verkaufserloes(typId, stadt = null) {
@@ -319,23 +350,25 @@ export class Ausbau {
       if (t.art === "produktion") {
         menge = t.leistung * Stadt.faktor(stadt.prodFaktor, t.ware, tag);
       } else {
-        // Zutaten zuerst aus dem Kontor, dann vom Markt
-        const rezept = Object.entries(this.D.rezepte[t.ware]);
+        // Zutaten: bei Versorgung über das Kontor nur von dort, sonst vom Markt
+        // Eigenversorgung über das Kontor braucht weniger Zutaten (eigenversorgung.zutaten_faktor)
+        const faktor = insKontor ? this.bau.eigenversorgung.zutaten_faktor : 1;
+        const rezept = Object.entries(this.D.rezepte[t.ware]).map(([z, m]) => [z, m * faktor]);
         for (let n = 0; n < t.leistung; n++) {
-          const moeglich = rezept.every(([z, m]) => (k?.lager[z]?.menge ?? 0) + (stadt.handelt(z) ? Math.max(0, stadt.bestand[z] - 2) : 0) >= m);
+          const moeglich = rezept.every(([z, m]) => (insKontor ? (k.lager[z]?.menge ?? 0) : stadt.handelt(z) ? Math.max(0, stadt.bestand[z] - 2) : 0) >= m);
           if (!moeglich) break;
           let preis = 0;
           for (const [z, m] of rezept) {
             let rest = m;
-            const ausKontor = Math.min(rest, Math.floor(k?.lager[z]?.menge ?? 0));
+            const ausKontor = insKontor ? Math.min(rest, k.lager[z]?.menge ?? 0) : 0;
             if (ausKontor > 0) {
               preis += k.lager[z].einstand * ausKontor;
               entnimm(k.lager, z, ausKontor);
               rest -= ausKontor;
             }
-            for (; rest > 0; rest--) {
-              const p = stadt.mittelpreis(z);
-              stadt.bestand[z] -= 1;
+            for (; rest > 1e-9; rest -= Math.min(1, rest)) {
+              const p = stadt.kaufpreis(z) * Math.min(1, rest);
+              stadt.bestand[z] -= Math.min(1, rest);
               kasse -= p;
               preis += p;
             }
@@ -358,9 +391,9 @@ export class Ausbau {
           b.verdorben = menge - m;
         } else if (stadt.handelt(t.ware)) {
           const bestand = stadt.bestand[t.ware];
-          for (let i = 0; i < Math.floor(menge); i++) kasse += stadt.mittelpreis(t.ware, bestand + i);
+          for (let i = 0; i < Math.floor(menge); i++) kasse += stadt.verkaufspreis(t.ware, bestand + i);
           const rest = menge - Math.floor(menge);
-          if (rest > 0) kasse += rest * stadt.mittelpreis(t.ware, bestand + Math.floor(menge));
+          if (rest > 0) kasse += rest * stadt.verkaufspreis(t.ware, bestand + Math.floor(menge));
           stadt.bestand[t.ware] += menge;
           b.verdorben = 0;
         }

@@ -166,13 +166,13 @@ export class Stadt {
 }
 
 // Optimale Ladungsmenge einer KI-Fahrt, mit Preiswirkung auf beiden Seiten
-export function angebot(D, von, nach, g, geld) {
+export function angebot(D, von, nach, g, geld, laderaum = D.p.SHIP_CAP) {
   const bestandVon = von.bestand[g];
   const bestandNach = nach.bestand[g] + (nach.unterwegs[g] || 0);
   let kosten = 0;
   let erloes = 0;
   let menge = 0;
-  while (menge < D.p.SHIP_CAP && bestandVon - menge >= 2) {
+  while (menge < laderaum && bestandVon - menge >= 2) {
     const kauf = von.kaufpreis(g, bestandVon - menge);
     const verkauf = nach.verkaufspreis(g, bestandNach + menge);
     if (verkauf <= kauf || kosten + kauf > geld) break;
@@ -241,7 +241,8 @@ export class Haendler {
       for (const nach of welt.staedte) {
         if (nach === von || nach.gesperrt(tag) || !nach.handelt(g)) continue;
         if (nach.geplanterVerkaufspreis(g) < kauf * (1 + p.MIN_ROI)) continue;
-        const { menge, kosten, erloes } = angebot(this.D, von, nach, g, this.geld);
+        // laderaum: nur gesetzt, wenn der freie Handel des Spielers diese Bewertung nutzt
+        const { menge, kosten, erloes } = angebot(this.D, von, nach, g, this.geld, this.laderaum ?? p.SHIP_CAP);
         const gewinn = erloes - kosten;
         if (menge <= 0 || gewinn < p.MIN_PROFIT || gewinn / kosten < p.MIN_ROI) continue;
         const tage = welt.fahrtage(von, nach) + 1;

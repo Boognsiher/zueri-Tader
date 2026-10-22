@@ -45,8 +45,11 @@ export function speichere(spiel) {
       namen: spiel.namen,
       meldungen: spiel.meldungen,
       bilanz: spiel.bilanz,
+      werft: spiel.werft.zustand(),
       schiffe: spiel.schiffe.map((s) => ({
         name: s.name,
+        typ: s.typ,
+        gebraucht: s.gebraucht,
         pos: s.pos,
         ort: nr(s.ort),
         fahrt: s.fahrt ? { weg: s.fahrt.weg, start: s.fahrt.start, ende: s.fahrt.ende, ziel: nr(s.fahrt.ziel) } : null,
@@ -95,6 +98,8 @@ export function lade(D, stand) {
   spiel.bilanz = { ...spiel.bilanz, ...sp.bilanz };
   spiel.schiffe = sp.schiffe.map((z) => ({
     name: z.name,
+    typ: z.typ ?? D.schiffe.startschiff, // Spielstände vor dem Bootshandel
+    gebraucht: z.gebraucht ?? false,
     pos: z.pos,
     ort: stadt(z.ort),
     fahrt: z.fahrt ? { ...z.fahrt, ziel: stadt(z.fahrt.ziel) } : null,
@@ -102,5 +107,6 @@ export function lade(D, stand) {
     auto: z.auto,
   }));
   spiel.ausbau.laden(sp.ausbau);
+  spiel.werft.laden(sp.werft);
   return spiel;
 }

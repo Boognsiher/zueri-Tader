@@ -1,0 +1,15 @@
+{
+  "_info": "Schiffstypen und Bootshandel des Spielers. Wird nur vom Spiel gelesen. Der Nauen entspricht dem Schiff der KI-Händler und der Simulation (SHIP_CAP, SHIP_COST, UPKEEP, SPEED in params.json, vom Test geprüft). tempo = Faktor auf SPEED. werften = Städte, in denen neue Schiffe verkauft werden. verkaufsanteil = Erlös beim Verkauf als Anteil des Neupreises. gebraucht: Angebote tauchen zufällig in einer Stadt auf (chance_pro_tag), bleiben dauer_tage, kosten Neupreis x (1 - Rabatt) mit Rabatt zwischen rabatt_min und rabatt_max und haben unterhalt_faktor mal so hohen Unterhalt. rabatt_max muss kleiner als 1 - verkaufsanteil bleiben, sonst lohnt sich Kaufen und sofort Verkaufen. Die Preise folgen dem gemessenen Tagesgewinn im freien Handel (Amortisation rund 150-170 Tage), der Test prüft, dass kein Typ mehr als doppelt so rentabel ist wie ein anderer.",
+  "startschiff": "nauen",
+  "typen": [
+    {"id": "weidling", "name": "Weidling", "laderaum": 40, "tempo": 1.1, "preis": 14000, "unterhalt": 4, "groesse": 0.75,
+     "text": "Kleiner, wendiger Kahn. Etwas schneller und billig im Unterhalt, aber wenig Laderaum."},
+    {"id": "nauen", "name": "Nauen", "laderaum": 120, "tempo": 1.0, "preis": 20000, "unterhalt": 10, "groesse": 1.0,
+     "text": "Das übliche Lastschiff auf dem See, mit Rahsegel."},
+    {"id": "ledischiff", "name": "Ledischiff", "laderaum": 250, "tempo": 0.9, "preis": 26000, "unterhalt": 16, "groesse": 1.3,
+     "text": "Grosses, flaches Lastschiff. Etwas langsamer, lohnt sich mit gemischter Ladung und für Kontor-Ware aus eigenen Betrieben."}
+  ],
+  "werften": ["Zürich", "Wädenswil", "Rapperswil"],
+  "verkaufsanteil": 0.5,
+  "gebraucht": {"chance_pro_tag": 0.04, "dauer_tage": 30, "max_angebote": 3, "rabatt_min": 0.2, "rabatt_max": 0.4, "unterhalt_faktor": 1.3}
+}

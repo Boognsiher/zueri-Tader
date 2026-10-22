@@ -5,7 +5,7 @@
 //    tools/sim/wirtschaft_sim.py. So fällt auf, wenn Spiel und Simulation auseinanderlaufen.
 // 2. Handel des Spielers: kein Gewinn durch Hin-und-her-Handeln, Laderaum und Geld begrenzen.
 // 3. Karte: Jeder Seeweg führt über Wasser.
-// 4.-6. Betriebe und Kontor, automatischer Handel, Speichern und Laden.
+// 4.-8. Betriebe und Kontor, automatischer Handel, Speichern und Laden, Bootshandel, Eigenversorgung.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -292,6 +292,130 @@ console.log("\nSpeichern und Laden");
     spiel.welt.haendler.every((h, i) => h.geld === geladen.welt.haendler[i].geld);
   pruefe("Nach 120 weiteren Tagen sind Original und geladenes Spiel identisch", gleich);
   pruefe("Fremde Datei wird abgelehnt", pruefeStand(D, { foo: 1 }) !== null);
+}
+
+// --- 7. Bootshandel -----------------------------------------------------------
+console.log("\nBootshandel");
+{
+  const nauen = D.schiffe.typ.nauen;
+  pruefe("Nauen entspricht dem Schiff der KI (Laderaum, Preis, Unterhalt, Tempo)",
+    nauen.laderaum === D.p.SHIP_CAP && nauen.preis === D.p.SHIP_COST && nauen.unterhalt === D.p.UPKEEP && nauen.tempo === 1);
+  const g = D.schiffe.gebraucht;
+  pruefe("Gebrauchtrabatt kleiner als der Verkaufsabschlag (kein Gewinn durch Kaufen und Verkaufen)", g.rabatt_max < 1 - D.schiffe.verkaufsanteil);
+
+  const spiel = new Spiel(D, 41);
+  const w = spiel.werft;
+  spiel.gulden = 100000;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  const meilen = spiel.welt.stadt["Meilen"];
+  pruefe("In Meilen gibt es keine Werft", w.pruefeNeukauf(meilen, "weidling") !== null);
+  const ledi = w.kaufeNeu(zuerich, "ledischiff");
+  pruefe("Ledischiff in Zürich kaufen", !!ledi && spiel.laderaum(ledi) === 250);
+  const k = spiel.kaufen(ledi, "Korn", 1000);
+  pruefe(`Ledischiff lädt mehr als ein Nauen (${k.menge} Korn)`, k.menge > D.p.SHIP_CAP);
+  pruefe("Beladenes Schiff kann nicht verkauft werden", w.pruefeVerkauf(ledi) !== null);
+  spiel.verkaufen(ledi, "Korn", 1000);
+  const geld = spiel.gulden;
+  pruefe("Leeres Ledischiff verkaufen bringt den Verkaufsanteil", w.verkaufe(ledi) && spiel.gulden - geld === w.verkaufserloes({ typ: "ledischiff" }));
+  pruefe("Das letzte Schiff kann nicht verkauft werden", w.pruefeVerkauf(spiel.schiffe[0]) !== null);
+
+  // Fahrzeit hängt vom Tempo ab
+  const weid = w.kaufeNeu(zuerich, "weidling");
+  const nau = spiel.schiffe[0];
+  spiel.segeln(weid, { stadt: spiel.welt.stadt["Lachen"] });
+  spiel.segeln(nau, { stadt: spiel.welt.stadt["Lachen"] });
+  const dw = weid.fahrt.ende - weid.fahrt.start;
+  const dn = nau.fahrt.ende - nau.fahrt.start;
+  pruefe(`Weidling ist schneller als der Nauen (${dw.toFixed(1)} gegen ${dn.toFixed(1)} Tage)`, dw < dn);
+
+  // Gebrauchtmarkt: Angebote tauchen auf und verschwinden
+  const markt = new Spiel(D, 42);
+  let gesehen = 0;
+  for (let t = 0; t < 365; t++) {
+    const vorher = markt.werft.naechsteNr;
+    markt.tagVoran();
+    if (markt.werft.naechsteNr > vorher) gesehen++;
+  }
+  pruefe(`Gebrauchte Schiffe werden angeboten (${gesehen} Angebote in einem Jahr)`, gesehen >= 5);
+  const angebot = markt.werft.angebote[0];
+  if (angebot) {
+    markt.gulden = 100000;
+    const dort = markt.welt.stadt[angebot.stadt];
+    markt.schiffe[0].ort = dort;
+    markt.schiffe[0].fahrt = null;
+    const gekauft = markt.werft.kaufeGebraucht(angebot);
+    pruefe(`Gebrauchtes Schiff kaufen (${angebot.preis} statt ${D.schiffe.typ[angebot.typ].preis} Gulden, höherer Unterhalt)`,
+      !!gekauft && gekauft.gebraucht && markt.unterhalt(gekauft) > D.schiffe.typ[angebot.typ].unterhalt);
+  }
+
+  // Wirtschaftlichkeit: je ein Schiff jedes Typs handelt ein Jahr frei
+  const rendite = {};
+  for (const t of D.schiffe.typen) {
+    let summe = 0;
+    for (const seed of [51, 52, 53]) {
+      const sp = new Spiel(D, seed, { leer: false });
+      const schiff = sp.schiffe[0];
+      schiff.typ = t.id;
+      sp.gulden = 60000;
+      starteFrei(sp, schiff, 60000);
+      for (let tag = 0; tag < 360; tag++) sp.tagVoran();
+      summe += (sp.gulden + sp.warenwert() - 60000) / 360;
+    }
+    rendite[t.id] = summe / 3 / t.preis; // Gewinn pro Tag je Gulden Schiffspreis
+  }
+  const werte = Object.values(rendite);
+  const verhaeltnis = Math.max(...werte) / Math.min(...werte);
+  console.log("   Gewinn pro Tag je 1000 Gulden Schiffspreis:", Object.entries(rendite).map(([k2, v]) => `${k2} ${(v * 1000).toFixed(2)}`).join(", "));
+  pruefe(`Kein Schiffstyp ist mehr als doppelt so rentabel wie ein anderer (Faktor ${verhaeltnis.toFixed(2)})`, werte.every((v) => v > 0) && verhaeltnis <= 2);
+}
+
+// --- 8. Eigenversorgung -------------------------------------------------------
+// Eigene Werkstatt über das Kontor beliefern und die Ware anderswo verkaufen soll mehr bringen
+// als dieselbe Werkstatt am Markt plus dasselbe Schiff im freien Handel.
+console.log("\nEigenversorgung");
+{
+  function aufbau(seed) {
+    const sp = new Spiel(D, seed);
+    sp.gulden = 100000;
+    const s = sp.schiffe[0];
+    const stadt = sp.welt.stadt["Wädenswil"];
+    s.ort = stadt;
+    s.pos = [...stadt.pos];
+    const b = sp.ausbau.betriebeIn(stadt).find((x) => x.typ === "trotte");
+    sp.ausbau.kaufen(b);
+    return { sp, s, stadt, b };
+  }
+  let kette = 0;
+  let markt = 0;
+  let werkstattMarkt = 0;
+  for (const seed of [61, 62]) {
+    const a = aufbau(seed);
+    a.sp.kaufen(a.s, "Holz", 20);
+    a.sp.ausbau.kontorBauen(a.stadt);
+    a.sp.ausbau.setzeZiel(a.b, "kontor");
+    const startA = a.sp.gulden + a.sp.warenwert();
+    starteRoute(a.sp, a.s, [
+      { stadt: "Wädenswil", auftraege: [
+        { art: "kaufen", ware: "Trauben", menge: 100, preis: null },
+        { art: "entladen", ware: "Trauben", menge: null, preis: null },
+        { art: "laden", ware: "Wein", menge: null, preis: null },
+      ] },
+      { stadt: "Rapperswil", auftraege: [{ art: "verkaufen", ware: "Wein", menge: null, preis: null }] },
+      { stadt: "Horgen", auftraege: [{ art: "verkaufen", ware: "Wein", menge: null, preis: null }] },
+    ]);
+    const b = aufbau(seed);
+    const startB = b.sp.gulden + b.sp.warenwert();
+    starteFrei(b.sp, b.s, 60000);
+    for (let t = 0; t < 360; t++) {
+      a.sp.tagVoran();
+      b.sp.tagVoran();
+    }
+    kette += (a.sp.gulden + a.sp.warenwert() - startA) / 360 / 2;
+    markt += (b.sp.gulden + b.sp.warenwert() - startB) / 360 / 2;
+    werkstattMarkt += b.b.summe / 360 / 2;
+  }
+  pruefe(`Werkstatt mit Marktversorgung trägt sich kaum (${werkstattMarkt.toFixed(0)} Gulden/Tag)`, werkstattMarkt < 60);
+  pruefe(`Trotte Wädenswil mit Kontor und Route: ${kette.toFixed(0)} Gulden/Tag, Markt + freier Handel: ${markt.toFixed(0)} (Ziel: Kette mindestens 15 % besser)`, kette >= markt * 1.15);
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

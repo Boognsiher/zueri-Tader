@@ -5,6 +5,7 @@
 import { Welt } from "./wirtschaft.js";
 import { Navigation, weglaenge, punktAufWeg } from "./navigation.js";
 import { Ausbau } from "./betriebe.js";
+import { Werft } from "./werft.js";
 import * as automatik from "./automatik.js";
 
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
@@ -23,8 +24,9 @@ export class Spiel {
     this.schiffe = [];
     this.namen = [...D.spiel.schiffsnamen];
     this.meldungen = [];
-    this.bilanz = { einkauf: 0, verkauf: 0, unterhalt: 0, schiffe: 0, betriebe: 0, betriebeKauf: 0, betriebeVerkauf: 0 };
+    this.bilanz = { einkauf: 0, verkauf: 0, unterhalt: 0, schiffe: 0, schiffeVerkauf: 0, betriebe: 0, betriebeKauf: 0, betriebeVerkauf: 0 };
     this.ausbau = new Ausbau(this);
+    this.werft = new Werft(this);
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
   }
 
@@ -54,13 +56,34 @@ export class Spiel {
     this.meldungen.length = Math.min(this.meldungen.length, 60);
   }
 
-  neuesSchiff(stadt) {
-    const name = this.namen.shift() ?? `${this.D.spiel.schiffstyp} ${this.schiffe.length + 1}`;
+  neuesSchiff(stadt, typId = this.D.schiffe.startschiff, gebraucht = false) {
+    const t = this.D.schiffe.typ[typId];
+    let name = this.namen.shift();
+    for (let n = this.schiffe.length + 1; !name || this.schiffe.some((s) => s.name === name); n++) name = `${t.name} ${n}`;
+    // typ = Schiffstyp (schiffe.json), gebraucht = höherer Unterhalt
     // ort = Hafen, in dem das Schiff liegt (null auf See), fahrt = laufende Fahrt oder null
     // auto = automatischer Handel (automatik.js) oder null
-    const schiff = { name, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null };
+    const schiff = { name, typ: typId, gebraucht, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null };
     this.schiffe.push(schiff);
     return schiff;
+  }
+
+  schiffstyp(schiff) {
+    return this.D.schiffe.typ[schiff.typ];
+  }
+
+  laderaum(schiff) {
+    return this.schiffstyp(schiff).laderaum;
+  }
+
+  unterhalt(schiff) {
+    const t = this.schiffstyp(schiff);
+    return t.unterhalt * (schiff.gebraucht ? this.D.schiffe.gebraucht.unterhalt_faktor : 1);
+  }
+
+  // Geschwindigkeit in Karteneinheiten pro Tag
+  tempo(schiff) {
+    return this.D.p.SPEED * this.schiffstyp(schiff).tempo;
   }
 
   ladungsmenge(schiff) {
@@ -68,7 +91,7 @@ export class Spiel {
   }
 
   freierLaderaum(schiff) {
-    return this.D.p.SHIP_CAP - this.ladungsmenge(schiff);
+    return this.laderaum(schiff) - this.ladungsmenge(schiff);
   }
 
   imHafen(schiff, stadt) {
@@ -155,7 +178,7 @@ export class Spiel {
     const nach = stadt ? stadt.pos : ziel.punkt;
     const weg = this.nav.route(von, nach);
     if (!weg) return { ok: false, grund: "Dort ist Land." };
-    const tage = weglaenge(weg) / this.D.p.SPEED;
+    const tage = weglaenge(weg) / this.tempo(schiff);
     const warImHafen = schiff.ort;
     schiff.pos = von;
     schiff.ort = null;
@@ -185,7 +208,7 @@ export class Spiel {
         s.ort = f.ziel;
         s.fahrt = null;
         ankuenfte.push(s);
-        if (s.auto) automatik.weiter(this, s);
+        if (automatik.aktiv(s)) automatik.weiter(this, s);
         else if (s.ort) this.melde(`${s.name} ist in ${s.ort.name} angekommen.`, "ankunft");
         else this.melde(`${s.name} hat den Zielpunkt vor ${this.naechsteStadt(s.pos).name} erreicht.`);
       }
@@ -197,19 +220,6 @@ export class Spiel {
   vorruecken(anteil) {
     this.anteil = Math.max(0, Math.min(anteil, 0.999999));
     return this.pruefeAnkuenfte();
-  }
-
-  kannSchiffKaufen(stadt) {
-    return this.gulden >= this.D.p.SHIP_COST && this.schiffe.some((s) => this.imHafen(s, stadt));
-  }
-
-  schiffKaufen(stadt) {
-    if (!this.kannSchiffKaufen(stadt)) return null;
-    this.gulden -= this.D.p.SHIP_COST;
-    this.bilanz.schiffe += this.D.p.SHIP_COST;
-    const schiff = this.neuesSchiff(stadt);
-    this.melde(`Neuer ${this.D.spiel.schiffstyp} "${schiff.name}" in ${stadt.name} gekauft.`, "gut");
-    return schiff;
   }
 
   // Wert der Ladung in Schiffen und Kontoren zum Einstandspreis
@@ -225,13 +235,14 @@ export class Spiel {
     this.anteil = 0;
     const ereignisse = this.welt.naechsterTag();
     for (const e of ereignisse) this.melde(e.text, "ereignis");
-    const unterhalt = this.D.p.UPKEEP * this.schiffe.length;
+    const unterhalt = this.schiffe.reduce((a, s) => a + this.unterhalt(s), 0);
     this.gulden -= unterhalt;
     this.bilanz.unterhalt += unterhalt;
     this.ausbau.tag();
+    this.werft.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
-    for (const s of this.schiffe) if (s.auto && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
+    for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
     return { ereignisse, ankuenfte };
   }
 }

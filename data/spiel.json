@@ -1,8 +1,8 @@
 {
-  "_info": "Spielstart und Spielgefühl der Demo. Wird nur vom Spiel gelesen, nicht von der Simulation. tageslaenge_ms = Dauer eines Spieltags in Millisekunden je Tempostufe.",
+  "_info": "Spielstart und Spielgefühl der Demo. Wird nur vom Spiel gelesen, nicht von der Simulation. tageslaenge_ms = Dauer eines Spieltags in Millisekunden je Tempostufe. autosave_sekunden = Abstand des automatischen Speicherns in echter Zeit.",
   "start": {"stadt": "Zürich", "gulden": 12000, "datum": [1650, 4, 1]},
-  "schiffstyp": "Nauen",
   "schiffsnamen": ["Möwe", "Felche", "Seerose", "Haubentaucher", "Morgenrot", "Treue", "Glarnerin", "Abendstern", "Hecht", "Stadt Zürich"],
   "tageslaenge_ms": {"1": 2200, "2": 1100, "3": 450},
-  "preisfarbe": {"guenstig": 0.85, "teuer": 1.15}
+  "preisfarbe": {"guenstig": 0.85, "teuer": 1.15},
+  "autosave_sekunden": 60
 }

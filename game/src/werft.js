@@ -1,0 +1,111 @@
+// Bootshandel: neue Schiffe in Werftstädten, Verkauf eigener Schiffe, Gebrauchtmarkt.
+// Alle Zahlen stehen in data/schiffe.json. Gekauft und verkauft wird nur, wenn eines der
+// eigenen Schiffe im Hafen liegt (man muss vor Ort sein).
+
+export class Werft {
+  constructor(spiel) {
+    this.spiel = spiel;
+    this.daten = spiel.D.schiffe;
+    this.angebote = []; // Gebrauchtschiffe: { nr, typ, stadt, preis, bis }
+    this.naechsteNr = 1;
+  }
+
+  typ(id) {
+    return this.daten.typ[id];
+  }
+
+  istWerft(stadt) {
+    return this.daten.werften.includes(stadt.name);
+  }
+
+  vorOrt(stadt) {
+    return this.spiel.schiffe.some((s) => this.spiel.imHafen(s, stadt));
+  }
+
+  // --- Neue Schiffe ---------------------------------------------------------------
+  pruefeNeukauf(stadt, typId) {
+    if (!this.istWerft(stadt)) return `In ${stadt.name} gibt es keine Werft (Werften: ${this.daten.werften.join(", ")}).`;
+    if (!this.vorOrt(stadt)) return "Dafür muss eines deiner Schiffe im Hafen liegen.";
+    if (this.spiel.gulden < this.typ(typId).preis) return "Zu wenig Gulden.";
+    return null;
+  }
+
+  kaufeNeu(stadt, typId) {
+    if (this.pruefeNeukauf(stadt, typId)) return null;
+    const t = this.typ(typId);
+    this.spiel.gulden -= t.preis;
+    this.spiel.bilanz.schiffe += t.preis;
+    const schiff = this.spiel.neuesSchiff(stadt, typId, false);
+    this.spiel.melde(`Neuer ${t.name} «${schiff.name}» in ${stadt.name} gekauft.`, "gut");
+    return schiff;
+  }
+
+  // --- Verkauf eigener Schiffe ----------------------------------------------------------
+  verkaufserloes(schiff) {
+    return Math.round((this.typ(schiff.typ).preis * this.daten.verkaufsanteil) / 100) * 100;
+  }
+
+  pruefeVerkauf(schiff) {
+    if (this.spiel.schiffe.length <= 1) return "Dein letztes Schiff kannst du nicht verkaufen.";
+    if (!this.spiel.imHafen(schiff)) return "Das Schiff muss im Hafen liegen.";
+    if (this.spiel.ladungsmenge(schiff) > 0) return "Erst die Ladung verkaufen oder ins Kontor bringen.";
+    return null;
+  }
+
+  verkaufe(schiff) {
+    if (this.pruefeVerkauf(schiff)) return false;
+    const erloes = this.verkaufserloes(schiff);
+    this.spiel.gulden += erloes;
+    this.spiel.bilanz.schiffeVerkauf += erloes;
+    this.spiel.schiffe = this.spiel.schiffe.filter((s) => s !== schiff);
+    this.spiel.namen.push(schiff.name); // der Name wird wieder frei
+    this.spiel.melde(`${this.typ(schiff.typ).name} «${schiff.name}» in ${schiff.ort.name} für ${erloes} Gulden verkauft.`);
+    return true;
+  }
+
+  // --- Gebrauchtmarkt ------------------------------------------------------------
+  angeboteIn(stadt) {
+    return this.angebote.filter((a) => a.stadt === stadt.name);
+  }
+
+  pruefeGebraucht(angebot) {
+    const stadt = this.spiel.welt.stadt[angebot.stadt];
+    if (!this.vorOrt(stadt)) return "Dafür muss eines deiner Schiffe im Hafen liegen.";
+    if (this.spiel.gulden < angebot.preis) return "Zu wenig Gulden.";
+    return null;
+  }
+
+  kaufeGebraucht(angebot) {
+    if (this.pruefeGebraucht(angebot)) return null;
+    const stadt = this.spiel.welt.stadt[angebot.stadt];
+    this.spiel.gulden -= angebot.preis;
+    this.spiel.bilanz.schiffe += angebot.preis;
+    this.angebote = this.angebote.filter((a) => a !== angebot);
+    const schiff = this.spiel.neuesSchiff(stadt, angebot.typ, true);
+    this.spiel.melde(`Gebrauchten ${this.typ(angebot.typ).name} «${schiff.name}» in ${stadt.name} für ${angebot.preis} Gulden gekauft.`, "gut");
+    return schiff;
+  }
+
+  // Täglich: abgelaufene Angebote entfernen, ab und zu ein neues
+  tag() {
+    const welt = this.spiel.welt;
+    const g = this.daten.gebraucht;
+    this.angebote = this.angebote.filter((a) => a.bis > welt.tag);
+    if (this.angebote.length >= g.max_angebote || welt.zufall.zahl() >= g.chance_pro_tag) return;
+    const t = welt.zufall.wahl(this.daten.typen);
+    const stadt = welt.zufall.wahl(welt.staedte);
+    const rabatt = g.rabatt_min + (g.rabatt_max - g.rabatt_min) * welt.zufall.zahl();
+    const angebot = { nr: this.naechsteNr++, typ: t.id, stadt: stadt.name, preis: Math.round((t.preis * (1 - rabatt)) / 100) * 100, bis: welt.tag + g.dauer_tage };
+    this.angebote.push(angebot);
+    this.spiel.melde(`In ${stadt.name} wird ein gebrauchter ${t.name} für ${angebot.preis} Gulden angeboten (bis ${this.spiel.datumWelt(angebot.bis)}).`, "ereignis");
+  }
+
+  zustand() {
+    return { angebote: this.angebote, naechsteNr: this.naechsteNr };
+  }
+
+  laden(z) {
+    this.angebote = z?.angebote ?? [];
+    this.naechsteNr = z?.naechsteNr ?? 1;
+  }
+}

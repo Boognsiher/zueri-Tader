@@ -3,14 +3,17 @@
 // Handelsroute: Das Schiff fährt eine Liste von Häfen endlos ab und erledigt dort Aufträge
 //   (verkaufen, kaufen, ins Kontor entladen, aus dem Kontor laden), auf Wunsch mit Preisgrenze.
 // Freier Handel: Der Kapitän sucht selbst das beste Geschäft, mit derselben Bewertung wie die
-//   KI-Händler (Gewinn pro Tag), und setzt höchstens den festgelegten Einsatz ein.
+//   KI-Händler (Gewinn pro Tag), und setzt höchstens den festgelegten Einsatz ein. Den restlichen
+//   Laderaum füllt er mit weiteren Waren, die sich am selben Ziel lohnen.
+// Lenkt der Spieler ein automatisches Schiff von Hand, pausiert die Automatik (auto.pausiert),
+// bis er sie wieder aufnimmt.
 //
 // schiff.auto = null (selbst steuern)
-//   | { art: "route", halte: [{ stadt, auftraege: [{ art, ware, menge, preis }] }], index, erledigt }
-//   | { art: "frei", einsatz, plan: { ware, ziel } | null, wartetage }
+//   | { art: "route", halte: [{ stadt, auftraege: [{ art, ware, menge, preis }] }], index, erledigt, pausiert }
+//   | { art: "frei", einsatz, plan: { waren, ziel } | null, wartetage, pausiert }
 // Städte stehen als Namen drin, damit sich der Zustand speichern lässt.
 
-import { Haendler } from "./wirtschaft.js";
+import { Haendler, angebot } from "./wirtschaft.js";
 
 export const AUFTRAGSARTEN = {
   verkaufen: "verkaufen",
@@ -18,7 +21,8 @@ export const AUFTRAGSARTEN = {
   kaufen: "kaufen",
   laden: "aus dem Kontor laden",
 };
-const REIHENFOLGE = ["verkaufen", "entladen", "kaufen", "laden"];
+// Erst verkaufen und einkaufen, dann ins Kontor entladen (auch eben Gekauftes), dann laden
+const REIHENFOLGE = ["verkaufen", "kaufen", "entladen", "laden"];
 const WARTETAGE_FREI = 3; // so lange wartet der Kapitän auf ein Geschäft, bevor er den Hafen wechselt
 
 const zahl = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
@@ -50,6 +54,27 @@ export function starteFrei(spiel, schiff, einsatz) {
   weiter(spiel, schiff);
 }
 
+// Läuft die Automatik (vorhanden und nicht pausiert)?
+export function aktiv(schiff) {
+  return !!schiff.auto && !schiff.auto.pausiert;
+}
+
+export function pausiere(spiel, schiff) {
+  if (!aktiv(schiff)) return;
+  schiff.auto.pausiert = true;
+  spiel.melde(`Automatik von ${schiff.name} pausiert (von Hand gesteuert).`);
+}
+
+export function nimmAuf(spiel, schiff) {
+  if (!schiff.auto || !schiff.auto.pausiert) return;
+  schiff.auto.pausiert = false;
+  if (schiff.auto.art === "route") schiff.auto.erledigt = false;
+  spiel.melde(`Automatik von ${schiff.name} läuft wieder.`);
+  // Fährt das Schiff gerade auf ein selbst gesetztes Ziel zu, übernimmt die Automatik sofort
+  if (schiff.fahrt) spiel.anhalten(schiff);
+  weiter(spiel, schiff);
+}
+
 export function beende(spiel, schiff) {
   if (!schiff.auto) return;
   schiff.auto = null;
@@ -58,7 +83,7 @@ export function beende(spiel, schiff) {
 
 // Bei Ankunft und täglich für jedes automatische Schiff, das nicht unterwegs ist
 export function weiter(spiel, schiff) {
-  if (!schiff.auto || schiff.fahrt) return;
+  if (!aktiv(schiff) || schiff.fahrt) return;
   if (schiff.auto.art === "route") route(spiel, schiff);
   else frei(spiel, schiff);
 }
@@ -108,8 +133,9 @@ function fuehreAus(spiel, schiff, halt) {
 function frei(spiel, schiff) {
   const a = schiff.auto;
   if (!schiff.ort) {
-    // vor Anker: zum nächsten Hafen
-    spiel.segeln(schiff, { stadt: spiel.naechsteStadt(schiff.pos) }, { still: true });
+    // vor Anker (z. B. nach einer Pause): zum geplanten Ziel der Ladung, sonst zum nächsten Hafen
+    const ziel = a.plan ? spiel.welt.stadt[a.plan.ziel] : spiel.naechsteStadt(schiff.pos);
+    spiel.segeln(schiff, { stadt: ziel }, { still: true });
     return;
   }
   const stadt = schiff.ort;
@@ -118,7 +144,7 @@ function frei(spiel, schiff) {
   for (const g of Object.keys(schiff.ladung)) {
     if (!stadt.handelt(g)) continue;
     const posten = schiff.ladung[g];
-    const amZiel = a.plan && a.plan.ziel === stadt.name && a.plan.ware === g;
+    const amZiel = a.plan && a.plan.ziel === stadt.name && a.plan.waren.includes(g);
     if (amZiel || stadt.verkaufspreis(g) >= posten.einstand * 1.05) {
       const r = spiel.verkaufen(schiff, g, Infinity);
       if (r.menge) teile.push(`${r.menge} ${g} verkauft (${r.gewinn >= 0 ? "+" : "−"}${zahl.format(Math.abs(r.gewinn))})`);
@@ -128,22 +154,46 @@ function frei(spiel, schiff) {
 
   const budget = Math.min(a.einsatz, spiel.gulden);
   const tag = spiel.welt.tag;
-  const optionen = budget > 0 ? Haendler.prototype.optionen.call({ D: spiel.D, geld: budget }, stadt, tag, spiel.welt) : [];
+  const bewerter = { D: spiel.D, geld: budget, laderaum: spiel.freierLaderaum(schiff) };
+  const optionen = budget > 0 ? Haendler.prototype.optionen.call(bewerter, stadt, tag, spiel.welt) : [];
   if (optionen.length) {
     optionen.sort((x, y) => y.rate - x.rate);
     const o = optionen[0];
     const k = spiel.kaufen(schiff, o.ware, o.menge);
-    if (k.menge && spiel.segeln(schiff, { stadt: o.ziel }, { still: true }).ok) {
-      a.plan = { ware: o.ware, ziel: o.ziel.name };
-      a.wartetage = 0;
-      teile.push(`${k.menge} ${o.ware} gekauft, Ziel ${o.ziel.name}`);
+    if (k.menge) {
+      const gekauft = [`${k.menge} ${o.ware}`];
+      const waren = [o.ware];
+      // Restlichen Laderaum mit weiteren Waren für dasselbe Ziel füllen, die lohnendste zuerst
+      const p = spiel.D.p;
+      const weitere = Object.keys(stadt.bestand)
+        .filter((g) => g !== o.ware && stadt.bestand[g] >= 5 && o.ziel.handelt(g))
+        .map((g) => ({ g, ...angebot(spiel.D, stadt, o.ziel, g, Math.min(a.einsatz - k.betrag, spiel.gulden), spiel.freierLaderaum(schiff)) }))
+        .filter((x) => x.menge > 0 && x.erloes - x.kosten >= p.MIN_PROFIT && (x.erloes - x.kosten) / x.kosten >= p.MIN_ROI)
+        .sort((x, y) => y.erloes - y.kosten - (x.erloes - x.kosten));
+      let ausgegeben = k.betrag;
+      for (const x of weitere) {
+        const rest = Math.min(a.einsatz - ausgegeben, spiel.gulden);
+        const neu = angebot(spiel.D, stadt, o.ziel, x.g, rest, spiel.freierLaderaum(schiff));
+        if (neu.menge <= 0 || neu.erloes - neu.kosten < p.MIN_PROFIT) continue;
+        const r = spiel.kaufen(schiff, x.g, neu.menge);
+        if (r.menge) {
+          ausgegeben += r.betrag;
+          gekauft.push(`${r.menge} ${x.g}`);
+          waren.push(x.g);
+        }
+      }
+      if (spiel.segeln(schiff, { stadt: o.ziel }, { still: true }).ok) {
+        a.plan = { waren, ziel: o.ziel.name };
+        a.wartetage = 0;
+        teile.push(`${gekauft.join(", ")} gekauft, Ziel ${o.ziel.name}`);
+      }
     }
   } else if (++a.wartetage > WARTETAGE_FREI) {
     // Lange nichts gefunden: leer zum aussichtsreichsten Hafen
     let beste = null;
     for (const andere of spiel.welt.staedte) {
       if (andere === stadt || andere.gesperrt(tag)) continue;
-      const dort = Haendler.prototype.optionen.call({ D: spiel.D, geld: budget }, andere, tag, spiel.welt);
+      const dort = Haendler.prototype.optionen.call(bewerter, andere, tag, spiel.welt);
       if (!dort.length) continue;
       const anfahrt = spiel.welt.fahrtage(stadt, andere);
       const rate = Math.max(...dort.map((o) => o.gewinn / (anfahrt + o.tage)));
