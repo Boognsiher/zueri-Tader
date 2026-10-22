@@ -1,26 +1,31 @@
 // Spielzustand des Spielers: Geld, Schiffe, Handel, Kalender.
-// Die Welt (Städte, KI-Händler, Ereignisse) steht in wirtschaft.js.
+// Die Welt (Städte, KI-Händler, Ereignisse) steht in wirtschaft.js, Kontore und Betriebe in
+// betriebe.js, der automatische Handel in automatik.js.
 
 import { Welt } from "./wirtschaft.js";
 import { Navigation, weglaenge, punktAufWeg } from "./navigation.js";
+import { Ausbau } from "./betriebe.js";
+import * as automatik from "./automatik.js";
 
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 export class Spiel {
-  constructor(D, seed) {
+  // leer = true: ohne Einschwingen und ohne Startschiff, zum Laden eines Spielstands
+  constructor(D, seed, { leer = false } = {}) {
     this.D = D;
     this.welt = new Welt(D, seed);
     this.nav = new Navigation(D);
     this.anteil = 0; // Fortschritt im laufenden Tag (0..1), setzt die Zeitsteuerung
     // Einschwingen ohne Spieler, damit die Preise beim Start nicht mehr springen
-    for (let i = 0; i < D.p.WARMUP; i++) this.welt.naechsterTag();
+    if (!leer) for (let i = 0; i < D.p.WARMUP; i++) this.welt.naechsterTag();
     this.starttag = this.welt.tag;
     this.gulden = D.spiel.start.gulden;
     this.schiffe = [];
     this.namen = [...D.spiel.schiffsnamen];
     this.meldungen = [];
-    this.bilanz = { einkauf: 0, verkauf: 0, unterhalt: 0, schiffe: 0 };
-    this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
+    this.bilanz = { einkauf: 0, verkauf: 0, unterhalt: 0, schiffe: 0, betriebe: 0, betriebeKauf: 0, betriebeVerkauf: 0 };
+    this.ausbau = new Ausbau(this);
+    if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
   }
 
   // Spieltag ab Spielbeginn (0 = Starttag)
@@ -52,7 +57,8 @@ export class Spiel {
   neuesSchiff(stadt) {
     const name = this.namen.shift() ?? `${this.D.spiel.schiffstyp} ${this.schiffe.length + 1}`;
     // ort = Hafen, in dem das Schiff liegt (null auf See), fahrt = laufende Fahrt oder null
-    const schiff = { name, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {} };
+    // auto = automatischer Handel (automatik.js) oder null
+    const schiff = { name, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null };
     this.schiffe.push(schiff);
     return schiff;
   }
@@ -87,8 +93,8 @@ export class Spiel {
   }
 
   // Kauf mit Mengeneffekt: jede Einheit zum Preis beim dann aktuellen Lagerbestand.
-  // Mit ausfuehren = false nur Vorschau.
-  kaufen(schiff, g, wunsch, ausfuehren = true) {
+  // Mit ausfuehren = false nur Vorschau. preisgrenze: höchster Preis pro Stück (oder null).
+  kaufen(schiff, g, wunsch, ausfuehren = true, preisgrenze = null) {
     const stadt = schiff.ort;
     if (!this.imHafen(schiff) || !stadt.handelt(g)) return { menge: 0, betrag: 0 };
     const bestand = stadt.bestand[g];
@@ -97,7 +103,7 @@ export class Spiel {
     let betrag = 0;
     while (menge < grenze && bestand - menge >= 2) {
       const p = stadt.kaufpreis(g, bestand - menge);
-      if (betrag + p > this.gulden) break;
+      if (betrag + p > this.gulden || (preisgrenze !== null && p > preisgrenze)) break;
       betrag += p;
       menge++;
     }
@@ -112,28 +118,35 @@ export class Spiel {
     return { menge, betrag };
   }
 
-  verkaufen(schiff, g, wunsch, ausfuehren = true) {
+  // preisgrenze: niedrigster Preis pro Stück (oder null)
+  verkaufen(schiff, g, wunsch, ausfuehren = true, preisgrenze = null) {
     const stadt = schiff.ort;
     const posten = schiff.ladung[g];
     if (!this.imHafen(schiff) || !stadt.handelt(g) || !posten) return { menge: 0, betrag: 0, gewinn: 0 };
     const bestand = stadt.bestand[g];
-    const menge = Math.min(wunsch, posten.menge);
+    const hoechstens = Math.min(wunsch, posten.menge);
+    let menge = 0;
     let betrag = 0;
-    for (let i = 0; i < menge; i++) betrag += stadt.verkaufspreis(g, bestand + i);
+    for (; menge < hoechstens; menge++) {
+      const p = stadt.verkaufspreis(g, bestand + menge);
+      if (preisgrenze !== null && p < preisgrenze) break;
+      betrag += p;
+    }
     const gewinn = betrag - posten.einstand * menge;
     if (ausfuehren && menge > 0) {
       stadt.bestand[g] += menge;
       this.gulden += betrag;
       this.bilanz.verkauf += betrag;
       posten.menge -= menge;
-      if (posten.menge === 0) delete schiff.ladung[g];
+      if (posten.menge <= 1e-9) delete schiff.ladung[g];
     }
     return { menge, betrag, gewinn };
   }
 
   // Fahrt zu einer Stadt (ziel.stadt) oder zu einem Punkt auf dem See (ziel.punkt).
   // Geht auch auf See: Das Schiff wechselt dann den Kurs. Gibt einen Grund zurück, wenn es nicht geht.
-  segeln(schiff, ziel) {
+  // still = true: ohne Meldung (automatischer Handel meldet selbst)
+  segeln(schiff, ziel, { still = false } = {}) {
     const stadt = ziel.stadt ?? null;
     if (stadt && this.imHafen(schiff, stadt)) return { ok: false, grund: `${schiff.name} liegt schon in ${stadt.name}.` };
     if (stadt && stadt.gesperrt(this.welt.tag)) return { ok: false, grund: `Föhnsturm: ${stadt.name} kann nicht angelaufen werden.` };
@@ -147,7 +160,7 @@ export class Spiel {
     schiff.pos = von;
     schiff.ort = null;
     schiff.fahrt = { weg, start: this.zeit, ende: this.zeit + tage, ziel: stadt };
-    if (stadt) {
+    if (stadt && !still) {
       const ab = warImHafen ? `legt in ${warImHafen.name} ab` : "ändert den Kurs";
       this.melde(`${schiff.name} ${ab}, Ziel ${stadt.name} (Ankunft ${this.datumWelt(schiff.fahrt.ende)}).`);
     }
@@ -172,7 +185,8 @@ export class Spiel {
         s.ort = f.ziel;
         s.fahrt = null;
         ankuenfte.push(s);
-        if (s.ort) this.melde(`${s.name} ist in ${s.ort.name} angekommen.`, "ankunft");
+        if (s.auto) automatik.weiter(this, s);
+        else if (s.ort) this.melde(`${s.name} ist in ${s.ort.name} angekommen.`, "ankunft");
         else this.melde(`${s.name} hat den Zielpunkt vor ${this.naechsteStadt(s.pos).name} erreicht.`);
       }
     }
@@ -198,10 +212,11 @@ export class Spiel {
     return schiff;
   }
 
-  // Wert der Ladung zum Einstandspreis
+  // Wert der Ladung in Schiffen und Kontoren zum Einstandspreis
   warenwert() {
     let summe = 0;
     for (const s of this.schiffe) for (const p of Object.values(s.ladung)) summe += p.menge * p.einstand;
+    for (const k of Object.values(this.ausbau.kontore)) for (const p of Object.values(k.lager)) summe += p.menge * p.einstand;
     return summe;
   }
 
@@ -213,7 +228,10 @@ export class Spiel {
     const unterhalt = this.D.p.UPKEEP * this.schiffe.length;
     this.gulden -= unterhalt;
     this.bilanz.unterhalt += unterhalt;
+    this.ausbau.tag();
     const ankuenfte = this.pruefeAnkuenfte();
+    // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
+    for (const s of this.schiffe) if (s.auto && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
     return { ereignisse, ankuenfte };
   }
 }

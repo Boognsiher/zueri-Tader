@@ -1,25 +1,35 @@
 {
-  "_info": "ENTWURF der Gebäude für das Slot-System (siehe docs/stadtausbau.md). Nicht ausbalanciert und noch nicht von der Simulation gelesen. produziert_pro_stufe = Einheiten pro Tag, batches_pro_stufe = Werkstattkapazität in Batches pro Tag (Rezepte in recipes.json), unterhalt = Gulden pro Tag. Baukosten enthalten Waren, die zur Baustelle verschifft werden müssen.",
-  "gebaeude": [
-    {"id": "kornhof", "name": "Kornhof", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Korn": 6}, "baukosten": {"gulden": 800, "Holz": 15}, "unterhalt": 8},
-    {"id": "fischerei", "name": "Fischerei", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Fisch": 5}, "baukosten": {"gulden": 600, "Holz": 10}, "unterhalt": 6},
-    {"id": "saegewerk", "name": "Sägewerk", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Holz": 5}, "baukosten": {"gulden": 900, "Holz": 10, "Werkzeug": 3}, "unterhalt": 10},
-    {"id": "erzhandel", "name": "Erzhandel", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Eisenerz": 4}, "baukosten": {"gulden": 2000, "Holz": 20, "Werkzeug": 10}, "unterhalt": 20},
-    {"id": "rebberg", "name": "Rebberg", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Trauben": 8}, "baukosten": {"gulden": 1500, "Holz": 20, "Werkzeug": 5}, "unterhalt": 15},
-    {"id": "seidenhandel", "name": "Seidenhandel", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Rohseide": 8}, "baukosten": {"gulden": 1500, "Holz": 20, "Werkzeug": 5}, "unterhalt": 15},
-    {"id": "baumwollverlag", "name": "Baumwollverlag", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Baumwolle": 8}, "baukosten": {"gulden": 1500, "Holz": 20, "Werkzeug": 5}, "unterhalt": 15},
-    {"id": "sennerei", "name": "Sennerei", "kategorie": "Produktion", "stufen": 3, "produziert_pro_stufe": {"Käse": 4}, "baukosten": {"gulden": 1800, "Holz": 20, "Werkzeug": 5}, "unterhalt": 15},
-    {"id": "trotte", "name": "Trotte", "kategorie": "Werkstatt", "stufen": 3, "batches_pro_stufe": {"Wein": 5}, "baukosten": {"gulden": 3000, "Holz": 30, "Werkzeug": 10}, "unterhalt": 25},
-    {"id": "seidenweberei", "name": "Seidenweberei", "kategorie": "Werkstatt", "stufen": 3, "batches_pro_stufe": {"Seide": 4}, "baukosten": {"gulden": 3000, "Holz": 30, "Werkzeug": 10}, "unterhalt": 25},
-    {"id": "weberei", "name": "Weberei", "kategorie": "Werkstatt", "stufen": 3, "batches_pro_stufe": {"Tuch": 5}, "baukosten": {"gulden": 3000, "Holz": 30, "Werkzeug": 10}, "unterhalt": 25},
-    {"id": "schmiede", "name": "Schmiede", "kategorie": "Werkstatt", "stufen": 3, "batches_pro_stufe": {"Werkzeug": 3}, "baukosten": {"gulden": 3500, "Holz": 20, "Werkzeug": 5}, "unterhalt": 30},
-    {"id": "markt", "name": "Markt", "kategorie": "Versorgung", "stufen": 2, "wirkung": {"zufriedenheit": 4}, "baukosten": {"gulden": 1200, "Holz": 20}, "unterhalt": 10},
-    {"id": "lagerhaus", "name": "Lagerhaus", "kategorie": "Versorgung", "stufen": 3, "wirkung": {"lagerkapazitaet_prozent": 25}, "baukosten": {"gulden": 1500, "Holz": 30}, "unterhalt": 8},
-    {"id": "kirche", "name": "Kirche", "kategorie": "Versorgung", "stufen": 2, "wirkung": {"zufriedenheit": 6}, "baukosten": {"gulden": 2500, "Holz": 20, "Werkzeug": 5}, "unterhalt": 12},
-    {"id": "krankenhaus", "name": "Krankenhaus", "kategorie": "Versorgung", "stufen": 2, "wirkung": {"zufriedenheit": 3, "seuchenschutz": true}, "baukosten": {"gulden": 3000, "Holz": 25, "Werkzeug": 8}, "unterhalt": 25, "voraussetzung": {"mindestgroesse": "Stadt"}},
-    {"id": "kontor", "name": "Kontor", "kategorie": "Handel und Schifffahrt", "stufen": 3, "wirkung": {"handelsrabatt_prozent": 3}, "baukosten": {"gulden": 2500, "Holz": 20}, "unterhalt": 15},
-    {"id": "schiffswerft", "name": "Schiffswerft", "kategorie": "Handel und Schifffahrt", "stufen": 3, "wirkung": {"schiffbau": true}, "baukosten": {"gulden": 5000, "Holz": 60, "Werkzeug": 15}, "unterhalt": 40, "voraussetzung": {"mindestgroesse": "Stadt"}},
-    {"id": "befestigung", "name": "Befestigung", "kategorie": "Verteidigung und Politik", "stufen": 3, "wirkung": {"verteidigung": 10}, "baukosten": {"gulden": 4000, "Holz": 40, "Werkzeug": 15}, "unterhalt": 35},
-    {"id": "botschaft", "name": "Botschaft", "kategorie": "Verteidigung und Politik", "stufen": 2, "wirkung": {"ruf_pro_monat": 1}, "baukosten": {"gulden": 6000, "Holz": 30, "Werkzeug": 10}, "unterhalt": 50, "voraussetzung": {"mindestgroesse": "Stadt", "ruf_min": 20}}
+  "_info": "Betriebe und Kontore des Spielers (siehe docs/stadtausbau.md). Jede Stadt hat von Anfang an Betriebe in Besitz der Stadt: pro Ware aus produktion/werkstaetten (cities.json) bis zu vorhandene_betriebe_pro_ware Stück, sofern die Menge für einen ganzen Betrieb reicht. Ihre Leistung ist Teil der Stadtproduktion. Der Spieler kann sie kaufen oder auf freien Bauplätzen neue bauen. leistung = Einheiten pro Tag (produktion) bzw. Batches pro Tag (werkstatt, Rezepte in recipes.json). Kaufpreis (Marktwert) = erwarteter Tagesgewinn zu den heutigen Mittelpreisen der Stadt x amortisation_tage, mindestens mindestwert. Betriebe handeln mit ihrer Stadt zum Mittelpreis, ohne Handelsspanne. Neubau: gleicher Wert, bezahlt in Gulden plus baumaterial, das vor Ort im Kontor oder im Schiff liegen muss. unterhalt in Gulden pro Tag. verkaufserloes_anteil = Anteil des Werts beim Verkauf an die Stadt.",
+  "amortisation_tage": 150,
+  "verkaufserloes_anteil": 0.7,
+  "mindestwert": 2000,
+  "vorhandene_betriebe_pro_ware": 1,
+  "bauplaetze": [
+    {"ab_einwohner": 0, "plaetze": 2},
+    {"ab_einwohner": 1000, "plaetze": 3},
+    {"ab_einwohner": 1500, "plaetze": 4}
+  ],
+  "kontor": {"name": "Kontor", "baukosten": {"gulden": 3000, "Holz": 20}, "unterhalt": 10, "lager": 400},
+  "betriebe": [
+    {"id": "kornhof", "name": "Kornhof", "art": "produktion", "ware": "Korn", "leistung": 12, "unterhalt": 25, "baumaterial": {"Holz": 20, "Werkzeug": 4}},
+    {"id": "fischerei", "name": "Fischerei", "art": "produktion", "ware": "Fisch", "leistung": 8, "unterhalt": 25, "baumaterial": {"Holz": 20, "Werkzeug": 4}},
+    {"id": "saegewerk", "name": "Sägewerk", "art": "produktion", "ware": "Holz", "leistung": 8, "unterhalt": 25, "baumaterial": {"Holz": 15, "Werkzeug": 6}},
+    {"id": "rebberg", "name": "Rebberg", "art": "produktion", "ware": "Trauben", "leistung": 10, "unterhalt": 30, "baumaterial": {"Holz": 20, "Werkzeug": 4}},
+    {"id": "seidenhandel", "name": "Seidenhandel", "art": "produktion", "ware": "Rohseide", "leistung": 8, "unterhalt": 35, "baumaterial": {"Holz": 20, "Werkzeug": 4}},
+    {"id": "baumwollverlag", "name": "Baumwollverlag", "art": "produktion", "ware": "Baumwolle", "leistung": 8, "unterhalt": 30, "baumaterial": {"Holz": 20, "Werkzeug": 4}},
+    {"id": "sennerei", "name": "Sennerei", "art": "produktion", "ware": "Käse", "leistung": 4, "unterhalt": 20, "baumaterial": {"Holz": 20, "Werkzeug": 4}},
+    {"id": "erzhandel", "name": "Erzhandel", "art": "produktion", "ware": "Eisenerz", "leistung": 5, "unterhalt": 25, "baumaterial": {"Holz": 20, "Werkzeug": 4}},
+    {"id": "trotte", "name": "Trotte", "art": "werkstatt", "ware": "Wein", "leistung": 6, "unterhalt": 10, "baumaterial": {"Holz": 30, "Werkzeug": 6}},
+    {"id": "seidenweberei", "name": "Seidenweberei", "art": "werkstatt", "ware": "Seide", "leistung": 5, "unterhalt": 10, "baumaterial": {"Holz": 30, "Werkzeug": 6}},
+    {"id": "weberei", "name": "Weberei", "art": "werkstatt", "ware": "Tuch", "leistung": 5, "unterhalt": 10, "baumaterial": {"Holz": 30, "Werkzeug": 6}},
+    {"id": "schmiede", "name": "Schmiede", "art": "werkstatt", "ware": "Werkzeug", "leistung": 3, "unterhalt": 10, "baumaterial": {"Holz": 20, "Werkzeug": 6}}
+  ],
+  "geplant": [
+    {"id": "markt", "name": "Markt", "kategorie": "Versorgung", "wirkung": {"zufriedenheit": 4}},
+    {"id": "kirche", "name": "Kirche", "kategorie": "Versorgung", "wirkung": {"zufriedenheit": 6}},
+    {"id": "spital", "name": "Spital", "kategorie": "Versorgung", "wirkung": {"zufriedenheit": 3, "seuchenschutz": true}},
+    {"id": "schiffswerft", "name": "Schiffswerft", "kategorie": "Handel und Schifffahrt", "wirkung": {"schiffbau": true}},
+    {"id": "befestigung", "name": "Befestigung", "kategorie": "Verteidigung und Politik", "wirkung": {"verteidigung": 10}},
+    {"id": "gesandtschaft", "name": "Gesandtschaft", "kategorie": "Verteidigung und Politik", "wirkung": {"ruf_pro_monat": 1}}
   ]
 }

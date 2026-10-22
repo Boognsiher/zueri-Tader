@@ -49,8 +49,9 @@ export class Stadt {
     this.name = cfg.name;
     this.einwohner = cfg.einwohner;
     this.pos = cfg.pos;
-    this.prod = cfg.prod;
-    this.werk = cfg.werk;
+    // Kopien: Betriebe des Spielers verschieben Leistung zwischen Stadt und Spieler (betriebe.js)
+    this.prod = { ...cfg.prod };
+    this.werk = { ...cfg.werk };
     this.unterwegs = {}; // Ladung der KI-Händler, die hierher unterwegs ist
     this.ballast = 0; // KI-Schiffe, die leer hierher unterwegs sind
     this.prodFaktor = {}; // Ware -> [Faktor, bis Tag] (Ereignisse)

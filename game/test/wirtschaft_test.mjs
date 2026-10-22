@@ -5,6 +5,7 @@
 //    tools/sim/wirtschaft_sim.py. So fällt auf, wenn Spiel und Simulation auseinanderlaufen.
 // 2. Handel des Spielers: kein Gewinn durch Hin-und-her-Handeln, Laderaum und Geld begrenzen.
 // 3. Karte: Jeder Seeweg führt über Wasser.
+// 4.-6. Betriebe und Kontor, automatischer Handel, Speichern und Laden.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -14,6 +15,8 @@ import path from "node:path";
 import { ladeDaten } from "../src/daten.js";
 import { Welt, neueStatistik, weg } from "../src/wirtschaft.js";
 import { Spiel } from "../src/spiel.js";
+import { starteRoute, starteFrei, beende } from "../src/automatik.js";
+import { speichere, lade, pruefe as pruefeStand } from "../src/speicher.js";
 
 const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..", "data");
 const D = await ladeDaten(async (datei) => JSON.parse(await readFile(path.join(DATA, datei), "utf-8")));
@@ -170,6 +173,125 @@ console.log("\nKarte");
     }
   }
   pruefe("Alle Seewege führen über Wasser und sind in beide Richtungen gleich lang", ueberLand === 0);
+}
+
+// --- 4. Betriebe und Kontor -------------------------------------------------
+console.log("\nBetriebe und Kontor");
+{
+  const spiel = new Spiel(D, 11);
+  const a = spiel.ausbau;
+  const schiff = spiel.schiffe[0];
+  const zuerich = spiel.welt.stadt["Zürich"];
+  spiel.gulden = 200000;
+  pruefe(`Jede Stadt hat vorhandene Betriebe (${a.betriebe.length} insgesamt)`, spiel.welt.staedte.every((s) => a.betriebeIn(s).length > 0));
+
+  const kornhof = a.betriebeIn(zuerich).find((b) => b.typ === "kornhof");
+  const kornVorher = zuerich.prod.Korn;
+  pruefe("Kornhof in Zürich kaufen", a.kaufen(kornhof));
+  pruefe(`Stadtproduktion Korn sinkt um die Leistung (${kornVorher} -> ${zuerich.prod.Korn})`, zuerich.prod.Korn === kornVorher - a.typ(kornhof).leistung);
+  const geld = spiel.gulden;
+  const lager = zuerich.bestand.Korn;
+  spiel.tagVoran();
+  pruefe(`Der Betrieb liefert an den Markt und bringt Geld (${kornhof.gestern.kasse.toFixed(0)} Gulden am ersten Tag)`, kornhof.gestern.kasse > 0 && spiel.gulden > geld - 100);
+
+  // Kontor: Holz mitbringen, bauen, Erzeugnisse einlagern, umlagern
+  spiel.kaufen(schiff, "Holz", 40);
+  pruefe("Kontor in Zürich bauen (Holz aus dem Schiff)", a.kontorBauen(zuerich));
+  pruefe("Betrieb liefert ins Kontor", a.setzeZiel(kornhof, "kontor"));
+  spiel.tagVoran();
+  const imKontor = a.kontor(zuerich).lager.Korn?.menge ?? 0;
+  pruefe(`Korn liegt im Kontor (${imKontor})`, imKontor > 0);
+  const umgelagert = a.umlagern(schiff, "Korn", 5, "insSchiff");
+  pruefe("Kontor -> Schiff umlagern", umgelagert === Math.min(5, Math.floor(imKontor)) && schiff.ladung.Korn?.menge >= umgelagert);
+
+  // Neubau: Bauplatz, Rohstoff der Stadt, Material
+  pruefe("Kein Neubau eines Sägewerks in Zürich (kein Holz dort)", a.pruefeBau(zuerich, "saegewerk") !== null);
+  const kostenTrotte = a.baukosten("trotte", zuerich);
+  spiel.kaufen(schiff, "Holz", 30);
+  pruefe(`Werkzeug fehlt für die Trotte: "${a.pruefeBau(zuerich, "trotte")}"`, String(a.pruefeBau(zuerich, "trotte")).includes("Werkzeug"));
+  spiel.ausbau.kontore["Zürich"].lager.Werkzeug = { menge: kostenTrotte.material.Werkzeug, einstand: 100 };
+  const neu = a.bauen(zuerich, "trotte");
+  pruefe("Trotte neu bauen mit Material aus Kontor und Schiff", !!neu && a.freiePlaetze(zuerich) === a.bauplaetze(zuerich) - 1);
+
+  pruefe("Kornhof an die Stadt verkaufen", a.verkaufen(kornhof));
+  pruefe("Stadtproduktion Korn wieder wie vorher", zuerich.prod.Korn === kornVorher);
+  pruefe("Unterhalt des Kontors wird bezahlt", (() => { const g = spiel.gulden; spiel.tagVoran(); return spiel.gulden < g + 1e6; })());
+
+  // Die Betriebe des Spielers lassen die Wirtschaft stabil: alle kaufen und ein Jahr laufen lassen
+  const voll = new Spiel(D, 5);
+  voll.gulden = 1e9;
+  for (const s of voll.welt.staedte) voll.neuesSchiff(s);
+  for (const b of voll.ausbau.betriebe) voll.ausbau.kaufen(b);
+  for (let t = 0; t < 360; t++) voll.tagVoran();
+  const zufr = voll.welt.staedte.reduce((x, s) => x + s.zufriedenheit, 0) / voll.welt.staedte.length;
+  const prod = voll.ausbau.betriebe.filter((b) => voll.ausbau.typ(b).art === "produktion");
+  const amort = prod.map((b) => b.kaufpreis / (b.summe / 360)).sort((x, y) => x - y);
+  const median = amort[Math.floor(amort.length / 2)];
+  pruefe(`Alle Betriebe in Spielerhand: Zufriedenheit bleibt ${zufr.toFixed(0)} (Ziel >= 55)`, zufr >= 55);
+  pruefe(`Rohstoffbetriebe amortisieren sich im Median in ${median.toFixed(0)} Tagen (Ziel 100-300)`, median >= 100 && median <= 300);
+}
+
+// --- 5. Automatischer Handel --------------------------------------------------
+console.log("\nAutomatischer Handel");
+{
+  const spiel = new Spiel(D, 21);
+  const schiff = spiel.schiffe[0];
+  pruefe("Route mit nur einem Hafen wird abgelehnt", starteRoute(spiel, schiff, [{ stadt: "Zürich", auftraege: [] }]) !== null);
+  const fehler = starteRoute(spiel, schiff, [
+    { stadt: "Zürich", auftraege: [{ art: "kaufen", ware: "Seide", menge: 60, preis: null }] },
+    { stadt: "Lachen", auftraege: [{ art: "verkaufen", ware: "Seide", menge: null, preis: null }] },
+  ]);
+  pruefe("Route Zürich - Lachen startet", fehler === null && !!schiff.fahrt);
+  let besuche = 0;
+  for (let t = 0; t < 120; t++) {
+    spiel.tagVoran();
+    besuche = spiel.meldungen.filter((m) => m.text.includes("(Route)")).length;
+  }
+  pruefe(`Das Schiff fährt die Route selbständig ab (${besuche} Halte in 120 Tagen)`, besuche >= 8);
+  beende(spiel, schiff);
+  pruefe("Route beenden", schiff.auto === null);
+
+  const frei = new Spiel(D, 22);
+  const s2 = frei.schiffe[0];
+  starteFrei(frei, s2, 8000);
+  const start = frei.gulden;
+  for (let t = 0; t < 360; t++) frei.tagVoran();
+  const geschaefte = frei.meldungen.filter((m) => m.text.includes("(frei)")).length;
+  const vermoegen = frei.gulden + frei.warenwert();
+  pruefe(`Freier Handel macht in einem Jahr Gewinn (${(vermoegen - start).toFixed(0)} Gulden, ${geschaefte}+ Meldungen)`, vermoegen > start);
+  pruefe("Freier Handel hält das Einsatzlimit ein", Object.values(s2.ladung).every((p) => p.menge * p.einstand <= 8000 + 1));
+}
+
+// --- 6. Speichern und Laden ---------------------------------------------------
+console.log("\nSpeichern und Laden");
+{
+  const spiel = new Spiel(D, 31);
+  spiel.gulden = 80000;
+  const s = spiel.schiffe[0];
+  spiel.ausbau.kaufen(spiel.ausbau.betriebeIn(s.ort)[0]);
+  starteRoute(spiel, s, [
+    { stadt: "Zürich", auftraege: [{ art: "kaufen", ware: "Rohseide", menge: 80, preis: 60 }] },
+    { stadt: "Wädenswil", auftraege: [{ art: "verkaufen", ware: "Rohseide", menge: null, preis: null }] },
+  ]);
+  const zweites = spiel.neuesSchiff(spiel.welt.stadt["Meilen"]);
+  spiel.segeln(zweites, { punkt: [50, 30] });
+  for (let t = 0; t < 40; t++) spiel.tagVoran();
+  spiel.vorruecken(0.37);
+
+  const text = JSON.stringify(speichere(spiel));
+  const geladen = lade(D, JSON.parse(text));
+  pruefe(`Spielstand als JSON (${(text.length / 1024).toFixed(0)} KB) speichern und laden`, geladen.datum() === spiel.datum());
+  pruefe("Gespeicherter Stand stimmt mit dem geladenen überein", JSON.stringify(speichere(geladen)).replace(/"gespeichert":"[^"]*"/, "") === text.replace(/"gespeichert":"[^"]*"/, ""));
+  for (let t = 0; t < 120; t++) {
+    spiel.tagVoran();
+    geladen.tagVoran();
+  }
+  const gleich =
+    spiel.gulden === geladen.gulden &&
+    spiel.welt.staedte.every((st, i) => JSON.stringify(st.bestand) === JSON.stringify(geladen.welt.staedte[i].bestand)) &&
+    spiel.welt.haendler.every((h, i) => h.geld === geladen.welt.haendler[i].geld);
+  pruefe("Nach 120 weiteren Tagen sind Original und geladenes Spiel identisch", gleich);
+  pruefe("Fremde Datei wird abgelehnt", pruefeStand(D, { foo: 1 }) !== null);
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");
