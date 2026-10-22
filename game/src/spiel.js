@@ -115,6 +115,15 @@ export class Spiel {
     return beste.stadt;
   }
 
+  // Preise für den Spieler in einer Stadt (Handelsspanne mit Rabatt durch eine Markthalle)
+  kaufpreis(stadt, g) {
+    return this.ausbau.kaufpreis(stadt, g);
+  }
+
+  verkaufspreis(stadt, g) {
+    return this.ausbau.verkaufspreis(stadt, g);
+  }
+
   // Kauf mit Mengeneffekt: jede Einheit zum Preis beim dann aktuellen Lagerbestand.
   // Mit ausfuehren = false nur Vorschau. preisgrenze: höchster Preis pro Stück (oder null).
   kaufen(schiff, g, wunsch, ausfuehren = true, preisgrenze = null) {
@@ -125,7 +134,7 @@ export class Spiel {
     let menge = 0;
     let betrag = 0;
     while (menge < grenze && bestand - menge >= 2) {
-      const p = stadt.kaufpreis(g, bestand - menge);
+      const p = this.ausbau.kaufpreis(stadt, g, bestand - menge);
       if (betrag + p > this.gulden || (preisgrenze !== null && p > preisgrenze)) break;
       betrag += p;
       menge++;
@@ -151,7 +160,7 @@ export class Spiel {
     let menge = 0;
     let betrag = 0;
     for (; menge < hoechstens; menge++) {
-      const p = stadt.verkaufspreis(g, bestand + menge);
+      const p = this.ausbau.verkaufspreis(stadt, g, bestand + menge);
       if (preisgrenze !== null && p < preisgrenze) break;
       betrag += p;
     }

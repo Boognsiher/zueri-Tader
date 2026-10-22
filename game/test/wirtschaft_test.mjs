@@ -5,7 +5,8 @@
 //    tools/sim/wirtschaft_sim.py. So fällt auf, wenn Spiel und Simulation auseinanderlaufen.
 // 2. Handel des Spielers: kein Gewinn durch Hin-und-her-Handeln, Laderaum und Geld begrenzen.
 // 3. Karte: Jeder Seeweg führt über Wasser.
-// 4.-8. Betriebe und Kontor, automatischer Handel, Speichern und Laden, Bootshandel, Eigenversorgung.
+// 4.-9. Betriebe und Kontor, automatischer Handel, Speichern und Laden, Bootshandel, Eigenversorgung,
+//      Stufen, Stadtgebäude und Kontorhandel.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -416,6 +417,84 @@ console.log("\nEigenversorgung");
   }
   pruefe(`Werkstatt mit Marktversorgung trägt sich kaum (${werkstattMarkt.toFixed(0)} Gulden/Tag)`, werkstattMarkt < 60);
   pruefe(`Trotte Wädenswil mit Kontor und Route: ${kette.toFixed(0)} Gulden/Tag, Markt + freier Handel: ${markt.toFixed(0)} (Ziel: Kette mindestens 15 % besser)`, kette >= markt * 1.15);
+}
+
+// --- 9. Stufen, Stadtgebäude, Kontorhandel ---------------------------------------
+console.log("\nStufen, Stadtgebäude, Kontorhandel");
+{
+  const spiel = new Spiel(D, 71);
+  const a = spiel.ausbau;
+  const schiff = spiel.schiffe[0];
+  const zuerich = spiel.welt.stadt["Zürich"];
+  spiel.gulden = 500000;
+  // Baumaterial reichlich ins Kontor
+  spiel.kaufen(schiff, "Holz", 40);
+  a.kontorBauen(zuerich);
+  const k = a.kontor(zuerich);
+  k.lager.Holz = { menge: 300, einstand: 30 };
+  k.lager.Werkzeug = { menge: 100, einstand: 120 };
+
+  // Betrieb ausbauen: doppelte Leistung, Stadtproduktion unverändert
+  const kornhof = a.betriebeIn(zuerich).find((b) => b.typ === "kornhof");
+  a.kaufen(kornhof);
+  const kornStadt = zuerich.prod.Korn;
+  pruefe("Kornhof auf Stufe 2 ausbauen", a.betriebAusbauen(kornhof) && kornhof.stufe === 2);
+  pruefe(`Leistung verdoppelt (${a.leistung(kornhof)} Korn pro Tag)`, a.leistung(kornhof) === 2 * a.typ(kornhof).leistung);
+  pruefe("Ausbau verändert die Stadtproduktion nicht", zuerich.prod.Korn === kornStadt);
+  a.betriebAusbauen(kornhof);
+  pruefe("Höchste Stufe ist 3", kornhof.stufe === 3 && a.pruefeBetriebsausbau(kornhof) !== null);
+  a.verkaufen(kornhof);
+  pruefe("Verkauf an die Stadt: Grundleistung plus zwei Ausbaustufen produziert die Stadt", zuerich.prod.Korn === kornStadt + 3 * a.typ(kornhof).leistung);
+
+  // Kontor ausbauen
+  const kapazitaet = a.lagerKapazitaet(k);
+  pruefe("Kontor auf Stufe 2 ausbauen", a.kontorAusbauen(zuerich) && a.lagerKapazitaet(k) === 2 * kapazitaet);
+
+  // Markthalle senkt die Spanne
+  const vorher = spiel.kaufpreis(zuerich, "Korn") - spiel.verkaufspreis(zuerich, "Korn");
+  pruefe("Markthalle bauen", a.baueGebaeude(zuerich, "markthalle"));
+  const nachher = spiel.kaufpreis(zuerich, "Korn") - spiel.verkaufspreis(zuerich, "Korn");
+  pruefe(`Spanne für Korn sinkt (${vorher.toFixed(2)} -> ${nachher.toFixed(2)} Gulden)`, nachher < vorher);
+  a.baueGebaeude(zuerich, "markthalle");
+  a.baueGebaeude(zuerich, "markthalle");
+  pruefe(`Spanne nie unter dem Minimum (${(a.spanne(zuerich) * 100).toFixed(0)} %)`, a.spanne(zuerich) >= D.bau.spanne_min - 1e-12);
+  const g0 = spiel.gulden;
+  const r1 = spiel.kaufen(schiff, "Korn", 20);
+  spiel.verkaufen(schiff, "Korn", 20);
+  pruefe("Auch mit Markthalle bringt Hin-und-her-Handeln Verlust", spiel.gulden < g0 && r1.menge === 20);
+
+  // Kirche: mehr Bauplätze
+  const plaetze = a.bauplaetze(zuerich);
+  const frei = a.freiePlaetze(zuerich);
+  a.baueGebaeude(zuerich, "kirche");
+  pruefe(`Kirche: +1 Bauplatz (${plaetze} -> ${a.bauplaetze(zuerich)}), der eigene Platz gleicht sich aus`, a.bauplaetze(zuerich) === plaetze + 1 && a.freiePlaetze(zuerich) === frei);
+  a.baueGebaeude(zuerich, "kirche");
+  pruefe("Kirche Stufe 2: ein freier Platz mehr als vorher", a.freiePlaetze(zuerich) === frei + 1);
+
+  // Zunfthaus senkt den Unterhalt der Betriebe
+  const trotte = a.betriebeIn(zuerich).find((b) => b.typ === "trotte");
+  a.kaufen(trotte);
+  const u0 = a.unterhalt(trotte);
+  a.baueGebaeude(zuerich, "zunfthaus");
+  pruefe(`Zunfthaus: Unterhalt der Trotte sinkt (${u0} -> ${a.unterhalt(trotte)})`, a.unterhalt(trotte) < u0);
+
+  // Kontor handelt: von Hand und nach Regeln
+  const kauf = a.kontorKaufen(zuerich, "Trauben", 50);
+  pruefe(`Kontor kauft von Hand (${kauf.menge} Trauben ohne Schiff)`, kauf.menge === 50 && k.lager.Trauben.menge === 50);
+  a.setzeRegel(zuerich, "Rohseide", { kaufenBis: 100, kaufPreis: 1000 });
+  a.setzeRegel(zuerich, "Trauben", { verkaufenUeber: 10, verkaufPreis: 1 });
+  for (let t = 0; t < 5; t++) spiel.tagVoran();
+  pruefe(`Regel kaufen bis 100: ${Math.round(k.lager.Rohseide?.menge ?? 0)} Rohseide im Kontor`, Math.round(k.lager.Rohseide?.menge ?? 0) === 100);
+  pruefe(`Regel verkaufen über 10: ${Math.round(k.lager.Trauben?.menge ?? 0)} Trauben übrig`, Math.round(k.lager.Trauben?.menge ?? 0) === 10);
+  a.setzeRegel(zuerich, "Rohseide", { kaufenBis: 300, kaufPreis: 1 });
+  spiel.tagVoran();
+  pruefe("Preisgrenze verhindert teure Käufe", Math.round(k.lager.Rohseide.menge) === 100);
+
+  // Speichern und Laden mit Stufen und Gebäuden
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Stufen, Stadtgebäude und Kontorregeln überstehen Speichern und Laden",
+    geladen.ausbau.gebaeudeStufe(zuerich, "markthalle") === 3 && geladen.ausbau.kontor(zuerich).stufe === 2 &&
+    geladen.ausbau.regel(zuerich, "Rohseide").kaufenBis === 300 && geladen.welt.stadt["Zürich"].prod.Korn === zuerich.prod.Korn);
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");
