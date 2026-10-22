@@ -199,7 +199,14 @@ export class Karte {
       punkt.setAttribute("cy", y.toFixed(2));
     });
 
-    // Schiffe des Spielers
+    // Schiffe des Spielers. Symbole von Schiffen, die es nicht mehr gibt (zur Flotte
+    // zusammengelegt, verkauft, Flotte aufgelöst), werden entfernt.
+    for (const [schiff, boot] of this.spielerBoote) {
+      if (!this.spiel.schiffe.includes(schiff)) {
+        boot.remove();
+        this.spielerBoote.delete(schiff);
+      }
+    }
     const imHafen = new Map();
     for (const schiff of this.spiel.schiffe) {
       let boot = this.spielerBoote.get(schiff);
