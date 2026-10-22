@@ -8,7 +8,7 @@ Preise folgen Angebot und Nachfrage, KI-Haendler (greedy) handeln zwischen den
 Staedten. Am Ende gibt es einen Bericht, ob die Wirtschaft stabil und
 spielbar ist.
 
-Alle Zahlen (Waren, Rezepte, Staedte, Parameter) stehen in data/*.json.
+Alle Zahlen (Waren, Rezepte, Staedte, Ereignisse, Parameter) stehen in data/*.json.
 Balance-Aenderungen sind reine Datenaenderungen, am Code muss nichts angefasst werden.
 
 Aufruf (aus dem Repo-Hauptordner):
@@ -48,6 +48,7 @@ CONSUMPTION = {}  # Ware -> Verbrauch pro 1000 Einwohner und Tag
 BASIC = []        # Grundbedarf (Zufriedenheit)
 COMFORT = []      # gehobener Bedarf (Zufriedenheit)
 CITIES = []       # Staedte (intern: name, pop, pos, prod, work)
+EVENTS = []       # Zufallsereignisse (events.json)
 # Parameter (SPREAD, PRICE_MIN, ...) werden ebenfalls aus params.json als
 # Modulvariablen gesetzt.
 
@@ -59,7 +60,7 @@ def _read(data_dir, name):
 
 def load_data(data_dir=DEFAULT_DATA_DIR):
     """Liest data/*.json in die Modulvariablen."""
-    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES
+    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS
     GOODS = {n: v["basispreis"] for n, v in _read(data_dir, "goods.json")["waren"].items()}
     RECIPES = _read(data_dir, "recipes.json")["rezepte"]
     c = _read(data_dir, "consumption.json")
@@ -69,6 +70,7 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
     CITIES = [{"name": s["name"], "pop": s["einwohner"], "pos": tuple(s["position"]),
                "prod": s["produktion"], "work": s["werkstaetten"]}
               for s in _read(data_dir, "cities.json")["staedte"]]
+    EVENTS = _read(data_dir, "events.json")["ereignisse"]
     for name, p in _read(data_dir, "params.json")["parameter"].items():
         globals()[name] = p["wert"]
 
@@ -321,20 +323,20 @@ class Stats:
 
 
 def spawn_event(city, day, rng, stats):
-    kind = rng.choice(["Missernte", "Seuche", "Fest", "Blockade"])
-    stats.events[kind] += 1
-    if kind == "Missernte":
-        for g in ("Nahrung", "Zuckerrohr", "Tabak", "Baumwolle"):
+    ev = rng.choice(EVENTS)
+    stats.events[ev["name"]] += 1
+    until = day + ev["dauer"]
+    if ev["art"] == "produktion":
+        for g in ev["waren"]:
             if g in city.prod:
-                city.prod_mult[g] = (0.3, day + 20)
-    elif kind == "Seuche":
-        for g in ("Nahrung", "Fisch"):
-            city.cons_mult[g] = (1.4, day + 25)
-    elif kind == "Fest":
-        for g in ("Rum", "Wein", "Zigarren"):
-            city.cons_mult[g] = (2.5, day + 12)
+                city.prod_mult[g] = (ev["faktor"], until)
+    elif ev["art"] == "verbrauch":
+        for g in ev["waren"]:
+            city.cons_mult[g] = (ev["faktor"], until)
+    elif ev["art"] == "sperre":
+        city.blockade_until = until
     else:
-        city.blockade_until = day + 15
+        raise ValueError(f"Unbekannte Ereignisart: {ev['art']}")
 
 
 def record(day, cities, k, stats, writer):
