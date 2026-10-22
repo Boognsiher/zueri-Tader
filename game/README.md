@@ -14,13 +14,13 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - Seekarte des Zürichsees mit acht Seegemeinden von Zürich bis Schmerikon, Durchfahrt am Seedamm
 - Marktübersicht jeder Stadt in der Seitenleiste: Lager, Kauf- und Verkaufspreis, bestes Gebot in einer anderen Stadt. Grosse Mengen verschieben den Preis (Mengeneffekt).
 - **Steuerung mit der Maus:** Klick auf den See, und das gewählte Schiff segelt dorthin (auch Kurswechsel unterwegs). Klick auf eine Stadt, und es legt dort an. Der Weg führt automatisch über Wasser, zum Obersee durch den Seedamm.
-- **Schiff abwählen** (nochmals anklicken, Esc oder Knopf «Abwählen»): Ein Klick auf eine Stadt öffnet dann das Stadtfenster mit Preisen, Betrieben und Kontor, ohne dass ein Schiff losfährt. Liegt ein eigenes Schiff dort, lässt sich von hier aus mit ihm handeln.
+- **Schiff abwählen** (nochmals anklicken, Esc oder Knopf «Abwählen»): Ein Klick auf eine Stadt hebt sie dann nur hervor und zeigt sie in der Marktübersicht, ohne dass ein Schiff losfährt. Der Knopf «Stadtfenster öffnen» zeigt Kontor, Betriebe und Werft. Liegt ein eigenes Schiff dort, lässt sich von hier aus mit ihm handeln.
 - **Handelsfenster:** öffnet sich bei der Ankunft im Hafen (oder per Klick auf die Stadt, in der das Schiff liegt) und hält die Zeit an. Darin auch die Option, direkt zu einem anderen Hafen zu segeln, und der Schiffskauf.
-- Eigene Schiffe (Nauen): Laderaum 120, Unterhalt pro Tag, weitere Schiffe kaufbar
-- **Betriebe:** in jeder Stadt vorhandene Betriebe kaufen (wie Werkstätten in Bannerlord) oder auf freien Bauplätzen neue bauen. Sie arbeiten täglich, Gewinn oder Verlust geht an dich. Erzeugnisse wahlweise an den Markt oder ins Kontor.
+- **Schiffe:** Weidling (40 Laderaum, schnell), Nauen (120), Ledischiff (250, langsamer). Neu in den Werften von Zürich, Wädenswil und Rapperswil, gebraucht als zufällige Angebote in irgendeiner Stadt, Verkauf zu 50 % des Neupreises (Reiter «Werft»)
+- **Betriebe:** in jeder Stadt vorhandene Betriebe kaufen (wie Werkstätten in Bannerlord) oder auf freien Bauplätzen neue bauen. Sie arbeiten täglich, Gewinn oder Verlust geht an dich. Versorgung über den Markt (mit Handelsspanne) oder über das Kontor (ohne Spanne, Werkstätten brauchen nur 70 % der Zutaten): Eigene Ketten lohnen sich.
 - **Kontor:** Lager in einer Stadt, Waren zwischen Schiff und Kontor umlagern oder direkt verkaufen
-- **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht
-- **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jeden Monat, Export und Import als Datei, «Weiterspielen» beim Start
+- **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung). Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf.
+- **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
 - 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
 - Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft
@@ -40,6 +40,7 @@ Noch nicht dabei: Spielziel, Gebäudestufen und Versorgungsgebäude, Diplomatie,
 | `src/automatik.js` | automatischer Handel: Handelsroute und freier Handel |
 | `src/speicher.js` | Spielstand speichern und laden |
 | `src/routenfenster.js` | Fenster zum Einrichten der Automatik |
+| `src/werft.js` | Bootshandel: neue und gebrauchte Schiffe, Verkauf |
 | `src/karte.js` | Seekarte als SVG |
 | `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Meldungen |
 | `src/main.js` | Einstieg, Zeitsteuerung, Menü Spielstand |
@@ -50,7 +51,7 @@ Reines JavaScript (ES-Module), ohne Build-Schritt und ohne Pakete. Wirtschaft un
 
 ## Regeln für Änderungen
 
-- Zahlen gehören nach `data/`. Startwerte und Tempo der Demo stehen in `data/spiel.json`, die Karte in `data/karte.json`.
+- Zahlen gehören nach `data/`. Startwerte und Tempo der Demo stehen in `data/spiel.json`, die Karte in `data/karte.json`, Schiffstypen und Bootshandel in `data/schiffe.json`.
 - Die Schiffe des Spielers fahren stufenlos und frei, die KI-Händler in ganzen Tagen auf festen Wegen wie in der Simulation.
 - `src/wirtschaft.js` und `tools/sim/wirtschaft_sim.py` müssen dieselbe Logik haben. Wer eine Seite ändert, ändert die andere mit und lässt beide Tests laufen. Der Spieltest prüft dieselben Balance-Checks wie die Simulation.
 

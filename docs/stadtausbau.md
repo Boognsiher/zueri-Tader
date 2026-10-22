@@ -10,7 +10,8 @@ Angelehnt an die Werkstätten in Mount & Blade: Bannerlord:
 - **Kaufen und verkaufen:** Der Spieler kauft einen Betrieb zum Marktwert, wenn eines seiner Schiffe im Hafen liegt. Dessen Leistung geht von der Stadt auf ihn über. Der Betrieb kauft Zutaten am Markt der Stadt (oder aus dem Kontor) und verkauft die Erzeugnisse dort (oder liefert ins Kontor). Gewinn oder Verlust geht an den Spieler. Zurückverkauft wird für 70 % des Marktwerts.
 - **Neubau:** Wenige Bauplätze pro Stadt (2-4 nach Einwohnern). Neue Betriebe erhöhen das Angebot. Rohstoffbetriebe nur, wo die Stadt den Rohstoff hat. Baumaterial (Holz, Werkzeug) muss im Kontor oder in einem Schiff vor Ort liegen.
 - **Kontor:** Lager mit 400 Einheiten pro Stadt. Für das Einlagern von Erzeugnissen, für Werkstätten mit eigenen Zutaten und für Handelsrouten (laden und entladen).
-- **Zahlen:** `data/buildings.json`. Der Kaufpreis ist der erwartete Tagesgewinn zu den heutigen Preisen der Stadt mal `amortisation_tage` (150). Betriebe handeln zum Mittelpreis ohne Handelsspanne.
+- **Versorgung:** Am Markt der Stadt kauft und verkauft ein Betrieb mit Handelsspanne, Werkstätten verdienen so wenig. Mit Versorgung über das Kontor gibt es keine Spanne, und Werkstätten brauchen nur 70 % der Zutaten. Eigene Ketten (Rohstoffe heranschaffen, verarbeiten, Ware dorthin fahren, wo sie teuer ist) lohnen sich deshalb klar.
+- **Zahlen:** `data/buildings.json`. Der Kaufpreis ist der höhere Tagesgewinn aus Marktversorgung (heutige Preise) und Eigenversorgung (Basispreise), mal `amortisation_tage` (150).
 - **Noch nicht umgesetzt:** Stufen, Versorgungsgebäude mit Wirkung auf die Zufriedenheit, Werft, Befestigung, Gesandtschaft (in `buildings.json` unter `geplant`), Bevölkerungswachstum.
 
 ## Grundidee: Stadt als Wirtschaftsmotor

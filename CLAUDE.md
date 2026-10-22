@@ -35,6 +35,7 @@ Exit-Code 0 = alle Balance-Checks bestanden, 1 = mindestens ein Check durchgefal
 - `data/cities.json`, `goods.json`, `recipes.json`, `consumption.json`: Wirtschaftsdaten
 - `data/events.json`: Zufallsereignisse, `data/karte.json`: Seeteile, Ufer und Durchfahrt (bestimmt die Fahrzeiten), `data/spiel.json`: Startwerte der Demo
 - `data/buildings.json`: Betriebe und Kontor für den Stadtausbau im Spiel (von der Simulation noch nicht gelesen)
+- `data/schiffe.json`: Schiffstypen und Bootshandel des Spielers. Der Nauen muss dem KI-Schiff in `params.json` entsprechen (Test prüft das)
 - `tools/sim/wirtschaft_sim.py`: Simulation (Datenabschnitt, Modell, Tagesschleife, Bericht), das Referenzmodell
 - `game/src/wirtschaft.js`: dieselbe Wirtschaftslogik im Spiel. Änderungen an der Logik immer in beiden Dateien
 
