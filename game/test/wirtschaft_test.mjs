@@ -4,7 +4,7 @@
 // 1. Die Wirtschaft des Spiels (ohne Spieler) besteht dieselben Balance-Checks wie
 //    tools/sim/wirtschaft_sim.py. So fällt auf, wenn Spiel und Simulation auseinanderlaufen.
 // 2. Handel des Spielers: kein Gewinn durch Hin-und-her-Handeln, Laderaum und Geld begrenzen.
-// 3. Karte: Jeder Seeweg führt über Wasser.
+// 3. Karte: Jeder Seeweg führt über Wasser, die Distanzen in karte.json sind aktuell.
 // 4.-9. Betriebe und Kontor, automatischer Handel, Speichern und Laden, Bootshandel, Eigenversorgung,
 //      Stufen, Stadtgebäude und Kontorhandel.
 // 10.  Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz.
@@ -17,7 +17,8 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { ladeDaten } from "../src/daten.js";
-import { Welt, neueStatistik, weg } from "../src/wirtschaft.js";
+import { Welt, neueStatistik, distanz } from "../src/wirtschaft.js";
+import { Navigation, weglaenge } from "../src/navigation.js";
 import { Spiel } from "../src/spiel.js";
 import { starteRoute, starteFrei, beende, starteVersorgung } from "../src/automatik.js";
 import { speichere, lade, pruefe as pruefeStand } from "../src/speicher.js";
@@ -108,7 +109,7 @@ console.log("\nHandel des Spielers");
 
   // Freie Fahrt: auf den See, Kurswechsel unterwegs, Land wird abgelehnt
   pruefe("Klick auf Land wird abgelehnt", !spiel.segeln(schiff, { punkt: [50, 5] }).ok);
-  pruefe("Fahrt zu einem Punkt auf dem Obersee klappt", spiel.segeln(schiff, { punkt: [88, 41] }).ok);
+  pruefe("Fahrt zu einem Punkt auf dem Obersee klappt", spiel.segeln(schiff, { punkt: [89, 54] }).ok);
   spiel.vorruecken(0.5);
   const vorher = spiel.position(schiff);
   pruefe("Kurswechsel auf See nach Zürich klappt", spiel.segeln(schiff, { stadt: spiel.welt.stadt["Zürich"] }).ok);
@@ -124,7 +125,9 @@ console.log("\nWegsuche");
 {
   const spiel = new Spiel(D, 3);
   const nav = spiel.nav;
-  const ziele = [...spiel.welt.staedte.map((s) => s.pos), [10, 10], [50, 30], [70, 42], [95, 40], [80, 47]];
+  // Städte, die Durchfahrt am Seedamm und Punkte mitten im See (zwischen gegenüberliegenden Ufern)
+  const mitte = (a, b) => [(spiel.welt.stadt[a].pos[0] + spiel.welt.stadt[b].pos[0]) / 2, (spiel.welt.stadt[a].pos[1] + spiel.welt.stadt[b].pos[1]) / 2];
+  const ziele = [...spiel.welt.staedte.map((s) => s.pos), D.karte.durchfahrten[0].position, mitte("Meilen", "Horgen"), mitte("Zürich", "Küsnacht"), mitte("Lachen", "Schmerikon"), mitte("Rapperswil", "Lachen")];
   let fehlt = 0;
   let ueberLand = 0;
   for (const a of ziele) {
@@ -142,41 +145,34 @@ console.log("\nWegsuche");
   pruefe(`Alle ${ziele.length * (ziele.length - 1)} Wege gefunden, keiner führt über Land`, fehlt === 0 && ueberLand === 0);
 }
 
-// --- 3. Karte: Seewege über Wasser ----------------------------------------
+// --- 3. Karte: Seewege über Wasser, Distanzen aktuell ---------------------------
 console.log("\nKarte");
 {
-  const welt = new Welt(D, 1);
-  function imUfer([x, y], ufer) {
-    let drin = false;
-    for (let i = 0, j = ufer.length - 1; i < ufer.length; j = i++) {
-      const [x1, y1] = ufer[i];
-      const [x2, y2] = ufer[j];
-      if (y1 > y !== y2 > y && x < x1 + ((y - y1) * (x2 - x1)) / (y2 - y1)) drin = !drin;
-    }
-    return drin;
-  }
-  function imWasser(p) {
-    return Object.values(D.karte.seeteile).some((t) => imUfer(p, t.ufer));
-  }
+  const nav = new Navigation(D);
   let ueberLand = 0;
-  for (const a of welt.staedte) {
-    for (const b of welt.staedte) {
+  let abweichung = 0;
+  for (const a of D.staedte) {
+    if (!nav.imWasser(a.pos)) {
+      console.log(`   ${a.name} liegt nicht im Wasser`);
+      ueberLand++;
+    }
+    for (const b of D.staedte) {
       if (a === b) continue;
-      const punkte = weg(D, a, b);
-      for (let i = 1; i < punkte.length; i++) {
-        for (let s = 0; s <= 50; s++) {
-          const p = [punkte[i - 1][0] + ((punkte[i][0] - punkte[i - 1][0]) * s) / 50, punkte[i - 1][1] + ((punkte[i][1] - punkte[i - 1][1]) * s) / 50];
-          if (!imWasser(p)) {
-            ueberLand++;
-            console.log(`   über Land: ${a.name} -> ${b.name} bei ${p.map((v) => v.toFixed(1))}`);
-            break;
-          }
-        }
+      const w = nav.route(a.pos, b.pos);
+      if (!w) {
+        ueberLand++;
+        continue;
       }
-      if (welt.fahrtage(a, b) !== welt.fahrtage(b, a)) ueberLand++;
+      for (let i = 1; i < w.length; i++) if (!nav.frei(w[i - 1], w[i])) ueberLand++;
+      const gespeichert = distanz(D, a, b);
+      if (Math.abs(gespeichert - weglaenge(w)) > 0.02) {
+        abweichung++;
+        console.log(`   ${a.name} -> ${b.name}: gespeichert ${gespeichert}, berechnet ${weglaenge(w).toFixed(2)}`);
+      }
     }
   }
-  pruefe("Alle Seewege führen über Wasser und sind in beide Richtungen gleich lang", ueberLand === 0);
+  pruefe("Alle Städte liegen am Wasser, alle Wege zwischen ihnen führen über Wasser", ueberLand === 0);
+  pruefe("Distanzen in karte.json passen zur Karte (sonst: node tools/karte/distanzen.mjs)", abweichung === 0);
 }
 
 // --- 4. Betriebe und Kontor -------------------------------------------------
@@ -560,7 +556,9 @@ console.log("\nVersorgen");
 {
   const spiel = new Spiel(D, 91);
   const a = spiel.ausbau;
+  // Ledischiff: Für die weite Strecke Zürich - Rapperswil reicht ein Nauen nicht (Laderaum)
   const schiff = spiel.schiffe[0];
+  schiff.typ = "ledischiff";
   const zuerich = spiel.welt.stadt["Zürich"];
   const rapperswil = spiel.welt.stadt["Rapperswil"];
   spiel.gulden = 500000;

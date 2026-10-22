@@ -49,8 +49,7 @@ BASIC = []        # Grundbedarf (Zufriedenheit)
 COMFORT = []      # gehobener Bedarf (Zufriedenheit)
 CITIES = []       # Staedte (intern: name, pop, pos, prod, work)
 EVENTS = []       # Zufallsereignisse (events.json)
-SEETEIL = {}      # Stadt -> Seeteil (karte.json)
-DURCHFAHRTEN = [] # Durchfahrten zwischen Seeteilen (karte.json)
+DISTANZEN = {}    # (Stadt, Stadt) -> Weglaenge ueber Wasser (karte.json, tools/karte/distanzen.mjs)
 # Parameter (SPREAD, PRICE_MIN, ...) werden ebenfalls aus params.json als
 # Modulvariablen gesetzt.
 
@@ -62,7 +61,7 @@ def _read(data_dir, name):
 
 def load_data(data_dir=DEFAULT_DATA_DIR):
     """Liest data/*.json in die Modulvariablen."""
-    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, SEETEIL, DURCHFAHRTEN
+    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN
     GOODS = {n: v["basispreis"] for n, v in _read(data_dir, "goods.json")["waren"].items()}
     RECIPES = _read(data_dir, "recipes.json")["rezepte"]
     c = _read(data_dir, "consumption.json")
@@ -73,12 +72,14 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
                "prod": s["produktion"], "work": s["werkstaetten"]}
               for s in _read(data_dir, "cities.json")["staedte"]]
     EVENTS = _read(data_dir, "events.json")["ereignisse"]
-    karte = _read(data_dir, "karte.json")
-    SEETEIL = {stadt: teil for teil, v in karte["seeteile"].items() for stadt in v["staedte"]}
-    DURCHFAHRTEN = karte["durchfahrten"]
-    for c in CITIES:
-        if c["name"] not in SEETEIL:
-            raise ValueError(f"Stadt {c['name']} fehlt in karte.json (seeteile)")
+    DISTANZEN = {}
+    for paar, d in _read(data_dir, "karte.json")["distanzen"].items():
+        a, b = paar.split("|")
+        DISTANZEN[(a, b)] = DISTANZEN[(b, a)] = d
+    for a in CITIES:
+        for b in CITIES:
+            if a is not b and (a["name"], b["name"]) not in DISTANZEN:
+                raise ValueError(f"Distanz {a['name']} - {b['name']} fehlt in karte.json (node tools/karte/distanzen.mjs)")
     for name, p in _read(data_dir, "params.json")["parameter"].items():
         globals()[name] = p["wert"]
 
@@ -215,14 +216,8 @@ class City:
 
 
 def route_length(a, b):
-    """Weglaenge ueber Wasser: direkt im selben Seeteil, sonst ueber die Durchfahrt."""
-    ta, tb = SEETEIL[a.name], SEETEIL[b.name]
-    if ta == tb:
-        return math.dist(a.pos, b.pos)
-    for d in DURCHFAHRTEN:
-        if set(d["verbindet"]) == {ta, tb}:
-            return math.dist(a.pos, d["position"]) + math.dist(d["position"], b.pos)
-    raise ValueError(f"Keine Durchfahrt zwischen {ta} und {tb} (karte.json)")
+    """Weglaenge ueber Wasser, vorberechnet aus der Karte (tools/karte/distanzen.mjs)."""
+    return DISTANZEN[(a.name, b.name)]
 
 
 def travel_days(a, b):

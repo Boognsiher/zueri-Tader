@@ -4,6 +4,7 @@
 // Kein Zugriff auf das DOM, damit das Modell auch unter Node läuft (game/test/).
 
 import { Zufall } from "./zufall.js";
+import { Navigation } from "./navigation.js";
 
 // Preis = Basispreis * (Zielbestand / Lagerbestand) ^ k, begrenzt
 export function preis(D, basis, ziel, bestand) {
@@ -11,28 +12,17 @@ export function preis(D, basis, ziel, bestand) {
   return Math.min(Math.max(p, basis * D.p.PRICE_MIN), basis * D.p.PRICE_MAX);
 }
 
-function abstand(a, b) {
-  return Math.hypot(a[0] - b[0], a[1] - b[1]);
-}
-
-// Weg über Wasser als Punktliste: direkt im selben Seeteil, sonst über die Durchfahrt
-export function weg(D, a, b) {
-  const ta = D.seeteil[a.name];
-  const tb = D.seeteil[b.name];
-  if (ta === tb) return [a.pos, b.pos];
-  const d = D.karte.durchfahrten.find((x) => x.verbindet.includes(ta) && x.verbindet.includes(tb));
-  if (!d) throw new Error(`Keine Durchfahrt zwischen ${ta} und ${tb} (karte.json)`);
-  return [a.pos, d.position, b.pos];
-}
-
-export function weglaenge(punkte) {
-  let summe = 0;
-  for (let i = 1; i < punkte.length; i++) summe += abstand(punkte[i - 1], punkte[i]);
-  return summe;
+// Weglänge über Wasser zwischen zwei Städten, vorberechnet aus der Karte
+// (karte.json: distanzen, erzeugt mit tools/karte/distanzen.mjs)
+export function distanz(D, a, b) {
+  if (a === b) return 0;
+  const d = D.karte.distanzen[`${a.name}|${b.name}`] ?? D.karte.distanzen[`${b.name}|${a.name}`];
+  if (d === undefined) throw new Error(`Distanz ${a.name} - ${b.name} fehlt in karte.json (node tools/karte/distanzen.mjs)`);
+  return d;
 }
 
 export function fahrtage(D, a, b) {
-  return Math.max(1, Math.ceil(weglaenge(weg(D, a, b)) / D.p.SPEED));
+  return Math.max(1, Math.ceil(distanz(D, a, b) / D.p.SPEED));
 }
 
 function mittel(liste) {
@@ -348,6 +338,8 @@ export class Welt {
     for (let i = 0; i < this.kiZiel(); i++) this.haendler.push(new Haendler(this.zufall.wahl(this.staedte), D));
     this.st = null; // Statistik, nur in Tests
     this.tageCache = {};
+    this.wegCache = {};
+    this.nav = null; // Wegsuche für die Darstellung der KI-Fahrten, erst bei Bedarf
   }
 
   // Anzahl KI-Händler: AI_SHIPS_PER_1000 je 1000 Einwohner aller Städte
@@ -361,8 +353,14 @@ export class Welt {
     return this.tageCache[schluessel];
   }
 
+  // Weg über Wasser als Punktliste (für die Darstellung der KI-Händler auf der Karte)
   weg(a, b) {
-    return weg(this.D, a, b);
+    const schluessel = `${a.name}|${b.name}`;
+    if (!(schluessel in this.wegCache)) {
+      this.nav ??= new Navigation(this.D);
+      this.wegCache[schluessel] = this.nav.route(a.pos, b.pos) ?? [a.pos, b.pos];
+    }
+    return this.wegCache[schluessel];
   }
 
   // Rechnet einen Tag. Gibt die neuen Ereignisse zurück.

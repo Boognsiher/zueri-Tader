@@ -38,6 +38,10 @@ Allgemeiner Hinweis, keine Rechtsberatung:
 
 Sobald das erste fremde Asset dazukommt, eine Liste mit Quelle und Lizenz anlegen (z. B. `docs/assets-lizenzen.md`).
 
+## Kartengrundlage
+
+Die Seekontur, die Lage der Städte, der Greifensee und der Pfäffikersee sind von Hand nach einer historischen Karte des Zürichsees aus dem 19. Jahrhundert übertragen (vom Projektinhaber gestellt). Solche Karten sind in der Regel gemeinfrei; das Bild selbst liegt nicht im Repo, nur die übertragenen Koordinaten in `data/karte.json`.
+
 ## Offene Fragen
 
 - Stadtansicht: dauerhaft 2D (gemalte Illustration oder Kacheln) oder später 3D mit festen Bauplätzen?

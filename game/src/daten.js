@@ -40,9 +40,7 @@ function aufbereiten(roh) {
     prod: s.produktion,
     werk: s.werkstaetten,
   }));
-  for (const s of staedte) {
-    if (!(s.name in seeteil)) throw new Error(`Stadt ${s.name} fehlt in karte.json (seeteile)`);
-  }
+
 
   return {
     p,

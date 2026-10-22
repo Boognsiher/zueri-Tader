@@ -52,7 +52,7 @@ export class Karte {
   baue() {
     const svg = this.svg;
     const D = this.D;
-    svg.setAttribute("viewBox", "-3 -5 110 62");
+    svg.setAttribute("viewBox", "-2 -3 109 67");
     svg.innerHTML = "";
     if (!this.klickBereit) {
       // Klick auf die Karte (nicht auf Stadt oder Schiff): Ziel auf dem See
@@ -73,7 +73,7 @@ export class Karte {
     el("stop", { offset: "0%", class: "papier-hell" }, papier);
     el("stop", { offset: "100%", class: "papier-dunkel" }, papier);
 
-    el("rect", { x: -3, y: -5, width: 110, height: 62, fill: "url(#papier)" }, svg);
+    el("rect", { x: -2, y: -3, width: 109, height: 67, fill: "url(#papier)" }, svg);
 
     // Hügel als einfache Schraffur bei den Bergnamen
     const land = el("g", { class: "land" }, svg);
@@ -85,8 +85,9 @@ export class Karte {
       }
     }
 
-    // Flüsse
+    // Flüsse und kleine Seen (nur Darstellung, nicht befahrbar)
     for (const f of D.karte.fluesse) el("path", { d: glatt(f.linie, false), class: "fluss" }, land);
+    for (const s of D.karte.kleine_seen ?? []) el("path", { d: glatt(s.ufer), class: "kleiner-see" }, land);
 
     // See: Uferstreifen und Uferlinie zuerst, das Wasser darüber. So verdeckt jeder Seeteil
     // die Uferlinie des anderen, wo sie sich überlappen, und nur der Aussenrand bleibt sichtbar.
@@ -110,7 +111,7 @@ export class Karte {
     }
 
     this.kartusche(svg);
-    this.windrose(svg, 99, 7);
+    this.windrose(svg, 100, 21);
 
     this.ebeneRoute = el("g", { class: "routen" }, svg);
     this.ebeneHaendler = el("g", { class: "haendler" }, svg);
@@ -149,10 +150,10 @@ export class Karte {
 
   kartusche(svg) {
     const g = el("g", { class: "kartusche" }, svg);
-    el("rect", { x: 56, y: -3.5, width: 32, height: 8.6, rx: 1 }, g);
-    el("rect", { x: 56.7, y: -2.8, width: 30.6, height: 7.2, rx: 0.6, class: "innen" }, g);
-    el("text", { x: 72, y: 0.6, class: "titel" }, g).textContent = "Der Zürichsee";
-    el("text", { x: 72, y: 3.4, class: "untertitel" }, g).textContent = "samt Obersee · Anno 1650";
+    el("rect", { x: 66, y: 1, width: 34, height: 8.6, rx: 1 }, g);
+    el("rect", { x: 66.7, y: 1.7, width: 32.6, height: 7.2, rx: 0.6, class: "innen" }, g);
+    el("text", { x: 83, y: 5.1, class: "titel" }, g).textContent = "Der Zürichsee";
+    el("text", { x: 83, y: 7.9, class: "untertitel" }, g).textContent = "samt Obersee · Anno 1650";
   }
 
   windrose(svg, x, y) {
