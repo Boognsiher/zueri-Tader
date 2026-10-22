@@ -1,8 +1,9 @@
 {
-  "_info": "Spielstart und Spielgefühl der Demo. Wird nur vom Spiel gelesen, nicht von der Simulation. tageslaenge_ms = Dauer eines Spieltags in Millisekunden je Tempostufe. autosave_sekunden = Abstand des automatischen Speicherns in echter Zeit.",
+  "_info": "Spielstart und Spielgefühl der Demo. Wird nur vom Spiel gelesen, nicht von der Simulation. tageslaenge_ms = Dauer eines Spieltags in Millisekunden je Tempostufe. autosave_sekunden = Abstand des automatischen Speicherns in echter Zeit. sichtweite = Kartenabstand, bis zu dem fremde Schiffe (KI-Händler, Kriegsschiffe der Stände) auf der Karte erscheinen: um eigene Schiffe und um eigene Städte (mit Kontor oder eigenem Betrieb).",
   "start": {"stadt": "Zürich", "gulden": 12000, "datum": [1650, 4, 1]},
   "schiffsnamen": ["Möwe", "Felche", "Seerose", "Haubentaucher", "Morgenrot", "Treue", "Glarnerin", "Abendstern", "Hecht", "Stadt Zürich"],
   "tageslaenge_ms": {"1": 2200, "2": 1100, "3": 450},
   "preisfarbe": {"guenstig": 0.85, "teuer": 1.15},
-  "autosave_sekunden": 60
+  "autosave_sekunden": 60,
+  "sichtweite": {"schiff": 12, "eigene_stadt": 9}
 }

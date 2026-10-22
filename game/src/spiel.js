@@ -197,6 +197,23 @@ export class Spiel {
     return punktAufWeg(f.weg, (this.zeit - f.start) / Math.max(f.ende - f.start, 1e-9));
   }
 
+  // Orte, von denen aus der Spieler fremde Schiffe sieht: eigene Schiffe und eigene Städte
+  // (Kontor oder eigener Betrieb), je mit Sichtweite aus data/spiel.json
+  sichtpunkte() {
+    const w = this.D.spiel.sichtweite;
+    const punkte = this.schiffe.map((s) => {
+      const p = this.position(s);
+      return [p.x, p.y, w.schiff];
+    });
+    const eigene = new Set([...Object.keys(this.ausbau.kontore), ...this.ausbau.eigene().map((b) => b.stadt)]);
+    for (const name of eigene) punkte.push([...this.welt.stadt[name].pos, w.eigene_stadt]);
+    return punkte;
+  }
+
+  sichtbar(x, y, punkte = this.sichtpunkte()) {
+    return punkte.some(([px, py, r]) => Math.hypot(px - x, py - y) <= r);
+  }
+
   // Nächste Stadt, für Meldungen wie "vor Meilen"
   naechsteStadt(punkt) {
     let beste = null;

@@ -248,12 +248,13 @@ main {
 .route { fill: none; stroke: var(--rot); stroke-width: 0.3; stroke-dasharray: 0.9 0.6; opacity: 0.8; }
 
 .spielerboot { cursor: pointer; }
+.spielerboot .klickflaeche { fill: transparent; }
 .spielerboot .rumpf { fill: var(--holz); stroke: #2b1d10; stroke-width: 0.12; }
 .spielerboot .mast { fill: #2b1d10; }
 .spielerboot .segel { fill: #fbf4e2; stroke: #6b5a40; stroke-width: 0.1; }
 .spielerboot .wimpel { fill: var(--rot); }
 .spielerboot.gewaehlt .segel { fill: #fff; stroke: var(--rot); stroke-width: 0.2; }
-.bootname { font-size: 1.35px; text-anchor: middle; fill: var(--holz); font-style: italic; paint-order: stroke; stroke: var(--papier-hell); stroke-width: 0.35px; }
+.bootname { font-size: 1.1px; text-anchor: middle; fill: var(--holz); font-style: italic; paint-order: stroke; stroke: var(--papier-hell); stroke-width: 0.3px; }
 .spielerboot.gewaehlt .bootname { fill: var(--rot); font-weight: 600; }
 
 /* --- Dialoge -------------------------------------------------------------- */

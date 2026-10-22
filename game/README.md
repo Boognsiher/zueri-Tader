@@ -26,7 +26,7 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Bilanz:** Einnahmen und Ausgaben nach Konten pro Monat und gesamt, Vermögen, Monatsergebnis (Knopf «Bilanz» oben)
 - **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung), oder **Versorgen**: nur Städte wählen, das Schiff verteilt Kontor-Ware dorthin, wo deine Werkstätten sie brauchen. Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf. Laden und Löschen braucht Liegezeit (voller Laderaum rund 0,8 Tage).
 - **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
-- KI-Händler handeln mit (40 am Anfang, mehr mit wachsender Bevölkerung), als graue Punkte auf dem See sichtbar
+- KI-Händler handeln mit (40 am Anfang, mehr mit wachsender Bevölkerung), als graue Punkte auf dem See sichtbar, aber nur in Sichtweite eigener Schiffe und Städte (`sichtweite` in `data/spiel.json`)
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
 - **Meldungen** in zwei Reitern: «Wichtig» (Ereignisse, Ankünfte, Warnungen, Käufe und Bauten) und «Handel» (Käufe und Verkäufe, Automatik, Kontore); ein Punkt zeigt Neues im anderen Reiter
 - Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft

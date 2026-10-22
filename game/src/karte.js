@@ -5,6 +5,7 @@
 import { punktAufWeg, weglaenge } from "./navigation.js";
 
 const NS = "http://www.w3.org/2000/svg";
+const BOOT_MASSSTAB = 0.6; // Symbolgrösse der eigenen Schiffe, mal der Grösse des Schiffstyps
 
 function el(name, attrs = {}, eltern = null) {
   const e = document.createElementNS(NS, name);
@@ -177,6 +178,8 @@ export class Karte {
     while (this.haendlerPunkte.length < welt.haendler.length) {
       this.haendlerPunkte.push(el("circle", { r: 0.5, class: "haendler-punkt" }, this.ebeneHaendler));
     }
+    // Fremde Schiffe erscheinen nur in Sichtweite eigener Schiffe und Städte
+    const sicht = this.spiel.sichtpunkte();
     welt.haendler.forEach((h, i) => {
       const punkt = this.haendlerPunkte[i];
       let x;
@@ -195,6 +198,9 @@ export class Karte {
         x = h.ort.pos[0] + Math.cos(w) * 1.6;
         y = h.ort.pos[1] + Math.sin(w) * 1.1;
       }
+      const zeigen = this.spiel.sichtbar(x, y, sicht);
+      punkt.style.display = zeigen ? "" : "none";
+      if (!zeigen) return;
       punkt.setAttribute("cx", x.toFixed(2));
       punkt.setAttribute("cy", y.toFixed(2));
     });
@@ -212,6 +218,7 @@ export class Karte {
       let boot = this.spielerBoote.get(schiff);
       if (!boot) {
         boot = bootSymbol(this.ebeneSpieler, "spielerboot");
+        el("circle", { r: 1.6, cy: -0.5, class: "klickflaeche" }, boot); // das kleine Symbol bleibt gut klickbar
         el("text", { y: 2.3, class: "bootname" }, boot);
         boot.addEventListener("click", (e) => {
           e.stopPropagation();
@@ -229,16 +236,16 @@ export class Karte {
         imHafen.set(schiff.ort, n + 1);
         // im Hafen auf der Seite, wo der Stadtname nicht steht
         const unten = this.beschriftungUnten.has(schiff.ort.name);
-        x = schiff.ort.pos[0] + (unten ? 3 : 2.4) + n * 3.2;
+        x = schiff.ort.pos[0] + (unten ? 2.6 : 2.1) + n * 2.1;
         y = schiff.ort.pos[1] + (unten ? -1.2 : 1.2);
       }
       boot.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
-      const groesse = this.spiel.schiffstyp(schiff).groesse;
+      const groesse = this.spiel.schiffstyp(schiff).groesse * BOOT_MASSSTAB;
       boot.querySelector(".boot-koerper").setAttribute("transform", `scale(${links ? -groesse : groesse},${groesse})`);
       const name = boot.querySelector(".bootname");
       const zeichen = (schiff.mitglieder ? ` ×${schiff.mitglieder.length}` : "") + (schiff.auto ? (schiff.auto.pausiert ? " ⏸" : " ⟳") : "");
       if (name.textContent !== schiff.name + zeichen) name.textContent = schiff.name + zeichen;
-      name.setAttribute("y", (2.3 * groesse).toFixed(2));
+      name.setAttribute("y", (1 + 1.6 * groesse).toFixed(2));
       boot.classList.toggle("gewaehlt", schiff === this.auswahl.schiff);
     }
   }
