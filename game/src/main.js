@@ -124,6 +124,8 @@ async function start() {
     },
   });
   ui.routenfenster = routenfenster;
+  // Zugang für Tests und Fehlersuche in der Browser-Konsole
+  window.zueriTrade = { spiel, ui };
 
   knoepfe.forEach((k) => k.addEventListener("click", () => setzeTempo(Number(k.dataset.tempo))));
   document.addEventListener("keydown", (e) => {

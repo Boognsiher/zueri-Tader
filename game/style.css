@@ -412,3 +412,9 @@ button.autosymbol.pausiert { color: #fff6e8; background: linear-gradient(#4f8a55
 .modus.pausiert { color: var(--tinte-blass); }
 .schiffsname small { font-weight: normal; color: var(--tinte-blass); }
 #markt [data-stadtfenster] { margin: 0.1rem 0 0.4rem; }
+
+/* --- Stufen, Stadtgebäude, Kontorregeln ------------------------------------------ */
+.stufe { font-size: 0.78rem; background: var(--holz); color: #fff3e0; border-radius: 3px; padding: 0 0.35em; vertical-align: 0.1em; }
+.regeln { margin-top: 0.6rem; }
+.regeln summary { cursor: pointer; font-weight: 600; }
+.regeln input[type="number"] { width: 4.6rem; }
