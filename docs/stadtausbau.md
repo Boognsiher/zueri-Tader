@@ -12,7 +12,10 @@ Angelehnt an die Werkstätten in Mount & Blade: Bannerlord:
 - **Kontor:** Lager mit 400 Einheiten pro Stadt. Für das Einlagern von Erzeugnissen, für Werkstätten mit eigenen Zutaten und für Handelsrouten (laden und entladen).
 - **Versorgung:** Am Markt der Stadt kauft und verkauft ein Betrieb mit Handelsspanne, Werkstätten verdienen so wenig. Mit Versorgung über das Kontor gibt es keine Spanne, und Werkstätten brauchen nur 70 % der Zutaten. Eigene Ketten (Rohstoffe heranschaffen, verarbeiten, Ware dorthin fahren, wo sie teuer ist) lohnen sich deshalb klar.
 - **Zahlen:** `data/buildings.json`. Der Kaufpreis ist der höhere Tagesgewinn aus Marktversorgung (heutige Preise) und Eigenversorgung (Basispreise), mal `amortisation_tage` (150).
-- **Noch nicht umgesetzt:** Stufen, Versorgungsgebäude mit Wirkung auf die Zufriedenheit, Werft, Befestigung, Gesandtschaft (in `buildings.json` unter `geplant`), Bevölkerungswachstum.
+- **Stufen:** Betriebe, Kontore und Stadtgebäude lassen sich bis Stufe 3 ausbauen. Eine Betriebsstufe kostet so viel wie ein Neubau und bringt die Grundleistung noch einmal, eine Kontorstufe 400 Lagerplätze.
+- **Stadtgebäude** (je ein Bauplatz): Markthalle (deine Handelsspanne in der Stadt -2 Prozentpunkte je Stufe), Kirche (+1 Bauplatz je Stufe), Zunfthaus (Unterhalt deiner Betriebe in der Stadt -15 % je Stufe).
+- **Kontorhandel:** Das Kontor kauft und verkauft von Hand am Markt der Stadt, auch ohne Schiff, und nach Regeln pro Ware jeden Tag (kaufen bis zu einer Menge bis zum Höchstpreis, verkaufen über einer Menge ab dem Mindestpreis, höchstens 40 Stück je Ware und Tag).
+- **Noch nicht umgesetzt:** Versorgungsgebäude mit Wirkung auf die Zufriedenheit (Spital usw.), Werft als Gebäude, Befestigung, Gesandtschaft (in `buildings.json` unter `geplant`), Bevölkerungswachstum.
 
 ## Grundidee: Stadt als Wirtschaftsmotor
 
