@@ -1,0 +1,138 @@
+// Wegsuche über Wasser für die frei gesteuerten Schiffe des Spielers.
+// Wasser = Innenfläche der Seeteile aus data/karte.json. Führt die direkte Linie über Land,
+// wird ein kürzester Weg über Hilfspunkte gesucht (Durchfahrten, Häfen, Punkte knapp
+// innerhalb des Ufers). Die KI-Händler nutzen weiter die festen Wege aus wirtschaft.js.
+
+const SCHRITT = 0.4; // Prüfabstand entlang einer Linie in Karteneinheiten
+const UFERABSTAND = 1.5; // wie weit die Hilfspunkte vom Ufer nach innen rücken
+
+function imPolygon([x, y], ufer) {
+  let drin = false;
+  for (let i = 0, j = ufer.length - 1; i < ufer.length; j = i++) {
+    const [x1, y1] = ufer[i];
+    const [x2, y2] = ufer[j];
+    if (y1 > y !== y2 > y && x < x1 + ((y - y1) * (x2 - x1)) / (y2 - y1)) drin = !drin;
+  }
+  return drin;
+}
+
+function abstand(a, b) {
+  return Math.hypot(a[0] - b[0], a[1] - b[1]);
+}
+
+export function weglaenge(punkte) {
+  let summe = 0;
+  for (let i = 1; i < punkte.length; i++) summe += abstand(punkte[i - 1], punkte[i]);
+  return summe;
+}
+
+// Punkt bei Anteil t (0..1) der Weglänge, dazu ob die Fahrt nach links geht
+export function punktAufWeg(punkte, t) {
+  const gesamt = weglaenge(punkte);
+  let rest = Math.max(0, Math.min(1, t)) * gesamt;
+  for (let i = 1; i < punkte.length; i++) {
+    const [a, b] = [punkte[i - 1], punkte[i]];
+    const l = abstand(a, b);
+    if (rest <= l || i === punkte.length - 1) {
+      const f = l ? Math.min(1, rest / l) : 0;
+      return { x: a[0] + (b[0] - a[0]) * f, y: a[1] + (b[1] - a[1]) * f, links: b[0] < a[0] };
+    }
+    rest -= l;
+  }
+  const p = punkte[punkte.length - 1];
+  return { x: p[0], y: p[1], links: false };
+}
+
+export class Navigation {
+  constructor(D) {
+    this.teile = Object.values(D.karte.seeteile).map((t) => t.ufer);
+    const knoten = [];
+    for (const d of D.karte.durchfahrten) knoten.push(d.position);
+    for (const s of D.staedte) knoten.push(s.pos);
+    for (const ufer of this.teile) {
+      const mitte = [0, 1].map((k) => ufer.reduce((a, p) => a + p[k], 0) / ufer.length);
+      for (let i = 0; i < ufer.length; i++) {
+        // Punkt auf der Winkelhalbierenden der Ecke nach innen
+        const p = ufer[i];
+        const a = ufer[(i - 1 + ufer.length) % ufer.length];
+        const b = ufer[(i + 1) % ufer.length];
+        const ra = [(a[0] - p[0]) / abstand(a, p), (a[1] - p[1]) / abstand(a, p)];
+        const rb = [(b[0] - p[0]) / abstand(b, p), (b[1] - p[1]) / abstand(b, p)];
+        let r = [ra[0] + rb[0], ra[1] + rb[1]];
+        if (Math.hypot(...r) < 1e-6) r = [mitte[0] - p[0], mitte[1] - p[1]];
+        const l = Math.hypot(...r);
+        for (const richtung of [1, -1]) {
+          const q = [p[0] + (richtung * UFERABSTAND * r[0]) / l, p[1] + (richtung * UFERABSTAND * r[1]) / l];
+          if (this.imWasser(q)) {
+            knoten.push(q);
+            break;
+          }
+        }
+      }
+    }
+    this.knoten = knoten;
+    this.nachbarn = null; // wird bei der ersten Suche berechnet
+  }
+
+  imWasser(p) {
+    return this.teile.some((ufer) => imPolygon(p, ufer));
+  }
+
+  // Führt die gerade Linie von a nach b ganz über Wasser?
+  frei(a, b) {
+    const n = Math.max(2, Math.ceil(abstand(a, b) / SCHRITT));
+    for (let i = 0; i <= n; i++) {
+      if (!this.imWasser([a[0] + ((b[0] - a[0]) * i) / n, a[1] + ((b[1] - a[1]) * i) / n])) return false;
+    }
+    return true;
+  }
+
+  // Kürzester Weg über Wasser als Punktliste, oder null, wenn das Ziel nicht erreichbar ist
+  route(von, nach) {
+    if (!this.imWasser(nach)) return null;
+    if (this.frei(von, nach)) return [von, nach];
+    const k = this.knoten;
+    if (!this.nachbarn) {
+      this.nachbarn = k.map(() => []);
+      for (let i = 0; i < k.length; i++) {
+        for (let j = i + 1; j < k.length; j++) {
+          if (this.frei(k[i], k[j])) {
+            const d = abstand(k[i], k[j]);
+            this.nachbarn[i].push([j, d]);
+            this.nachbarn[j].push([i, d]);
+          }
+        }
+      }
+    }
+    // Dijkstra über die Hilfspunkte, Start = k.length, Ziel = k.length + 1
+    const start = k.length;
+    const ziel = k.length + 1;
+    const punkt = (i) => (i === start ? von : i === ziel ? nach : k[i]);
+    const kanten = (i) => {
+      if (i === start) return k.map((p, j) => [j, abstand(von, p)]).filter(([j]) => this.frei(von, k[j]));
+      const liste = [...this.nachbarn[i]];
+      if (this.frei(k[i], nach)) liste.push([ziel, abstand(k[i], nach)]);
+      return liste;
+    };
+    const dist = new Map([[start, 0]]);
+    const vorher = new Map();
+    const erledigt = new Set();
+    while (true) {
+      let aktuell = null;
+      for (const [i, d] of dist) if (!erledigt.has(i) && (aktuell === null || d < dist.get(aktuell))) aktuell = i;
+      if (aktuell === null) return null;
+      if (aktuell === ziel) break;
+      erledigt.add(aktuell);
+      for (const [j, d] of kanten(aktuell)) {
+        const neu = dist.get(aktuell) + d;
+        if (!dist.has(j) || neu < dist.get(j)) {
+          dist.set(j, neu);
+          vorher.set(j, aktuell);
+        }
+      }
+    }
+    const weg = [];
+    for (let i = ziel; i !== undefined; i = vorher.get(i)) weg.unshift(punkt(i));
+    return weg;
+  }
+}

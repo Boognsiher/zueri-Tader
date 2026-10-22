@@ -91,12 +91,48 @@ console.log("\nHandel des Spielers");
   pruefe(`Geld begrenzt den Kauf (${arm.menge} Korn für ${arm.betrag.toFixed(0)} von 100 Gulden)`, arm.menge > 0 && arm.menge < 50 && spiel.gulden >= 0);
   spiel.gulden = 12000;
 
-  const ziel = spiel.welt.staedte.find((s) => s !== schiff.ort && !s.gesperrt(spiel.welt.tag));
-  pruefe("Ablegen klappt", spiel.ablegen(schiff, ziel));
+  const ziel = spiel.welt.stadt["Schmerikon"];
+  pruefe("Ablegen nach Schmerikon klappt", spiel.segeln(schiff, { stadt: ziel }).ok);
   pruefe("Unterwegs ist kein Handel möglich", spiel.kaufen(schiff, "Korn", 10).menge === 0);
-  const ankunft = schiff.ankunft;
+  pruefe(`Der Weg führt über den Seedamm (${schiff.fahrt.weg.length} Punkte)`, schiff.fahrt.weg.length >= 3);
+  const ankunft = schiff.fahrt.ende;
   while (spiel.welt.tag < ankunft) spiel.tagVoran();
-  pruefe(`Schiff kommt am geplanten Tag in ${ziel.name} an`, schiff.ort === ziel && !schiff.ziel);
+  pruefe(`Schiff kommt zur geplanten Zeit in ${ziel.name} an`, schiff.ort === ziel && !schiff.fahrt);
+
+  // Freie Fahrt: auf den See, Kurswechsel unterwegs, Land wird abgelehnt
+  pruefe("Klick auf Land wird abgelehnt", !spiel.segeln(schiff, { punkt: [50, 5] }).ok);
+  pruefe("Fahrt zu einem Punkt auf dem Obersee klappt", spiel.segeln(schiff, { punkt: [88, 41] }).ok);
+  spiel.vorruecken(0.5);
+  const vorher = spiel.position(schiff);
+  pruefe("Kurswechsel auf See nach Zürich klappt", spiel.segeln(schiff, { stadt: spiel.welt.stadt["Zürich"] }).ok);
+  const neu = schiff.fahrt.weg[0];
+  pruefe("Neuer Kurs beginnt an der aktuellen Position", Math.hypot(neu[0] - vorher.x, neu[1] - vorher.y) < 1e-9);
+  spiel.anhalten(schiff);
+  pruefe("Anhalten auf See: kein Hafen, keine Fahrt", !schiff.fahrt && !schiff.ort);
+  pruefe("Auf See ist kein Handel möglich", spiel.kaufen(schiff, "Korn", 10).menge === 0);
+}
+
+// --- Wegsuche: von jedem Hafen zu jedem Hafen und zu Punkten auf dem See ---
+console.log("\nWegsuche");
+{
+  const spiel = new Spiel(D, 3);
+  const nav = spiel.nav;
+  const ziele = [...spiel.welt.staedte.map((s) => s.pos), [10, 10], [50, 30], [70, 42], [95, 40], [80, 47]];
+  let fehlt = 0;
+  let ueberLand = 0;
+  for (const a of ziele) {
+    for (const b of ziele) {
+      if (a === b) continue;
+      const w = nav.route(a, b);
+      if (!w) {
+        fehlt++;
+        console.log(`   kein Weg: ${a} -> ${b}`);
+        continue;
+      }
+      for (let i = 1; i < w.length; i++) if (!nav.frei(w[i - 1], w[i])) ueberLand++;
+    }
+  }
+  pruefe(`Alle ${ziele.length * (ziele.length - 1)} Wege gefunden, keiner führt über Land`, fehlt === 0 && ueberLand === 0);
 }
 
 // --- 3. Karte: Seewege über Wasser ----------------------------------------

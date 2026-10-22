@@ -1,7 +1,8 @@
 // Spielzustand des Spielers: Geld, Schiffe, Handel, Kalender.
 // Die Welt (Städte, KI-Händler, Ereignisse) steht in wirtschaft.js.
 
-import { Welt, weg } from "./wirtschaft.js";
+import { Welt } from "./wirtschaft.js";
+import { Navigation, weglaenge, punktAufWeg } from "./navigation.js";
 
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -9,6 +10,8 @@ export class Spiel {
   constructor(D, seed) {
     this.D = D;
     this.welt = new Welt(D, seed);
+    this.nav = new Navigation(D);
+    this.anteil = 0; // Fortschritt im laufenden Tag (0..1), setzt die Zeitsteuerung
     // Einschwingen ohne Spieler, damit die Preise beim Start nicht mehr springen
     for (let i = 0; i < D.p.WARMUP; i++) this.welt.naechsterTag();
     this.starttag = this.welt.tag;
@@ -31,9 +34,14 @@ export class Spiel {
     return `${d.getUTCDate()}. ${MONATE[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
   }
 
-  // Datum zu einem Welt-Tag (z. B. Ankunft eines Schiffs)
-  datumWelt(weltTag) {
-    return this.datum(weltTag - this.starttag);
+  // Datum zu einem Welt-Tag oder einer Welt-Zeit (z. B. Ankunft eines Schiffs)
+  datumWelt(weltZeit) {
+    return this.datum(Math.floor(weltZeit) - this.starttag);
+  }
+
+  // Welt-Zeit mit Tagesbruchteil: Die Schiffe des Spielers fahren stufenlos
+  get zeit() {
+    return this.welt.tag + this.anteil;
   }
 
   melde(text, art = "info") {
@@ -43,7 +51,8 @@ export class Spiel {
 
   neuesSchiff(stadt) {
     const name = this.namen.shift() ?? `${this.D.spiel.schiffstyp} ${this.schiffe.length + 1}`;
-    const schiff = { name, ort: stadt, ziel: null, abfahrt: null, ankunft: null, weg: null, ladung: {} };
+    // ort = Hafen, in dem das Schiff liegt (null auf See), fahrt = laufende Fahrt oder null
+    const schiff = { name, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {} };
     this.schiffe.push(schiff);
     return schiff;
   }
@@ -57,7 +66,24 @@ export class Spiel {
   }
 
   imHafen(schiff, stadt) {
-    return !schiff.ziel && (!stadt || schiff.ort === stadt);
+    return !!schiff.ort && !schiff.fahrt && (!stadt || schiff.ort === stadt);
+  }
+
+  // Aktuelle Position, auch während der Fahrt
+  position(schiff) {
+    if (!schiff.fahrt) return { x: schiff.pos[0], y: schiff.pos[1], links: false };
+    const f = schiff.fahrt;
+    return punktAufWeg(f.weg, (this.zeit - f.start) / Math.max(f.ende - f.start, 1e-9));
+  }
+
+  // Nächste Stadt, für Meldungen wie "vor Meilen"
+  naechsteStadt(punkt) {
+    let beste = null;
+    for (const s of this.welt.staedte) {
+      const d = Math.hypot(s.pos[0] - punkt[0], s.pos[1] - punkt[1]);
+      if (!beste || d < beste.d) beste = { stadt: s, d };
+    }
+    return beste.stadt;
   }
 
   // Kauf mit Mengeneffekt: jede Einheit zum Preis beim dann aktuellen Lagerbestand.
@@ -105,19 +131,58 @@ export class Spiel {
     return { menge, betrag, gewinn };
   }
 
-  kannAblegen(schiff, ziel) {
-    if (!this.imHafen(schiff) || ziel === schiff.ort) return false;
-    return !ziel.gesperrt(this.welt.tag);
+  // Fahrt zu einer Stadt (ziel.stadt) oder zu einem Punkt auf dem See (ziel.punkt).
+  // Geht auch auf See: Das Schiff wechselt dann den Kurs. Gibt einen Grund zurück, wenn es nicht geht.
+  segeln(schiff, ziel) {
+    const stadt = ziel.stadt ?? null;
+    if (stadt && this.imHafen(schiff, stadt)) return { ok: false, grund: `${schiff.name} liegt schon in ${stadt.name}.` };
+    if (stadt && stadt.gesperrt(this.welt.tag)) return { ok: false, grund: `Föhnsturm: ${stadt.name} kann nicht angelaufen werden.` };
+    const p = this.position(schiff);
+    const von = [p.x, p.y];
+    const nach = stadt ? stadt.pos : ziel.punkt;
+    const weg = this.nav.route(von, nach);
+    if (!weg) return { ok: false, grund: "Dort ist Land." };
+    const tage = weglaenge(weg) / this.D.p.SPEED;
+    const warImHafen = schiff.ort;
+    schiff.pos = von;
+    schiff.ort = null;
+    schiff.fahrt = { weg, start: this.zeit, ende: this.zeit + tage, ziel: stadt };
+    if (stadt) {
+      const ab = warImHafen ? `legt in ${warImHafen.name} ab` : "ändert den Kurs";
+      this.melde(`${schiff.name} ${ab}, Ziel ${stadt.name} (Ankunft ${this.datumWelt(schiff.fahrt.ende)}).`);
+    }
+    return { ok: true };
   }
 
-  ablegen(schiff, ziel) {
-    if (!this.kannAblegen(schiff, ziel)) return false;
-    schiff.ziel = ziel;
-    schiff.abfahrt = this.welt.tag;
-    schiff.ankunft = this.welt.tag + this.welt.fahrtage(schiff.ort, ziel);
-    schiff.weg = weg(this.D, schiff.ort, ziel);
-    this.melde(`${schiff.name} legt in ${schiff.ort.name} ab, Ziel ${ziel.name} (Ankunft ${this.datumWelt(schiff.ankunft)}).`);
-    return true;
+  // Auf See an der aktuellen Stelle anhalten
+  anhalten(schiff) {
+    if (!schiff.fahrt) return;
+    const p = this.position(schiff);
+    schiff.pos = [p.x, p.y];
+    schiff.fahrt = null;
+  }
+
+  // Schiffe ans Ziel bringen, deren Fahrt bis zur aktuellen Zeit vorbei ist
+  pruefeAnkuenfte() {
+    const ankuenfte = [];
+    for (const s of this.schiffe) {
+      if (s.fahrt && this.zeit >= s.fahrt.ende) {
+        const f = s.fahrt;
+        s.pos = [...f.weg[f.weg.length - 1]];
+        s.ort = f.ziel;
+        s.fahrt = null;
+        ankuenfte.push(s);
+        if (s.ort) this.melde(`${s.name} ist in ${s.ort.name} angekommen.`, "ankunft");
+        else this.melde(`${s.name} hat den Zielpunkt vor ${this.naechsteStadt(s.pos).name} erreicht.`);
+      }
+    }
+    return ankuenfte;
+  }
+
+  // Zeitsteuerung: Fortschritt im laufenden Tag setzen, gibt angekommene Schiffe zurück
+  vorruecken(anteil) {
+    this.anteil = Math.max(0, Math.min(anteil, 0.999999));
+    return this.pruefeAnkuenfte();
   }
 
   kannSchiffKaufen(stadt) {
@@ -142,21 +207,13 @@ export class Spiel {
 
   // Ein Tag vergeht. Gibt Ereignisse und angekommene Schiffe zurück.
   tagVoran() {
+    this.anteil = 0;
     const ereignisse = this.welt.naechsterTag();
     for (const e of ereignisse) this.melde(e.text, "ereignis");
     const unterhalt = this.D.p.UPKEEP * this.schiffe.length;
     this.gulden -= unterhalt;
     this.bilanz.unterhalt += unterhalt;
-    const ankuenfte = [];
-    for (const s of this.schiffe) {
-      if (s.ziel && this.welt.tag >= s.ankunft) {
-        s.ort = s.ziel;
-        s.ziel = null;
-        s.weg = null;
-        ankuenfte.push(s);
-        this.melde(`${s.name} ist in ${s.ort.name} angekommen.`, "ankunft");
-      }
-    }
+    const ankuenfte = this.pruefeAnkuenfte();
     return { ereignisse, ankuenfte };
   }
 }
