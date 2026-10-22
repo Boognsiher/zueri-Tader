@@ -44,7 +44,10 @@ button {
 }
 button:hover:not(:disabled) { background: linear-gradient(#fff6e0, #ead9b2); border-color: var(--holz); }
 button:disabled { opacity: 0.45; cursor: default; }
-button:focus-visible, .stadt:focus-visible { outline: 2px solid var(--rot); outline-offset: 2px; }
+button:focus-visible { outline: 2px solid var(--rot); outline-offset: 2px; }
+/* Städte: kein Fokusrahmen des Browsers, der Lichthof zeigt Auswahl und Tastaturfokus */
+.stadt, .stadt:focus, .stadt:focus-visible, .spielerboot:focus { outline: none; }
+.stadt:focus-visible .lichthof { opacity: 0.45; }
 
 /* --- Kopfzeile ------------------------------------------------------------ */
 .leiste {
@@ -221,8 +224,11 @@ main {
 
 .stadt { cursor: pointer; }
 .stadt .klickflaeche { fill: transparent; }
-.stadt .auswahlring { fill: none; stroke: transparent; stroke-width: 0.3; }
-.stadt.gewaehlt .auswahlring { stroke: var(--rot); stroke-dasharray: 0.7 0.4; }
+.stadt .lichthof { fill: #f6d27a; opacity: 0; transition: opacity 0.2s; }
+.stadt.gewaehlt .lichthof { opacity: 0.7; }
+.stadt.gewaehlt .haus { stroke: #f0b23c; stroke-width: 0.35; }
+.stadt.gewaehlt .stadtname { fill: var(--rot); }
+.stadt:hover .lichthof { opacity: 0.3; }
 .stadt .haus { fill: var(--rot); stroke: var(--papier-hell); stroke-width: 0.25; }
 .stadt.gesperrt .haus { fill: #777; }
 .stadt.ereignis .haus { stroke: #f0b23c; stroke-width: 0.4; }
@@ -397,3 +403,12 @@ button.klein { font-size: 0.85rem; padding: 0.05em 0.5em; }
 .auftraege select { max-width: 9.5rem; }
 
 .mitschiff { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.3rem 0 0.5rem; }
+
+/* --- Flotte: Automatik-Symbol, Werft ------------------------------------------- */
+.schiffzeile { display: flex; align-items: stretch; gap: 0.3rem; }
+.schiffzeile .schiff { flex: 1; }
+.autosymbol { display: flex; align-items: center; justify-content: center; width: 1.9rem; flex: none; border-radius: 4px; font-size: 1.05rem; color: var(--gruen); border: 1px solid var(--rand); background: var(--papier); }
+button.autosymbol.pausiert { color: #fff6e8; background: linear-gradient(#4f8a55, #2f6a35); border-color: #24522a; padding: 0; }
+.modus.pausiert { color: var(--tinte-blass); }
+.schiffsname small { font-weight: normal; color: var(--tinte-blass); }
+#markt [data-stadtfenster] { margin: 0.1rem 0 0.4rem; }

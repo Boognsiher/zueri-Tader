@@ -124,7 +124,7 @@ export class Karte {
       const [x, y] = stadt.pos;
       const g = el("g", { class: "stadt", transform: `translate(${x},${y})`, tabindex: 0, role: "button", "aria-label": stadt.name }, this.ebeneStaedte);
       el("circle", { r: 3.2, class: "klickflaeche" }, g);
-      el("circle", { r: 2.1, class: "auswahlring" }, g);
+      el("circle", { r: 2.6, class: "lichthof" }, g);
       el("path", { d: "M-1,0.6 L-1,-0.5 L0,-1.3 L1,-0.5 L1,0.6 Z", class: "haus" }, g);
       const dy = unten.has(stadt.name) ? 3.4 : -2.2;
       el("text", { y: dy, class: "stadtname" }, g).textContent = stadt.name;
@@ -201,7 +201,7 @@ export class Karte {
       let boot = this.spielerBoote.get(schiff);
       if (!boot) {
         boot = bootSymbol(this.ebeneSpieler, "spielerboot");
-        el("text", { y: 2.3, class: "bootname" }, boot).textContent = schiff.name;
+        el("text", { y: 2.3, class: "bootname" }, boot);
         boot.addEventListener("click", (e) => {
           e.stopPropagation();
           this.rueckrufe.schiff(schiff);
@@ -222,7 +222,12 @@ export class Karte {
         y = schiff.ort.pos[1] + (unten ? -1.2 : 1.2);
       }
       boot.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
-      boot.querySelector(".boot-koerper").setAttribute("transform", links ? "scale(-1,1)" : "");
+      const groesse = this.spiel.schiffstyp(schiff).groesse;
+      boot.querySelector(".boot-koerper").setAttribute("transform", `scale(${links ? -groesse : groesse},${groesse})`);
+      const name = boot.querySelector(".bootname");
+      const zeichen = schiff.auto ? (schiff.auto.pausiert ? " ⏸" : " ⟳") : "";
+      if (name.textContent !== schiff.name + zeichen) name.textContent = schiff.name + zeichen;
+      name.setAttribute("y", (2.3 * groesse).toFixed(2));
       boot.classList.toggle("gewaehlt", schiff === this.auswahl.schiff);
     }
   }
@@ -243,7 +248,7 @@ export class Karte {
           text = "gesperrt";
         } else {
           const w = spiel.nav.route([p.x, p.y], stadt.pos);
-          if (w) text = `${(Math.round((2 * weglaenge(w)) / this.D.p.SPEED) / 2).toLocaleString("de-CH")} T.`;
+          if (w) text = `${(Math.round((2 * weglaenge(w)) / spiel.tempo(schiff)) / 2).toLocaleString("de-CH")} T.`;
         }
       }
       info.textContent = text;

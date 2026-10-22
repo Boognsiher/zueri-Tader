@@ -20,7 +20,6 @@ export class Routenfenster {
     dialog.addEventListener("click", (e) => this.klick(e));
     dialog.addEventListener("change", (e) => this.aenderung(e, true));
     dialog.addEventListener("input", (e) => this.aenderung(e, false));
-    dialog.addEventListener("close", () => this.rueckrufe.geschlossen());
   }
 
   get offen() {
@@ -41,8 +40,11 @@ export class Routenfenster {
     if (!this.dialog.open) this.dialog.show();
   }
 
+  // Synchron schliessen: das close-Ereignis des Dialogs käme erst später
   schliesse() {
-    if (this.dialog.open) this.dialog.close();
+    if (!this.dialog.open) return;
+    this.dialog.close();
+    this.rueckrufe.geschlossen();
   }
 
   standardRoute(schiff) {
@@ -59,7 +61,7 @@ export class Routenfenster {
     const staedte = this.spiel.welt.staedte.map((s) => s.name);
     const waren = Object.keys(this.D.waren);
     const option = (wert, text, aktiv) => `<option value="${esc(wert)}" ${aktiv ? "selected" : ""}>${esc(text)}</option>`;
-    let html = `<header><div><h2>Automatik</h2><span class="untertitel">${esc(this.D.spiel.schiffstyp)} «${esc(this.schiff.name)}»</span></div>
+    let html = `<header><div><h2>Automatik</h2><span class="untertitel">${esc(this.spiel.schiffstyp(this.schiff).name)} «${esc(this.schiff.name)}»</span></div>
       <button class="schliessen" data-abbrechen title="Schliessen ohne Änderung" aria-label="Schliessen">×</button></header>
       <div class="modi" role="radiogroup" aria-label="Steuerung">
         ${[["selbst", "Selbst steuern"], ["route", "Handelsroute"], ["frei", "Freier Handel"]]
@@ -72,7 +74,7 @@ export class Routenfenster {
       html += `<p class="hilfe">Der Kapitän sucht in jedem Hafen das Geschäft mit dem höchsten Gewinn pro Tag, kauft, fährt hin und verkauft. Findet er länger nichts, wechselt er den Hafen.</p>
         <label class="einsatz">Einsatz pro Fahrt höchstens <input type="number" min="0" step="500" value="${e.einsatz}" data-feld="einsatz"> Gulden</label>`;
     } else {
-      html += `<p class="hilfe">Das Schiff fährt die Häfen der Reihe nach ab und beginnt danach von vorn. Menge leer = alles bzw. so viel wie passt. Preis leer = egal, beim Kaufen Höchstpreis, beim Verkaufen Mindestpreis. Verkauft und entladen wird vor dem Kaufen und Laden.</p><ol class="halte">`;
+      html += `<p class="hilfe">Das Schiff fährt die Häfen der Reihe nach ab und beginnt danach von vorn. Menge leer = alles bzw. so viel wie passt. Preis leer = egal, beim Kaufen Höchstpreis, beim Verkaufen Mindestpreis. Reihenfolge in jedem Hafen: verkaufen, kaufen, ins Kontor entladen (auch eben Gekauftes), aus dem Kontor laden.</p><ol class="halte">`;
       e.halte.forEach((h, i) => {
         const kontor = this.spiel.ausbau.kontor(h.stadt);
         html += `<li class="halt"><div class="haltkopf">

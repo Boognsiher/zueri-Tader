@@ -66,7 +66,7 @@ async function start() {
   const geladen = !!spiel;
   if (!spiel) {
     spiel = new Spiel(D, (Date.now() ^ (Math.random() * 0x7fffffff)) | 0);
-    spiel.melde(`Dein ${D.spiel.schiffstyp} «${spiel.schiffe[0].name}» liegt in ${D.spiel.start.stadt} bereit.`);
+    spiel.melde(`Dein ${spiel.schiffstyp(spiel.schiffe[0]).name} «${spiel.schiffe[0].name}» liegt in ${D.spiel.start.stadt} bereit.`);
     if (ladefehler) spiel.melde(`Spielstand konnte nicht geladen werden: ${ladefehler}`, "warnung");
   }
 
@@ -147,7 +147,7 @@ async function start() {
   function autoSpeichern() {
     schreibe(SCHLUESSEL.auto, speichere(spiel));
   }
-  let monat = spiel.datum().split(" ").slice(1).join(" ");
+  setInterval(autoSpeichern, D.spiel.autosave_sekunden * 1000);
   document.addEventListener("visibilitychange", () => {
     if (document.visibilityState === "hidden") autoSpeichern();
   });
@@ -215,16 +215,11 @@ async function start() {
       let ankuenfte = [];
       let neuerTag = false;
       // Nur selbst gesteuerte Schiffe halten an, automatische fahren weiter
-      const selbst = (liste) => liste.filter((s) => !s.auto);
+      const selbst = (liste) => liste.filter((s) => !s.auto || s.auto.pausiert);
       while (vorrat >= dauer && !ankuenfte.length) {
         vorrat -= dauer;
         ankuenfte = selbst(spiel.tagVoran().ankuenfte);
         neuerTag = true;
-        const m = spiel.datum().split(" ").slice(1).join(" ");
-        if (m !== monat) {
-          monat = m;
-          autoSpeichern();
-        }
       }
       if (!ankuenfte.length) ankuenfte = selbst(spiel.vorruecken(vorrat / dauer));
       if (ankuenfte.length && $("anhalten").checked) {
