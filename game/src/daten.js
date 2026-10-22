@@ -1,0 +1,61 @@
+// Lädt alle Spielzahlen aus data/*.json, dieselben Dateien, die auch die Simulation liest.
+// Im Browser per fetch, unter Node (Tests) über eine eigene Lesefunktion.
+
+const DATEIEN = ["goods", "recipes", "consumption", "cities", "params", "events", "karte", "spiel"];
+
+export async function ladeDaten(lesen) {
+  const roh = {};
+  for (const name of DATEIEN) roh[name] = await lesen(`${name}.json`);
+  return aufbereiten(roh);
+}
+
+export function ladeImBrowser(basis = "../data/") {
+  return ladeDaten(async (datei) => {
+    const antwort = await fetch(basis + datei, { cache: "no-cache" });
+    if (!antwort.ok) throw new Error(`${datei} konnte nicht geladen werden (${antwort.status})`);
+    return antwort.json();
+  });
+}
+
+function aufbereiten(roh) {
+  const p = {};
+  for (const [name, eintrag] of Object.entries(roh.params.parameter)) p[name] = eintrag.wert;
+
+  const waren = {};
+  const gruppen = {};
+  for (const [name, eintrag] of Object.entries(roh.goods.waren)) {
+    waren[name] = eintrag.basispreis;
+    gruppen[name] = eintrag.gruppe;
+  }
+
+  const seeteil = {};
+  for (const [teil, eintrag] of Object.entries(roh.karte.seeteile)) {
+    for (const stadt of eintrag.staedte) seeteil[stadt] = teil;
+  }
+
+  const staedte = roh.cities.staedte.map((s) => ({
+    name: s.name,
+    einwohner: s.einwohner,
+    pos: s.position,
+    prod: s.produktion,
+    werk: s.werkstaetten,
+  }));
+  for (const s of staedte) {
+    if (!(s.name in seeteil)) throw new Error(`Stadt ${s.name} fehlt in karte.json (seeteile)`);
+  }
+
+  return {
+    p,
+    waren,
+    gruppen,
+    rezepte: roh.recipes.rezepte,
+    verbrauch: roh.consumption.verbrauch_pro_1000_einwohner_und_tag,
+    grundbedarf: roh.consumption.grundbedarf,
+    gehoben: roh.consumption.gehobener_bedarf,
+    staedte,
+    ereignisse: roh.events.ereignisse,
+    karte: roh.karte,
+    seeteil,
+    spiel: roh.spiel,
+  };
+}
