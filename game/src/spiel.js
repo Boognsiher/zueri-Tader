@@ -9,6 +9,7 @@ import { Werft } from "./werft.js";
 import * as automatik from "./automatik.js";
 import { neueKonten, buche } from "./bilanz.js";
 
+const MELDUNGEN_JE_REIHE = 60;
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
 export class Spiel {
@@ -69,9 +70,13 @@ export class Spiel {
     buche(this.konten, this.monat(), konto, betrag);
   }
 
+  // Meldungen in zwei Reihen: "handel" (Käufe und Verkäufe, Automatik, Kontore) und
+  // "wichtig" (alles andere). Jede Reihe behält ihre letzten MELDUNGEN_JE_REIHE Einträge.
   melde(text, art = "info") {
-    this.meldungen.unshift({ tag: this.tag, datum: this.datum(), text, art });
-    this.meldungen.length = Math.min(this.meldungen.length, 60);
+    const reihe = art === "handel" ? "handel" : "wichtig";
+    this.meldungen.unshift({ tag: this.tag, datum: this.datum(), text, art, reihe });
+    let zaehler = 0;
+    this.meldungen = this.meldungen.filter((m) => m.reihe !== reihe || ++zaehler <= MELDUNGEN_JE_REIHE);
   }
 
   neuesSchiff(stadt, typId = this.D.schiffe.startschiff, gebraucht = false) {

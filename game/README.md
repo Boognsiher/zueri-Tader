@@ -28,6 +28,7 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
 - 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
+- **Meldungen** in zwei Reitern: «Wichtig» (Ereignisse, Ankünfte, Warnungen, Käufe und Bauten) und «Handel» (Käufe und Verkäufe, Automatik, Kontore); ein Punkt zeigt Neues im anderen Reiter
 - Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft
 
 Noch nicht dabei: Spielziel, Gebäudestufen und Versorgungsgebäude, Diplomatie, Kampf (siehe `docs/roadmap.md`).

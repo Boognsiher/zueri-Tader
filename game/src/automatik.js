@@ -125,7 +125,9 @@ function liegezeit(spiel, schiff, menge) {
 }
 
 function tageText(tage) {
-  return tage >= 0.05 ? `, Liegezeit ${tage.toLocaleString("de-CH", { maximumFractionDigits: 1 })} Tage` : "";
+  if (tage < 0.05) return "";
+  const text = tage.toLocaleString("de-CH", { maximumFractionDigits: 1 });
+  return `, Liegezeit ${text} ${text === "1" ? "Tag" : "Tage"}`;
 }
 
 // Erledigt die Aufträge eines Halts, gibt die umgeschlagene Menge zurück

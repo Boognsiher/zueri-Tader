@@ -38,11 +38,19 @@ export class Oberflaeche {
     this.stadt = this.schiff.ort ?? spiel.naechsteStadt(this.schiff.pos);
     this.menge = "10";
     this.reiter = "markt";
+    this.meldReiter = "wichtig";
+    this.gesehen = { wichtig: "", handel: "" }; // oberste gesehene Meldung je Reihe
     this.handelOffen = false;
     this.fensterSchiff = null; // Schiff im Handelsfenster, null = Stadtfenster
     this.fensterStadt = null;
     this.routenfenster = null; // wird von main.js gesetzt
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
+    this.e.meldungen.addEventListener("click", (ev) => {
+      const k = ev.target.closest("[data-meldreiter]");
+      if (!k) return;
+      this.meldReiter = k.dataset.meldreiter;
+      this.meldungen();
+    });
     this.e.markt.addEventListener("click", (ev) => {
       if (ev.target.closest("[data-stadtfenster]")) this.oeffneStadt(this.stadt);
     });
@@ -713,11 +721,23 @@ export class Oberflaeche {
     this.e.bilanzInhalt.innerHTML = html;
   }
 
+  // Meldungen mit zwei Reitern: Wichtig und Handel. Ein Punkt zeigt neue Meldungen im anderen Reiter.
   meldungen() {
-    this.e.meldungen.innerHTML = this.spiel.meldungen
-      .slice(0, 6)
+    const alle = this.spiel.meldungen;
+    const reihe = (m) => m.reihe ?? (m.art === "handel" ? "handel" : "wichtig");
+    // Neue Meldungen erkennt man am obersten Eintrag jeder Reihe
+    const oben = { wichtig: alle.find((m) => reihe(m) === "wichtig"), handel: alle.find((m) => reihe(m) === "handel") };
+    const kennung = (m) => (m ? `${m.datum}|${m.text}` : "");
+    this.gesehen[this.meldReiter] = kennung(oben[this.meldReiter]);
+    const neu = (r) => r !== this.meldReiter && oben[r] && this.gesehen[r] !== kennung(oben[r]);
+    const knopf = (r, text) => `<button data-meldreiter="${r}" aria-selected="${this.meldReiter === r}">${text}${neu(r) ? ' <span class="neu" aria-label="neue Meldungen">●</span>' : ""}</button>`;
+    const eintraege = alle
+      .filter((m) => reihe(m) === this.meldReiter)
+      .slice(0, 25)
       .map((m) => `<li class="${m.art}"><span class="wann">${esc(m.datum)}</span> ${esc(m.text)}</li>`)
       .join("");
+    this.e.meldungen.innerHTML = `<div class="meldreiter" role="tablist">${knopf("wichtig", "Wichtig")}${knopf("handel", "Handel")}</div>
+      <ol>${eintraege || `<li class="leer">Noch keine Meldungen.</li>`}</ol>`;
   }
 
   // --- Klicks ----------------------------------------------------------------
@@ -802,7 +822,7 @@ export class Oberflaeche {
       const r = schiff ? s.verkaufen(schiff, knopf.dataset.verkauf, wunsch) : { menge: 0 };
       if (r.menge) {
         const ergebnis = r.gewinn >= 0 ? `Gewinn ${f(r.gewinn)}` : `Verlust ${f(-r.gewinn)}`;
-        s.melde(`${r.menge} ${knopf.dataset.verkauf} für ${f(r.betrag)} Gulden verkauft (${ergebnis}).`, r.gewinn >= 0 ? "gut" : "handel");
+        s.melde(`${r.menge} ${knopf.dataset.verkauf} für ${f(r.betrag)} Gulden verkauft (${ergebnis}).`, "handel");
       }
     } else if (knopf.dataset.ziel !== undefined) {
       this.segle({ stadt: s.welt.staedte[Number(knopf.dataset.ziel)] });
