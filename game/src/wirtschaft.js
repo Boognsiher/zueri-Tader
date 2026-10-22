@@ -48,6 +48,9 @@ export class Stadt {
     this.D = D;
     this.name = cfg.name;
     this.einwohner = cfg.einwohner;
+    this.einwohner0 = cfg.einwohner; // Startbevölkerung, Bezug für das Wachstum
+    this.zufriedenheitBonus = 0; // Versorgungsgebäude des Spielers (betriebe.js)
+    this.wohnraumBonus = 0; // zusätzlicher Wohnraum als Anteil der Startbevölkerung
     this.pos = cfg.pos;
     // Kopien: Betriebe des Spielers verschieben Leistung zwischen Stadt und Spieler (betriebe.js)
     this.prod = { ...cfg.prod };
@@ -85,6 +88,27 @@ export class Stadt {
         this.bestand[g] = this.ziel[g];
       }
     }
+    this.ziel0 = { ...this.ziel };
+    this.kap0 = { ...this.kap };
+  }
+
+  // Bevölkerungsfaktor: Produktion, Werkstätten, Verbrauch und Zielbestand wachsen mit
+  faktor() {
+    return this.einwohner / this.einwohner0;
+  }
+
+  // Obergrenze der Bevölkerung (Wohnraum)
+  wohnraum() {
+    return this.einwohner0 * (this.D.p.POP_MAX_FACTOR + this.wohnraumBonus);
+  }
+
+  skaliere() {
+    const f = this.faktor();
+    for (const [g, rate] of Object.entries(this.D.verbrauch)) this.verbrauch[g] = (rate * this.einwohner) / 1000;
+    for (const g of Object.keys(this.ziel0)) {
+      this.ziel[g] = this.ziel0[g] * f;
+      this.kap[g] = this.kap0[g] * f;
+    }
   }
 
   handelt(g) {
@@ -118,16 +142,18 @@ export class Stadt {
     return v && v[1] > tag ? v[0] : 1;
   }
 
-  // Ein Tag: Produktion, Werkstätten, Verbrauch, Zufriedenheit, Verderb
+  // Ein Tag: Produktion, Werkstätten, Verbrauch, Zufriedenheit, Bevölkerung, Verderb
   schritt(tag, st) {
     const D = this.D;
+    const f = this.faktor();
+    // Produktion wächst mit der Bevölkerung (mehr Arbeitskräfte)
     for (const [g, a] of Object.entries(this.prod)) {
-      const q = a * Stadt.faktor(this.prodFaktor, g, tag);
+      const q = a * f * Stadt.faktor(this.prodFaktor, g, tag);
       this.bestand[g] += q;
       if (st) addiere(st.produziert, g, q);
     }
     for (const [g, kapazitaet] of Object.entries(this.werk)) {
-      let batches = kapazitaet;
+      let batches = kapazitaet * f;
       for (const [zutat, n] of Object.entries(D.rezepte[g])) {
         batches = Math.min(batches, (this.bestand[zutat] ?? 0) / n);
       }
@@ -152,8 +178,17 @@ export class Stadt {
         gehoben.push(anteil);
       }
     }
-    const zielwert = 60 * mittel(grund) + 40 * mittel(gehoben);
+    // Aufschlüsselung für die Anzeige
+    this.zufriedenheitTeile = { grund: D.p.SAT_BASIC * mittel(grund), gehoben: D.p.SAT_COMFORT * mittel(gehoben), gebaeude: this.zufriedenheitBonus };
+    const zielwert = Math.min(100, D.p.SAT_BASIC * mittel(grund) + D.p.SAT_COMFORT * mittel(gehoben) + this.zufriedenheitBonus);
     this.zufriedenheit += 0.1 * (zielwert - this.zufriedenheit);
+    // Bevölkerung: wächst über POP_SAT_NEUTRAL, schrumpft darunter, begrenzt durch Wohnraum
+    const n = D.p.POP_SAT_NEUTRAL;
+    const rate = this.zufriedenheit > n ? (D.p.POP_GROWTH * (this.zufriedenheit - n)) / (100 - n) : (-D.p.POP_SHRINK * (n - this.zufriedenheit)) / n;
+    const tief = this.einwohner0 * D.p.POP_MIN_FACTOR;
+    this.einwohner = Math.min(Math.max(this.einwohner * (1 + rate), tief), Math.max(this.wohnraum(), tief));
+    this.wachstum = rate; // für die Anzeige
+    this.skaliere();
     for (const g of Object.keys(this.bestand)) {
       if (this.bestand[g] > this.kap[g]) {
         if (st) addiere(st.verdorben, g, this.bestand[g] - this.kap[g]);

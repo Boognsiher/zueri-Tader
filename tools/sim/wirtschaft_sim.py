@@ -97,6 +97,9 @@ class City:
     def __init__(self, cfg):
         self.name = cfg["name"]
         self.pop = cfg["pop"]
+        self.pop0 = cfg["pop"]               # Startbevoelkerung, Bezug fuer das Wachstum
+        self.satisfaction_bonus = 0.0        # Versorgungsgebaeude des Spielers (nur im Spiel)
+        self.housing_bonus = 0.0             # zusaetzlicher Wohnraum (nur im Spiel)
         self.pos = cfg["pos"]
         self.prod = cfg["prod"]
         self.work = cfg["work"]
@@ -125,6 +128,19 @@ class City:
                 self.target[g] = max(t, 20.0)
                 self.cap[g] = CAP_FACTOR * self.target[g]
                 self.stock[g] = self.target[g]
+        self.target0 = dict(self.target)
+        self.cap0 = dict(self.cap)
+
+    def scale(self):
+        """Bevoelkerungsfaktor: Produktion, Werkstaetten, Verbrauch und Zielbestand wachsen mit."""
+        return self.pop / self.pop0
+
+    def rescale(self):
+        f = self.scale()
+        self.cons = {g: r * self.pop / 1000.0 for g, r in CONSUMPTION.items()}
+        for g in self.target0:
+            self.target[g] = self.target0[g] * f
+            self.cap[g] = self.cap0[g] * f
 
     # --- Preise -------------------------------------------------------
     def mid_price(self, g, k):
@@ -148,14 +164,15 @@ class City:
 
     # --- ein Tag --------------------------------------------------------
     def step(self, day, stats):
-        # Produktion / Import
+        f = self.scale()
+        # Produktion / Import (waechst mit der Bevoelkerung: mehr Arbeitskraefte)
         for g, a in self.prod.items():
-            q = a * self._mult(self.prod_mult, g, day)
+            q = a * f * self._mult(self.prod_mult, g, day)
             self.stock[g] += q
             stats.produced[g] += q
         # Werkstaetten
         for g, cap_b in self.work.items():
-            batches = cap_b
+            batches = cap_b * f
             for inp, n in RECIPES[g].items():
                 batches = min(batches, self.stock.get(inp, 0.0) / n)
             if batches > 0:
@@ -176,8 +193,19 @@ class City:
                     shortage = True
             elif g in COMFORT:
                 comfort.append(ful)
-        target_sat = 60 * statistics.mean(basic) + 40 * statistics.mean(comfort)
+        target_sat = min(100.0, SAT_BASIC * statistics.mean(basic) + SAT_COMFORT * statistics.mean(comfort)
+                         + self.satisfaction_bonus)
         self.satisfaction += 0.1 * (target_sat - self.satisfaction)
+        # Bevoelkerung: waechst ueber POP_SAT_NEUTRAL, schrumpft darunter, begrenzt durch Wohnraum
+        n = POP_SAT_NEUTRAL
+        if self.satisfaction > n:
+            rate = POP_GROWTH * (self.satisfaction - n) / (100 - n)
+        else:
+            rate = -POP_SHRINK * (n - self.satisfaction) / n
+        hoch = self.pop0 * (POP_MAX_FACTOR + self.housing_bonus)
+        tief = self.pop0 * POP_MIN_FACTOR
+        self.pop = min(max(self.pop * (1 + rate), tief), max(hoch, tief))
+        self.rescale()
         # Lagerkapazitaet: Ueberschuss verdirbt
         for g in self.stock:
             if self.stock[g] > self.cap[g]:
@@ -458,13 +486,16 @@ def report(args, cities, ships, stats):
 
     # --- Zufriedenheit -----------------------------------------------------
     print("\n=== STAEDTE ===")
-    print(f"{'Stadt':<15}{'Zufriedenh.':>12}{'Minimum':>9}{'Tage Mangel':>13}")
+    print(f"{'Stadt':<15}{'Zufriedenh.':>12}{'Minimum':>9}{'Tage Mangel':>13}{'Einwohner':>18}")
     sats = []
     for c in cities:
         m = stats.sat_sum[c.name] / stats.sat_n[c.name]
         sats.append((m, stats.sat_min[c.name]))
         print(f"{c.name:<15}{m:>12.0f}{stats.sat_min[c.name]:>9.0f}"
-              f"{100*stats.short_days[c.name]/days:>12.0f}%")
+              f"{100*stats.short_days[c.name]/days:>12.0f}%{c.pop0:>9.0f} -> {c.pop:>5.0f}")
+    shrunk = [c.name for c in cities if c.pop < c.pop0]
+    checks.append((f"Keine Stadt schrumpft (Einwohner am Ende mindestens wie am Anfang); geschrumpft: "
+                   f"{', '.join(shrunk) or 'keine'}", not shrunk))
     checks.append((f"Zufriedenheit: Mittel {statistics.mean(s[0] for s in sats):.0f} (Ziel >= 55), "
                    f"niedrigster Stadtschnitt {min(s[0] for s in sats):.0f} (Ziel >= 40)",
                    statistics.mean(s[0] for s in sats) >= 55 and min(s[0] for s in sats) >= 40))

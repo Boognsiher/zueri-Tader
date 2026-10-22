@@ -17,6 +17,13 @@
     "MIN_ROI": {"wert": 0.05, "info": "KI-Händler fahren nur, wenn eine Tour mindestens diese Rendite bringt"},
     "MIN_PROFIT": {"wert": 60, "info": "KI-Händler fahren nur, wenn eine Tour mindestens diesen Gewinn bringt"},
     "WARMUP": {"wert": 60, "info": "Einlauftage, die nicht in die Statistik zählen"},
-    "EVENT_RATE": {"wert": 0.004, "info": "Ereigniswahrscheinlichkeit pro Stadt und Tag"}
+    "EVENT_RATE": {"wert": 0.004, "info": "Ereigniswahrscheinlichkeit pro Stadt und Tag"},
+    "SAT_BASIC": {"wert": 55, "info": "Zufriedenheit: Punkte bei voller Deckung des Grundbedarfs"},
+    "SAT_COMFORT": {"wert": 30, "info": "Zufriedenheit: Punkte bei voller Deckung des gehobenen Bedarfs. Die restlichen Punkte bis 100 gibt es nur über Versorgungsgebäude (im Spiel)"},
+    "POP_SAT_NEUTRAL": {"wert": 60, "info": "Bei dieser Zufriedenheit bleibt die Bevölkerung gleich, darüber wächst sie, darunter schrumpft sie"},
+    "POP_GROWTH": {"wert": 0.0006, "info": "Wachstum pro Tag bei Zufriedenheit 100 (0.0006 = 0,06 %)"},
+    "POP_SHRINK": {"wert": 0.001, "info": "Schrumpfen pro Tag bei Zufriedenheit 0"},
+    "POP_MAX_FACTOR": {"wert": 1.3, "info": "Wohnraum: höchste Bevölkerung als Vielfaches der Startbevölkerung"},
+    "POP_MIN_FACTOR": {"wert": 0.6, "info": "Tiefste Bevölkerung als Vielfaches der Startbevölkerung"}
   }
 }

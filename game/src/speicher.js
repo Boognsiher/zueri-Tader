@@ -27,6 +27,7 @@ export function speichere(spiel) {
         verbrauchFaktor: s.verbrauchFaktor,
         sperreBis: s.sperreBis,
         zufriedenheit: s.zufriedenheit,
+        einwohner: s.einwohner,
         ereignisse: s.ereignisse,
       })),
       haendler: welt.haendler.map((h) => ({
@@ -44,7 +45,7 @@ export function speichere(spiel) {
       gulden: spiel.gulden,
       namen: spiel.namen,
       meldungen: spiel.meldungen,
-      bilanz: spiel.bilanz,
+      konten: spiel.konten,
       werft: spiel.werft.zustand(),
       schiffe: spiel.schiffe.map((s) => ({
         name: s.name,
@@ -82,7 +83,10 @@ export function lade(D, stand) {
 
   welt.tag = stand.welt.tag;
   welt.zufall.zustand = stand.welt.zufall;
-  stand.welt.staedte.forEach((z, i) => Object.assign(welt.staedte[i], z));
+  stand.welt.staedte.forEach((z, i) => {
+    Object.assign(welt.staedte[i], z);
+    welt.staedte[i].skaliere(); // Verbrauch und Zielbestände zur gespeicherten Bevölkerung
+  });
   welt.haendler = stand.welt.haendler.map((z, i) => {
     const h = welt.haendler[i] ?? Object.create(Object.getPrototypeOf(welt.haendler[0]));
     Object.assign(h, { D, ort: stadt(z.ort), geld: z.geld, ladung: z.ladung, ziel: stadt(z.ziel), abfahrt: z.abfahrt, ankunft: z.ankunft });
@@ -95,7 +99,7 @@ export function lade(D, stand) {
   spiel.gulden = sp.gulden;
   spiel.namen = sp.namen;
   spiel.meldungen = sp.meldungen;
-  spiel.bilanz = { ...spiel.bilanz, ...sp.bilanz };
+  if (sp.konten) spiel.konten = sp.konten; // ältere Spielstände ohne Buchhaltung beginnen leer
   spiel.schiffe = sp.schiffe.map((z) => ({
     name: z.name,
     typ: z.typ ?? D.schiffe.startschiff, // Spielstände vor dem Bootshandel
