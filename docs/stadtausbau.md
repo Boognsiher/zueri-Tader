@@ -1,6 +1,17 @@
 # Stadtausbau
 
-Stand: Entwurf. Entschieden sind das Slot-System und die einfache Zufriedenheit. Zahlen in `data/buildings.json` sind nicht ausbalanciert und werden von der Simulation noch nicht gelesen.
+Stand: Im Spiel umgesetzt sind Kontore und Betriebe (siehe unten "Umsetzung in der Demo"). Der Rest dieses Dokuments ist der ursprüngliche Entwurf. Die Simulation liest `data/buildings.json` noch nicht.
+
+## Umsetzung in der Demo (22.10.2026)
+
+Angelehnt an die Werkstätten in Mount & Blade: Bannerlord:
+
+- **Vorhandene Betriebe:** Jede Stadt hat von Anfang an Betriebe in Besitz der Stadt, abgeleitet aus ihrer Produktion in `cities.json` (höchstens einer pro Ware, wenn die Menge für einen ganzen Betrieb reicht). Insgesamt 34 Betriebe.
+- **Kaufen und verkaufen:** Der Spieler kauft einen Betrieb zum Marktwert, wenn eines seiner Schiffe im Hafen liegt. Dessen Leistung geht von der Stadt auf ihn über. Der Betrieb kauft Zutaten am Markt der Stadt (oder aus dem Kontor) und verkauft die Erzeugnisse dort (oder liefert ins Kontor). Gewinn oder Verlust geht an den Spieler. Zurückverkauft wird für 70 % des Marktwerts.
+- **Neubau:** Wenige Bauplätze pro Stadt (2-4 nach Einwohnern). Neue Betriebe erhöhen das Angebot. Rohstoffbetriebe nur, wo die Stadt den Rohstoff hat. Baumaterial (Holz, Werkzeug) muss im Kontor oder in einem Schiff vor Ort liegen.
+- **Kontor:** Lager mit 400 Einheiten pro Stadt. Für das Einlagern von Erzeugnissen, für Werkstätten mit eigenen Zutaten und für Handelsrouten (laden und entladen).
+- **Zahlen:** `data/buildings.json`. Der Kaufpreis ist der erwartete Tagesgewinn zu den heutigen Preisen der Stadt mal `amortisation_tage` (150). Betriebe handeln zum Mittelpreis ohne Handelsspanne.
+- **Noch nicht umgesetzt:** Stufen, Versorgungsgebäude mit Wirkung auf die Zufriedenheit, Werft, Befestigung, Gesandtschaft (in `buildings.json` unter `geplant`), Bevölkerungswachstum.
 
 ## Grundidee: Stadt als Wirtschaftsmotor
 

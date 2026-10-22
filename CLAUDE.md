@@ -34,7 +34,7 @@ Exit-Code 0 = alle Balance-Checks bestanden, 1 = mindestens ein Check durchgefal
 - `data/params.json`: Stellschrauben. Wichtigste Balance-Schraube: `TARGET_DAYS_USE` / `TARGET_DAYS_PROD` (Zielbestand in Tagen)
 - `data/cities.json`, `goods.json`, `recipes.json`, `consumption.json`: Wirtschaftsdaten
 - `data/events.json`: Zufallsereignisse, `data/karte.json`: Seeteile, Ufer und Durchfahrt (bestimmt die Fahrzeiten), `data/spiel.json`: Startwerte der Demo
-- `data/buildings.json`: Entwurf der Gebäude (noch nicht von der Simulation gelesen)
+- `data/buildings.json`: Betriebe und Kontor für den Stadtausbau im Spiel (von der Simulation noch nicht gelesen)
 - `tools/sim/wirtschaft_sim.py`: Simulation (Datenabschnitt, Modell, Tagesschleife, Bericht), das Referenzmodell
 - `game/src/wirtschaft.js`: dieselbe Wirtschaftslogik im Spiel. Änderungen an der Logik immer in beiden Dateien
 

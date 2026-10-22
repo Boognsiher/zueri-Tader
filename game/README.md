@@ -16,11 +16,15 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Steuerung mit der Maus:** Klick auf den See, und das gewählte Schiff segelt dorthin (auch Kurswechsel unterwegs). Klick auf eine Stadt, und es legt dort an. Der Weg führt automatisch über Wasser, zum Obersee durch den Seedamm.
 - **Handelsfenster:** öffnet sich bei der Ankunft im Hafen (oder per Klick auf die Stadt, in der das Schiff liegt) und hält die Zeit an. Darin auch die Option, direkt zu einem anderen Hafen zu segeln, und der Schiffskauf.
 - Eigene Schiffe (Nauen): Laderaum 120, Unterhalt pro Tag, weitere Schiffe kaufbar
+- **Betriebe:** in jeder Stadt vorhandene Betriebe kaufen (wie Werkstätten in Bannerlord) oder auf freien Bauplätzen neue bauen. Sie arbeiten täglich, Gewinn oder Verlust geht an dich. Erzeugnisse wahlweise an den Markt oder ins Kontor.
+- **Kontor:** Lager in einer Stadt, Waren zwischen Schiff und Kontor umlagern oder direkt verkaufen
+- **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht
+- **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jeden Monat, Export und Import als Datei, «Weiterspielen» beim Start
 - 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
 - Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft
 
-Noch nicht dabei: Spielziel, Speichern, Stadtausbau, Diplomatie, Kampf (siehe `docs/roadmap.md`).
+Noch nicht dabei: Spielziel, Gebäudestufen und Versorgungsgebäude, Diplomatie, Kampf (siehe `docs/roadmap.md`).
 
 ## Aufbau
 
@@ -31,9 +35,13 @@ Noch nicht dabei: Spielziel, Speichern, Stadtausbau, Diplomatie, Kampf (siehe `d
 | `src/wirtschaft.js` | Wirtschaftsmodell: Preise, Städte, KI-Händler, Ereignisse. Entspricht `tools/sim/wirtschaft_sim.py` |
 | `src/spiel.js` | Spielerzustand: Geld, Schiffe, Fahrten, Handel, Kalender |
 | `src/navigation.js` | Wegsuche über Wasser für die frei gesteuerten Schiffe |
+| `src/betriebe.js` | Kontore und Betriebe (Stadtausbau) |
+| `src/automatik.js` | automatischer Handel: Handelsroute und freier Handel |
+| `src/speicher.js` | Spielstand speichern und laden |
+| `src/routenfenster.js` | Fenster zum Einrichten der Automatik |
 | `src/karte.js` | Seekarte als SVG |
-| `src/oberflaeche.js` | Seitenleiste (Flotte, Marktübersicht), Handelsfenster, Meldungen |
-| `src/main.js` | Einstieg und Zeitsteuerung |
+| `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Meldungen |
+| `src/main.js` | Einstieg, Zeitsteuerung, Menü Spielstand |
 | `src/zufall.js` | reproduzierbarer Zufallsgenerator |
 | `test/wirtschaft_test.mjs` | Test ohne Browser (`node game/test/wirtschaft_test.mjs`) |
 
