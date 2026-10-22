@@ -1,0 +1,41 @@
+# Entscheidungen
+
+Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei "Entschieden" ergänzen, mit Datum und Begründung.
+
+## Entschieden
+
+| Datum | Entscheidung | Begründung |
+|---|---|---|
+| 22.10.2026 | Hobbyprojekt, das die Spielidee der Port-Royale-Reihe weiterentwickelt | Eigenes Spiel ist realistischer als Modifikationen des geschlossenen Originals |
+| 22.10.2026 | Schwerpunkte: Handel, Management, Diplomatie. Kampf bleibt klein | Persönliche Gewichtung, Kampf nur als Würze |
+| 22.10.2026 | Kampf mit statischer Ansicht, keine 3D-Schlachten | Spart den grössten Entwicklungsaufwand |
+| 22.10.2026 | 2D-Karte mit Städten als Knoten und Seewegen | Passt zu einem Managementspiel, spart Aufwand |
+| 22.10.2026 | Stadtausbau als Slot-System | Schnell testbar, später auf Raster erweiterbar |
+| 22.10.2026 | Bauen nur in freigeschalteten Städten, keine eigenen Siedlungen am Anfang | Einfacher Start, Tiefe später |
+| 22.10.2026 | Eine Zufriedenheitszahl pro Stadt statt Bevölkerungsschichten | Einfacher Start, Tiefe später |
+| 22.10.2026 | Datengetriebenes Design: Zahlen in `data/*.json`, nicht im Code | Balance ohne Programmieren, Simulation und Spiel teilen die Daten |
+| 22.10.2026 | Wirtschaft zuerst als Python-Simulation ohne Grafik testen | Spielspass im Kern beweisen, bevor Oberfläche und Inhalt folgen |
+| 22.10.2026 | Entwicklung auf GitHub, Weiterarbeit mit Claude Code | Versionierung, Dokumentation und Tests an einem Ort |
+| 22.10.2026 | Arbeitstitel "Züri-Trade" | Vom Projektinhaber gewählt, Titel ist änderbar |
+| 22.10.2026 | Standardwerte der Simulation: Zielbestand 30/20 Tage, 45 Schiffe, k = 0.7 | Erfüllt alle Balance-Checks, siehe `docs/wirtschaft.md` |
+| 22.10.2026 | Grafikansatz orientiert sich an Port Royale 3 (alter Look: 2D-Karte, später optional 3D-Stadtansicht), bewusst vereinfacht und poliert. Keine Übernahme von Originalbildern | Gleiche Grafik ist nicht erreichbar und nicht nötig. Ein stimmiger Stil reicht, und das Repo bleibt rechtlich sauber. Siehe `docs/optik.md` |
+| 22.10.2026 | Unreal Engine 5 geprüft, nicht empfohlen | Für ein oberflächenlastiges Verwaltungsspiel unnötig aufwändig, Projekte bestehen weitgehend aus Binärdateien (schlecht für Git und Claude Code). Siehe `game/README.md` |
+
+## Empfehlung, noch nicht bestätigt
+
+| Thema | Empfehlung |
+|---|---|
+| Zeitmodell | Echtzeit mit Pause, intern in festen Tagen gerechnet. Fühlt sich lebendig an und bleibt testbar. Alternative: rundenbasiert (einfacher zu bauen). |
+| Umfang | 15-25 Städte, 10-15 Waren |
+| Preisformel | `Basispreis × (Zielbestand / Lagerbestand)^k`, siehe `docs/wirtschaft.md` |
+
+## Offen
+
+- **Engine:** Godot 4 (kostenlos, gutes UI-System, starke 2D-Unterstützung) oder Web mit TypeScript (flexible Oberflächen, einfach zu teilen). Entscheidung vor dem Ordner `game/`.
+- **Spielziel:** Reichtum, Titel, Monopole oder eine Kombination
+- **Einzelspieler oder Mehrspieler:** bisher Einzelspieler angenommen
+- **Diplomatie:** Umfang und Tiefe, siehe `docs/diplomatie.md`
+- **Städte freischalten:** wie und wodurch
+- **Setting:** Karibik (derzeit) oder Änderung passend zum Titel
+- **Lizenz des Repos:** noch nicht festgelegt
+- **Grafik im Detail:** Richtung ist festgelegt (siehe oben). Offen sind der genaue Oberflächenstil (Pergament, Seekarte, Kontor) und ob die Stadtansicht 2D oder später 3D wird, siehe `docs/optik.md`

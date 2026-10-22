@@ -1,0 +1,61 @@
+{
+  "_info": "Städte. produktion = Rohproduktion/Import pro Tag, werkstaetten = Kapazität in Batches pro Tag (Rezepte in recipes.json). Faustregel: Gesamtproduktion pro Ware ca. 3-8 % über dem Gesamtbedarf; Rohstoff und Werkstatt nicht überall in derselben Stadt.",
+  "staedte": [
+    {
+      "name": "Port Royal",
+      "einwohner": 1200,
+      "position": [45, 30],
+      "produktion": {"Nahrung": 15, "Fisch": 10, "Zuckerrohr": 40, "Wein": 12},
+      "werkstaetten": {"Rum": 25, "Tuch": 10, "Zigarren": 14}
+    },
+    {
+      "name": "Havanna",
+      "einwohner": 1800,
+      "position": [20, 8],
+      "produktion": {"Nahrung": 72, "Zuckerrohr": 35, "Tabak": 40, "Wein": 14},
+      "werkstaetten": {"Rum": 18, "Zigarren": 20}
+    },
+    {
+      "name": "Santo Domingo",
+      "einwohner": 1000,
+      "position": [72, 14],
+      "produktion": {"Nahrung": 55, "Holz": 25, "Zuckerrohr": 32, "Gewürze": 8},
+      "werkstaetten": {"Rum": 8, "Werkzeug": 10}
+    },
+    {
+      "name": "Tortuga",
+      "einwohner": 500,
+      "position": [55, 5],
+      "produktion": {"Fisch": 30, "Gewürze": 10},
+      "werkstaetten": {}
+    },
+    {
+      "name": "Cartagena",
+      "einwohner": 1400,
+      "position": [40, 55],
+      "produktion": {"Nahrung": 55, "Tabak": 32, "Kakao": 10, "Eisenerz": 20},
+      "werkstaetten": {}
+    },
+    {
+      "name": "Maracaibo",
+      "einwohner": 800,
+      "position": [70, 50],
+      "produktion": {"Nahrung": 30, "Holz": 25, "Baumwolle": 40, "Kakao": 8},
+      "werkstaetten": {"Tuch": 20}
+    },
+    {
+      "name": "Curaçao",
+      "einwohner": 700,
+      "position": [90, 40],
+      "produktion": {"Fisch": 22, "Baumwolle": 28},
+      "werkstaetten": {"Tuch": 12, "Werkzeug": 8}
+    },
+    {
+      "name": "Belize",
+      "einwohner": 600,
+      "position": [8, 38],
+      "produktion": {"Nahrung": 25, "Fisch": 20, "Holz": 35, "Baumwolle": 20},
+      "werkstaetten": {}
+    }
+  ]
+}
