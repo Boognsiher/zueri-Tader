@@ -1,17 +1,6 @@
 {
   "_info": "Verbrauch pro 1000 Einwohner und Tag. Grundbedarf und gehobener Bedarf bestimmen die Zufriedenheit (60/40). Waren ausserhalb beider Listen (z. B. Werkzeug) sind Bedarf ohne Zufriedenheitswirkung.",
-  "verbrauch_pro_1000_einwohner_und_tag": {
-    "Nahrung": 30,
-    "Fisch": 10,
-    "Holz": 8,
-    "Rum": 6,
-    "Tuch": 5,
-    "Zigarren": 4,
-    "Wein": 3,
-    "Gewürze": 2,
-    "Kakao": 2,
-    "Werkzeug": 2
-  },
-  "grundbedarf": ["Nahrung", "Fisch", "Holz"],
-  "gehobener_bedarf": ["Rum", "Tuch", "Zigarren", "Wein", "Gewürze", "Kakao"]
+  "verbrauch_pro_1000_einwohner_und_tag": {"Korn": 30, "Fisch": 10, "Holz": 8, "Wein": 6, "Tuch": 5, "Seide": 4, "Zucker": 3, "Gewürze": 2, "Käse": 2, "Werkzeug": 2},
+  "grundbedarf": ["Korn", "Fisch", "Holz"],
+  "gehobener_bedarf": ["Wein", "Tuch", "Seide", "Zucker", "Gewürze", "Käse"]
 }

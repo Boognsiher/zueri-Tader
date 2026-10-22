@@ -4,7 +4,7 @@ Stand: **Entwurf aus der Konzeptphase.** Nichts davon ist entschieden oder in de
 
 ## Ausgangspunkt
 
-Vier Nationen (England, Spanien, Frankreich, Niederlande) mit Städten in der Karibik. Der Spieler gehört zu keiner fest. Handel mit Feinden einer Nation hat Folgen.
+Mehrere eidgenössische Orte mit Gemeinden am See: Zürich (reformiert, Nord- und Westufer), Schwyz (katholisch, March mit Lachen), Rapperswil (unter dem Schutz katholischer Schirmorte) und Glarus mit dem Gaster (Schmerikon, Zufuhr über Linth und Walensee). Der Spieler gehört zu keinem fest. Konfessionelle Spannungen (Vorbild: erster Villmergerkrieg 1656) können zu Zöllen, Sperren und Konflikten führen. Im Folgenden steht "Nation" für einen solchen Ort.
 
 ## Bausteine
 
@@ -21,7 +21,7 @@ Vier Nationen (England, Spanien, Frankreich, Niederlande) mit Städten in der Ka
 - Konsequenz: Wer mit Feinden handelt, verliert Ruf und Zugang
 
 **Kaperbriefe**
-- Erlaubnis einer Nation, Schiffe ihrer Feinde anzugreifen
+- Erlaubnis eines Orts, Schiffe seiner Gegner aufzubringen (am See eher Beschlagnahme und Zollkontrolle als Seeschlacht)
 - Verbindet Diplomatie mit dem kleinen Kampfsystem
 
 **Handlungen der Nationen (Erweiterung)**

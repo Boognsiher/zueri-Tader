@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Wirtschaftssimulation fuer ein Handelsspiel (Port-Royale-Stil)
+Wirtschaftssimulation fuer ein Handelsspiel (Zürichsee, 17. Jahrhundert)
 ==============================================================
 Laesst die Wirtschaft ohne Spieler laufen: Staedte produzieren und verbrauchen,
 Preise folgen Angebot und Nachfrage, KI-Haendler (greedy) handeln zwischen den
@@ -489,8 +489,8 @@ def report(args, cities, ships, stats):
     print("Rendite je Ware (Mittel, Touren): " + ", ".join(
         f"{g} {100*statistics.mean(v):.0f}% ({len(v)})"
         for g, v in sorted(by_good.items(), key=lambda x: -statistics.mean(x[1]))))
-    print(f"Gewinn pro Schiff und Tag (nach Unterhalt): {per_ship_day:.1f} Gold")
-    print(f"Amortisation eines Schiffs ({SHIP_COST} Gold): {payback:.0f} Tage")
+    print(f"Gewinn pro Schiff und Tag (nach Unterhalt): {per_ship_day:.1f} Gulden")
+    print(f"Amortisation eines Schiffs ({SHIP_COST} Gulden): {payback:.0f} Tage")
     checks.append((f"Mittlere Tourrendite {100*statistics.mean(rois):.0f}% (Ziel 10-30%)",
                    0.10 <= statistics.mean(rois) <= 0.30))
     checks.append((f"Schiff amortisiert sich in {payback:.0f} Tagen (Ziel 30-300)", 30 <= payback <= 300))

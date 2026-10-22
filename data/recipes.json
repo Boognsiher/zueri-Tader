@@ -1,8 +1,8 @@
 {
   "_info": "Produktionsrezepte: pro Batch entsteht 1 Einheit der Ware aus den genannten Zutaten.",
   "rezepte": {
-    "Rum": {"Zuckerrohr": 2},
-    "Zigarren": {"Tabak": 2},
+    "Wein": {"Trauben": 2},
+    "Seide": {"Rohseide": 2},
     "Tuch": {"Baumwolle": 2},
     "Werkzeug": {"Eisenerz": 1, "Holz": 1}
   }

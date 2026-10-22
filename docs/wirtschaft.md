@@ -6,15 +6,15 @@ Das Wirtschaftsmodell ist als Simulation ohne Grafik umgesetzt (`tools/sim/wirts
 
 | Gruppe | Waren | Rolle |
 |---|---|---|
-| Grundversorgung | Nahrung, Fisch, Holz | wird immer gebraucht, stabile Preise, geringe Marge |
-| Rohstoffe | Zuckerrohr, Tabak, Baumwolle, Kakao, Eisenerz | Basis der Produktionsketten |
-| Veredelt | Rum, Zigarren, Tuch, Werkzeug | höhere Preise, brauchen Rohstoffe |
-| Luxus und Import | Wein, Gewürze | hohe Marge, im Modell als Import/Produktion einzelner Städte |
+| Grundversorgung | Korn, Fisch, Holz | wird immer gebraucht, stabile Preise, geringe Marge |
+| Rohstoffe | Trauben, Rohseide, Baumwolle, Käse, Eisenerz | Basis der Produktionsketten (Rohseide und Eisenerz kommen als Zufuhr über Walensee und Linth an den See) |
+| Veredelt | Wein, Seide, Tuch, Werkzeug | höhere Preise, brauchen Rohstoffe |
+| Import | Zucker, Gewürze | hohe Marge, im Modell als Import einzelner Städte |
 
 **Produktionsketten** (bewusst kurz, höchstens zwei Stufen):
 
-- 2 Zuckerrohr → 1 Rum
-- 2 Tabak → 1 Zigarren
+- 2 Trauben → 1 Wein
+- 2 Rohseide → 1 Seide
 - 2 Baumwolle → 1 Tuch
 - 1 Eisenerz + 1 Holz → 1 Werkzeug
 
@@ -25,8 +25,8 @@ Werkzeug ist die wichtigste Ware, weil es später als Baumaterial in den Stadtau
 Jede Stadt hat Stärken (was sie billig produziert) und Schwächen (was sie nachfragt). Das ist die Landkarte der Handelsrouten und wird von Hand entworfen. Faustregeln für die Datenpflege:
 
 - Pro Ware liegt die Gesamtproduktion etwa **3-8 % über dem Gesamtbedarf**. Liegt sie darunter, entsteht dauerhafte Knappheit. Liegt sie deutlich darüber, verderben Waren und die Preise fallen auf den Boden.
-- Bei Waren mit kleinen Mengen (Kakao, Eisenerz, Werkzeug, Gewürze) liegt der Überschuss wegen der Rundung bei 11-13 %. Das verursachte in den Tests keinen Verderb.
-- **Rohstoff und Werkstatt nicht überall in derselben Stadt.** Sonst wird die Ware nie gehandelt (in der ersten Version passierte das bei Tabak und Eisenerz).
+- Bei Waren mit kleinen Mengen (Käse, Eisenerz, Werkzeug, Gewürze) liegt der Überschuss wegen der Rundung bei 11-13 %. Das verursachte in den Tests keinen Verderb.
+- **Rohstoff und Werkstatt nicht überall in derselben Stadt.** Sonst wird die Ware nie gehandelt (in der ersten Version passierte das bei Tabak, heute Rohseide, und bei Eisenerz).
 
 ## Preisformel
 
@@ -52,11 +52,11 @@ Preis = Basispreis * (T / S) ^ k        begrenzt auf 40 % bis 250 % des Basispre
 
 ## Zufriedenheit
 
-Eine Zahl pro Stadt (0-100): 60 % aus der Deckung des Grundbedarfs (Nahrung, Fisch, Holz), 40 % aus gehobenem Bedarf (Rum, Tuch, Zigarren, Wein, Gewürze, Kakao). Sie gleitet langsam auf den Zielwert zu. Werkzeug ist Ausbaubedarf ohne Wirkung auf die Zufriedenheit.
+Eine Zahl pro Stadt (0-100): 60 % aus der Deckung des Grundbedarfs (Korn, Fisch, Holz), 40 % aus gehobenem Bedarf (Wein, Tuch, Seide, Zucker, Gewürze, Käse). Sie gleitet langsam auf den Zielwert zu. Werkzeug ist Ausbaubedarf ohne Wirkung auf die Zufriedenheit.
 
 ## Ereignisse
 
-Zufällige Ereignisse verschieben Preise: Missernte (Produktion -70 % für 20 Tage), Seuche (mehr Nahrungsbedarf), Fest (mehr Luxusbedarf), Blockade (Stadt wird 15 Tage nicht angesteuert). Vereinfachung: Schiffe, die schon unterwegs sind, landen trotz Blockade.
+Zufällige Ereignisse verschieben Preise: Missernte (Produktion -70 % für 20 Tage), Seuche (mehr Bedarf an Korn und Fisch), Chilbi (mehr Bedarf an Wein, Seide, Zucker), Föhnsturm (Stadt wird 15 Tage nicht angesteuert). Vereinfachung: Schiffe, die schon unterwegs sind, landen trotz Sturm. Die Ereignisse stehen in `data/events.json`.
 
 ## Händler-KI
 
@@ -67,16 +67,16 @@ KI-Händler testen die Wirtschaft. Sie wählen die Fahrt mit dem höchsten Gewin
 
 Diese KI ist ein Prüfstand, kein Gegner. Ein menschlicher Spieler wird bessere Routen finden.
 
-## Testergebnis (Standardwerte, 8 Städte, 45 Schiffe, 720 Tage)
+## Testergebnis (Standardwerte, 8 Städte am Zürichsee, 45 Schiffe, 720 Tage, Seeds 1-3)
 
 | Messwert | Ergebnis | Ziel |
 |---|---|---|
 | Preisstreuung | 12-32 % um den Basispreis | stabil |
-| Zeit am Preisdeckel/-boden | praktisch 0 % | höchstens 20 % |
-| Rendite pro Tour (Mittel) | ca. 28 % | 10-30 % |
-| Amortisation eines Schiffs (20'000 Gold) | ca. 200 Tage | 30-300 Tage |
+| Zeit am Preisdeckel/-boden | höchstens 1 % | höchstens 20 % |
+| Rendite pro Tour (Mittel) | ca. 23-25 % | 10-30 % |
+| Amortisation eines Schiffs (20'000 Gulden) | ca. 210-240 Tage | 30-300 Tage |
 | Verderb | ca. 0 % der Produktion | höchstens 8 % |
-| Häufigste Route | ca. 4,6 % der Touren | höchstens 12 % |
+| Häufigste Route | ca. 4,5 % der Touren (Wädenswil–Rapperswil) | höchstens 12 % |
 | Zufriedenheit | ca. 100 | mindestens 55 |
 
 Die Ziele sind Richtwerte aus der Konzeptphase, keine Naturgesetze. Ob ein Spieler schneller wachsen soll, ist eine Designentscheidung.
@@ -84,6 +84,8 @@ Die Ziele sind Richtwerte aus der Konzeptphase, keine Naturgesetze. Ob ein Spiel
 Die Zufriedenheit liegt zu glatt bei 100: Die KI versorgt die Städte zuverlässig. Spannung entsteht erst durch Spieler, Ereignisse und später Diplomatie und Krieg.
 
 ## Balance-Erkenntnisse
+
+Die folgenden Messungen stammen noch aus der Karibik-Fassung der Daten (gleiche Mengen und Preise, andere Lage der Städte). Die Zusammenhänge gelten weiter, die absoluten Renditen liegen am Zürichsee etwas tiefer, weil die Fahrten zum Obersee länger sind.
 
 **Wichtigste Stellschraube: `TARGET_DAYS_USE` und `TARGET_DAYS_PROD`.** Grosse Zielbestände machen den Markt träge und liquide: Eine Schiffsladung bewegt den Preis wenig, die Renditen sinken. Kleine Zielbestände machen ihn nervös mit hohen Gewinnen. Bei 60 Schiffen und k = 0.5 sank die mittlere Tourrendite von 36 % (Zielbestand 12/8 Tage) über 27 % (20/14) auf 19 % (30/20).
 
@@ -100,7 +102,7 @@ Andere Parameter hatten kaum Wirkung: Handelsspanne, Mindestrendite, Mindestgewi
 
 Mehr Schiffe drücken die Rendite und verlängern die Amortisation: Das ist der Wettbewerb unter den Händlern. Bei zu wenig Schiffen (unter etwa 40) steigen Preisausschläge und Verderb.
 
-**Kakao** und andere Waren mit kleinem Marktvolumen sind in der Statistik schnell unterrepräsentiert. Der Check misst deshalb den Anteil der Produktion, der verschifft wird, nicht den Wertanteil.
+**Käse** und andere Waren mit kleinem Marktvolumen sind in der Statistik schnell unterrepräsentiert. Der Check misst deshalb den Anteil der Produktion, der verschifft wird, nicht den Wertanteil.
 
 ## Offene Punkte der Wirtschaft
 

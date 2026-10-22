@@ -1,6 +1,6 @@
 # CLAUDE.md: Züri-Trade
 
-Handels- und Managementspiel (Karibik, 17. Jahrhundert), Hobbyprojekt. Details: `README.md` und `docs/`.
+Handels- und Managementspiel (Zürichsee, 17. Jahrhundert), Hobbyprojekt. Details: `README.md` und `docs/`.
 
 ## Sprache
 

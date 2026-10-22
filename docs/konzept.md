@@ -4,7 +4,7 @@ Stand: 22.10.2026, Konzeptphase.
 
 ## Vision
 
-Ein Handels- und Managementspiel in der Karibik des 17. Jahrhunderts. Der Spieler baut ein Handelsimperium auf und bewegt sich politisch zwischen den Kolonialmächten. Hobbyprojekt, das die Spielidee der Port-Royale-Reihe aufgreift und weiterentwickelt, mit eigenem Namen, eigenen Grafiken und eigenen Texten.
+Ein Handels- und Managementspiel am Zürichsee im 17. Jahrhundert. Der Spieler baut mit Lastschiffen (Nauen, Ledischiffe) ein Handelshaus auf, beliefert die Seegemeinden zwischen Zürich und dem Obersee und bewegt sich politisch zwischen den eidgenössischen Orten (Zürich, Schwyz, Glarus, Rapperswil mit seinen Schirmorten). Hobbyprojekt, das die Spielidee der Port-Royale-Reihe aufgreift und weiterentwickelt, mit eigenem Namen, eigenen Grafiken und eigenen Texten.
 
 ## Säulen und Gewichtung
 
@@ -36,7 +36,7 @@ Das Vorbild wurde von einem grossen Team gebaut. Für ein Hobbyprojekt gilt:
 
 - **15-25 Städte** statt 60 oder mehr, dafür gut ausbalanciert (die Simulation startet mit 8)
 - **10-15 Waren** mit sinnvollen Abhängigkeiten (die Simulation hat 14)
-- **2D-Karte** mit Städten als Knoten und Seewegen statt freier Navigation
+- **2D-Karte** des Zürichsees mit Städten als Knoten und Seewegen statt freier Navigation
 - **Kein Zwang zu Echtzeit-Aufwand:** Echtzeit mit Pause, intern in festen Tagen gerechnet (Empfehlung, noch nicht bestätigt)
 - **Oberfläche vor Grafik:** ein stimmiger UI-Stil (Seekarte, Pergament, Kontor) bringt mehr als aufwändige Grafik
 
@@ -50,6 +50,5 @@ Das Vorbild wurde von einem grossen Team gebaut. Für ein Hobbyprojekt gilt:
 
 - Spielziel (Reichtum, Titel, Monopole, Kombination?)
 - Einzelspieler oder auch Mehrspieler (bisher nur Einzelspieler angenommen)
-- Setting: Das Konzept geht von der Karibik aus. Falls der Arbeitstitel "Züri-Trade" auch das Setting ändern soll, wäre das hier zu entscheiden.
 
 Weitere offene Punkte: [entscheidungen.md](entscheidungen.md).

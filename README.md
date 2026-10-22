@@ -1,6 +1,6 @@
 # Züri-Trade
 
-Ein Handels- und Managementspiel in der Karibik des 17. Jahrhunderts: Waren günstig kaufen, teuer verkaufen, Städte ausbauen und sich politisch zwischen den Kolonialmächten bewegen.
+Ein Handels- und Managementspiel am Zürichsee im 17. Jahrhundert: mit Nauen und Ledischiffen Waren günstig kaufen und teuer verkaufen, Städte ausbauen und sich politisch zwischen den eidgenössischen Orten bewegen.
 
 Hobbyprojekt, inspiriert von der Spielidee der Port-Royale-Reihe, aber mit eigenem Namen, eigenen Grafiken und eigenen Texten. **Züri-Trade ist ein Arbeitstitel.**
 

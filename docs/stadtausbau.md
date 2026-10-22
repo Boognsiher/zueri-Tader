@@ -9,7 +9,7 @@ Der Ausbau dient dem Handel und umgekehrt:
 - Stadt wächst → mehr Bevölkerung → mehr Bedarf, mehr Arbeitskräfte, mehr Steuern
 - Gebäude produzieren Waren, die der Spieler handelt oder die die Stadt versorgen
 - Unversorgte Bevölkerung senkt die Zufriedenheit, das hat Folgen für Ruf, Steuern und Unruhen
-- Beispiel: Eine Rumbrennerei braucht Zuckerrohr, also schickt der Spieler Schiffe zur Plantage
+- Beispiel: Eine Trotte braucht Trauben, also schickt der Spieler Schiffe zu den Rebbergen
 
 ## Entschiedene Grundsätze
 
@@ -21,14 +21,14 @@ Der Ausbau dient dem Handel und umgekehrt:
 
 - Die Zahl der Bauplätze wächst mit der Stadtgrösse. Beispielwerte: Dorf 6, Stadt 12, Metropole 20 (noch nicht festgelegt).
 - Gebäude haben **Stufen** (Ausbau statt nur Neubau). Das gibt Fortschritt, ohne mehr Plätze zu brauchen.
-- Wenige Plätze zwingen zu Entscheidungen (Rumbrennerei oder Werft?). Daraus entsteht Strategie.
+- Wenige Plätze zwingen zu Entscheidungen (Trotte oder Schiffswerft?). Daraus entsteht Strategie.
 
 ## Gebäudekategorien
 
 | Kategorie | Beispiele |
 |---|---|
-| Produktion | Plantagen, Farm, Fischerei, Sägewerk, Erzmine |
-| Werkstatt | Rumbrennerei, Zigarrenmanufaktur, Weberei, Schmiede |
+| Produktion | Rebberg, Kornhof, Fischerei, Sägewerk, Sennerei |
+| Werkstatt | Trotte, Seidenweberei, Weberei, Schmiede |
 | Versorgung | Markt, Lagerhaus, Kirche, Krankenhaus |
 | Handel und Schifffahrt | Kontor, Werft |
 | Verteidigung und Politik | Befestigung, Botschaft |
@@ -37,9 +37,9 @@ Die Entwürfe mit Kosten, Unterhalt und Wirkung stehen in `data/buildings.json`.
 
 ## Rahmenbedingungen
 
-- Baukosten (Gold und Material) und laufender Unterhalt, sonst baut man unbegrenzt
+- Baukosten (Gulden und Material) und laufender Unterhalt, sonst baut man unbegrenzt
 - Baumaterial ist Ware (Holz, Werkzeug) und muss verschifft werden. Damit hängt der Ausbau am Handel.
-- In Städten fremder Nationen braucht der Spieler eine Genehmigung oder ein gutes Verhältnis (Verbindung zur Diplomatie)
+- In Städten fremder Orte braucht der Spieler eine Genehmigung oder ein gutes Verhältnis (Verbindung zur Diplomatie)
 
 ## Verbindung zur Diplomatie
 

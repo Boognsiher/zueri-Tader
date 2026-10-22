@@ -1,19 +1,19 @@
 {
   "_info": "Waren mit Basispreis in Gold. 'gruppe' ist nur zur Orientierung und wird von der Simulation nicht gelesen.",
   "waren": {
-    "Nahrung": {"basispreis": 20, "gruppe": "Grundversorgung"},
+    "Korn": {"basispreis": 20, "gruppe": "Grundversorgung"},
     "Fisch": {"basispreis": 25, "gruppe": "Grundversorgung"},
     "Holz": {"basispreis": 30, "gruppe": "Grundversorgung"},
-    "Zuckerrohr": {"basispreis": 35, "gruppe": "Rohstoff"},
-    "Tabak": {"basispreis": 45, "gruppe": "Rohstoff"},
+    "Trauben": {"basispreis": 35, "gruppe": "Rohstoff"},
+    "Rohseide": {"basispreis": 45, "gruppe": "Rohstoff"},
     "Baumwolle": {"basispreis": 40, "gruppe": "Rohstoff"},
-    "Kakao": {"basispreis": 55, "gruppe": "Rohstoff"},
+    "Käse": {"basispreis": 55, "gruppe": "Rohstoff"},
     "Eisenerz": {"basispreis": 50, "gruppe": "Rohstoff"},
-    "Rum": {"basispreis": 90, "gruppe": "Veredelt"},
-    "Zigarren": {"basispreis": 110, "gruppe": "Veredelt"},
+    "Wein": {"basispreis": 90, "gruppe": "Veredelt"},
+    "Seide": {"basispreis": 110, "gruppe": "Veredelt"},
     "Tuch": {"basispreis": 100, "gruppe": "Veredelt"},
     "Werkzeug": {"basispreis": 120, "gruppe": "Veredelt"},
-    "Wein": {"basispreis": 150, "gruppe": "Luxus/Import"},
-    "Gewürze": {"basispreis": 180, "gruppe": "Luxus/Import"}
+    "Zucker": {"basispreis": 150, "gruppe": "Import"},
+    "Gewürze": {"basispreis": 180, "gruppe": "Import"}
   }
 }

@@ -1,13 +1,35 @@
 {
   "_info": "Zufallsereignisse. art: 'produktion' (Produktion der genannten Waren x faktor), 'verbrauch' (Verbrauch der genannten Waren x faktor) oder 'sperre' (Stadt wird nicht angesteuert). dauer in Tagen. text ist die Meldung im Spiel, {stadt} wird ersetzt. Die Häufigkeit steht in params.json (EVENT_RATE).",
   "ereignisse": [
-    {"name": "Missernte", "art": "produktion", "waren": ["Nahrung", "Zuckerrohr", "Tabak", "Baumwolle"], "faktor": 0.3, "dauer": 20,
-     "text": "Missernte in {stadt}: Die Ernte fällt für Wochen fast ganz aus."},
-    {"name": "Seuche", "art": "verbrauch", "waren": ["Nahrung", "Fisch"], "faktor": 1.4, "dauer": 25,
-     "text": "Seuche in {stadt}: Die Stadt braucht mehr Nahrung."},
-    {"name": "Fest", "art": "verbrauch", "waren": ["Rum", "Wein", "Zigarren"], "faktor": 2.5, "dauer": 12,
-     "text": "Fest in {stadt}: Genussmittel sind gefragt."},
-    {"name": "Blockade", "art": "sperre", "dauer": 15,
-     "text": "Blockade vor {stadt}: Kein Schiff läuft den Hafen an."}
+    {
+      "name": "Missernte",
+      "art": "produktion",
+      "waren": ["Korn", "Trauben", "Rohseide", "Baumwolle"],
+      "faktor": 0.3,
+      "dauer": 20,
+      "text": "Missernte in {stadt}: Ernte und Zufuhr brechen für Wochen ein."
+    },
+    {
+      "name": "Seuche",
+      "art": "verbrauch",
+      "waren": ["Korn", "Fisch"],
+      "faktor": 1.4,
+      "dauer": 25,
+      "text": "Seuche in {stadt}: Die Stadt braucht mehr Korn und Fisch."
+    },
+    {
+      "name": "Chilbi",
+      "art": "verbrauch",
+      "waren": ["Wein", "Zucker", "Seide"],
+      "faktor": 2.5,
+      "dauer": 12,
+      "text": "Chilbi in {stadt}: Wein, Seide und Zucker sind gefragt."
+    },
+    {
+      "name": "Föhnsturm",
+      "art": "sperre",
+      "dauer": 15,
+      "text": "Föhnsturm bei {stadt}: Kein Schiff kann anlegen."
+    }
   ]
 }

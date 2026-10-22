@@ -6,6 +6,8 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 
 | Datum | Entscheidung | Begründung |
 |---|---|---|
+| 22.10.2026 | Setting: Zürichsee im 17. Jahrhundert statt Karibik. 8 Seegemeinden von Zürich bis Schmerikon, Lastschiffe (Nauen, Ledischiffe), Währung Gulden | Vom Projektinhaber entschieden, passt zum Titel "Züri-Trade". Die Waren wurden eins zu eins übertragen (gleiche Preise und Mengen), damit die getestete Balance erhalten bleibt. Annahme: Das Jahrhundert bleibt, weil Konzept und Waren darauf aufbauen |
+| 22.10.2026 | Ereignisse stehen in `data/events.json` statt im Code | Nach einer Umbenennung der Waren hätten fest eingetragene Namen still nichts mehr bewirkt |
 | 22.10.2026 | Hobbyprojekt, das die Spielidee der Port-Royale-Reihe weiterentwickelt | Eigenes Spiel ist realistischer als Modifikationen des geschlossenen Originals |
 | 22.10.2026 | Schwerpunkte: Handel, Management, Diplomatie. Kampf bleibt klein | Persönliche Gewichtung, Kampf nur als Würze |
 | 22.10.2026 | Kampf mit statischer Ansicht, keine 3D-Schlachten | Spart den grössten Entwicklungsaufwand |
@@ -36,6 +38,5 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 - **Einzelspieler oder Mehrspieler:** bisher Einzelspieler angenommen
 - **Diplomatie:** Umfang und Tiefe, siehe `docs/diplomatie.md`
 - **Städte freischalten:** wie und wodurch
-- **Setting:** Karibik (derzeit) oder Änderung passend zum Titel
 - **Lizenz des Repos:** noch nicht festgelegt
 - **Grafik im Detail:** Richtung ist festgelegt (siehe oben). Offen sind der genaue Oberflächenstil (Pergament, Seekarte, Kontor) und ob die Stadtansicht 2D oder später 3D wird, siehe `docs/optik.md`
