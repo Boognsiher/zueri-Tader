@@ -228,7 +228,17 @@ async function start() {
   });
 
   // --- Spielschleife -----------------------------------------------------------
+  // Jedes Bild; ein Fehler darf die Schleife nicht anhalten (sonst steht das Spiel)
   function bild(jetzt) {
+    try {
+      schritt(jetzt);
+    } catch (fehler) {
+      console.error("Fehler in der Spielschleife:", fehler);
+    }
+    requestAnimationFrame(bild);
+  }
+
+  function schritt(jetzt) {
     const dt = Math.min(jetzt - zuletzt, 500);
     zuletzt = jetzt;
     const dauer = D.spiel.tageslaenge_ms[tempo || letzteStufe];
@@ -253,7 +263,6 @@ async function start() {
       }
     }
     karte.zeichne(Math.min(vorrat / dauer, 1));
-    requestAnimationFrame(bild);
   }
   setzeTempo(0);
   ui.aktualisiere();

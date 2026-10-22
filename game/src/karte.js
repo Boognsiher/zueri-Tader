@@ -173,7 +173,10 @@ export class Karte {
     const welt = this.spiel.welt;
     const jetzt = welt.tag + anteil;
 
-    // KI-Händler
+    // KI-Händler; mit der Bevölkerung kommen neue dazu, die bekommen hier ihren Punkt
+    while (this.haendlerPunkte.length < welt.haendler.length) {
+      this.haendlerPunkte.push(el("circle", { r: 0.5, class: "haendler-punkt" }, this.ebeneHaendler));
+    }
     welt.haendler.forEach((h, i) => {
       const punkt = this.haendlerPunkte[i];
       let x;
