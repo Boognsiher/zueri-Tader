@@ -7,6 +7,8 @@
 //   Laderaum füllt er mit weiteren Waren, die sich am selben Ziel lohnen.
 // Lenkt der Spieler ein automatisches Schiff von Hand, pausiert die Automatik (auto.pausiert),
 // bis er sie wieder aufnimmt.
+// Laden und Löschen braucht Zeit: Das Schiff bleibt im Hafen, bis die umgeschlagene Menge
+// geschafft ist (schiffe.json: umschlag_pro_tag je Schiffstyp). auto.abfahrt = frühester Abfahrtszeitpunkt.
 //
 // schiff.auto = null (selbst steuern)
 //   | { art: "route", halte: [{ stadt, auftraege: [{ art, ware, menge, preis }] }], index, erledigt, pausiert }
@@ -68,6 +70,7 @@ export function pausiere(spiel, schiff) {
 export function nimmAuf(spiel, schiff) {
   if (!schiff.auto || !schiff.auto.pausiert) return;
   schiff.auto.pausiert = false;
+  schiff.auto.abfahrt = null;
   if (schiff.auto.art === "route") schiff.auto.erledigt = false;
   spiel.melde(`Automatik von ${schiff.name} läuft wieder.`);
   // Fährt das Schiff gerade auf ein selbst gesetztes Ziel zu, übernimmt die Automatik sofort
@@ -84,6 +87,8 @@ export function beende(spiel, schiff) {
 // Bei Ankunft und täglich für jedes automatische Schiff, das nicht unterwegs ist
 export function weiter(spiel, schiff) {
   if (!aktiv(schiff) || schiff.fahrt) return;
+  // Noch beim Laden oder Löschen
+  if (schiff.auto.abfahrt != null && spiel.zeit < schiff.auto.abfahrt) return;
   if (schiff.auto.art === "route") route(spiel, schiff);
   else frei(spiel, schiff);
 }
@@ -93,9 +98,12 @@ function route(spiel, schiff) {
   const halt = a.halte[a.index];
   if (schiff.ort && schiff.ort.name === halt.stadt) {
     if (!a.erledigt) {
-      fuehreAus(spiel, schiff, halt);
+      const menge = fuehreAus(spiel, schiff, halt);
       a.erledigt = true;
+      a.abfahrt = spiel.zeit + liegezeit(spiel, schiff, menge);
+      if (spiel.zeit < a.abfahrt) return;
     }
+    a.abfahrt = null;
     const naechster = (a.index + 1) % a.halte.length;
     // Gesperrter Hafen (Föhnsturm): warten und morgen neu versuchen
     if (spiel.segeln(schiff, { stadt: spiel.welt.stadt[a.halte[naechster].stadt] }, { still: true }).ok) {
@@ -107,27 +115,43 @@ function route(spiel, schiff) {
   spiel.segeln(schiff, { stadt: spiel.welt.stadt[halt.stadt] }, { still: true });
 }
 
+// Liegezeit in Tagen für eine umgeschlagene Menge (je nach Schiffstyp)
+function liegezeit(spiel, schiff, menge) {
+  return menge / spiel.schiffstyp(schiff).umschlag_pro_tag;
+}
+
+function tageText(tage) {
+  return tage >= 0.05 ? `, Liegezeit ${tage.toLocaleString("de-CH", { maximumFractionDigits: 1 })} Tage` : "";
+}
+
+// Erledigt die Aufträge eines Halts, gibt die umgeschlagene Menge zurück
 function fuehreAus(spiel, schiff, halt) {
   const teile = [];
+  let umschlag = 0;
   const auftraege = [...halt.auftraege].sort((x, y) => REIHENFOLGE.indexOf(x.art) - REIHENFOLGE.indexOf(y.art));
   for (const a of auftraege) {
     const menge = a.menge ?? Infinity;
     const grenze = a.preis ?? null;
     if (a.art === "verkaufen") {
       const r = spiel.verkaufen(schiff, a.ware, menge, true, grenze);
+      umschlag += r.menge;
       if (r.menge) teile.push(`${r.menge} ${a.ware} verkauft (${r.gewinn >= 0 ? "+" : "−"}${zahl.format(Math.abs(r.gewinn))})`);
     } else if (a.art === "kaufen") {
       const r = spiel.kaufen(schiff, a.ware, menge, true, grenze);
+      umschlag += r.menge;
       if (r.menge) teile.push(`${r.menge} ${a.ware} gekauft`);
     } else if (a.art === "entladen") {
       const m = spiel.ausbau.umlagern(schiff, a.ware, menge, "insKontor");
+      umschlag += m;
       if (m) teile.push(`${m} ${a.ware} ins Kontor`);
     } else if (a.art === "laden") {
       const m = spiel.ausbau.umlagern(schiff, a.ware, menge, "insSchiff");
+      umschlag += m;
       if (m) teile.push(`${m} ${a.ware} aus dem Kontor`);
     }
   }
-  spiel.melde(`${schiff.name} (Route) in ${halt.stadt}: ${teile.length ? teile.join(", ") : "nichts zu tun"}.`, "handel");
+  spiel.melde(`${schiff.name} (Route) in ${halt.stadt}: ${teile.length ? teile.join(", ") : "nichts zu tun"}${tageText(liegezeit(spiel, schiff, umschlag))}.`, "handel");
+  return umschlag;
 }
 
 function frei(spiel, schiff) {
@@ -139,7 +163,14 @@ function frei(spiel, schiff) {
     return;
   }
   const stadt = schiff.ort;
+  // Geladen: jetzt zum Ziel ablegen
+  if (a.abfahrt != null && a.plan) {
+    if (spiel.segeln(schiff, { stadt: spiel.welt.stadt[a.plan.ziel] }, { still: true }).ok) a.abfahrt = null;
+    return;
+  }
+  a.abfahrt = null;
   const teile = [];
+  let umschlag = 0;
   // Ladung verkaufen: die geplante Ware am Ziel, anderes nur mit mindestens 5 % Gewinn
   for (const g of Object.keys(schiff.ladung)) {
     if (!stadt.handelt(g)) continue;
@@ -147,6 +178,7 @@ function frei(spiel, schiff) {
     const amZiel = a.plan && a.plan.ziel === stadt.name && a.plan.waren.includes(g);
     if (amZiel || stadt.verkaufspreis(g) >= posten.einstand * 1.05) {
       const r = spiel.verkaufen(schiff, g, Infinity);
+      umschlag += r.menge;
       if (r.menge) teile.push(`${r.menge} ${g} verkauft (${r.gewinn >= 0 ? "+" : "−"}${zahl.format(Math.abs(r.gewinn))})`);
     }
   }
@@ -160,6 +192,7 @@ function frei(spiel, schiff) {
     optionen.sort((x, y) => y.rate - x.rate);
     const o = optionen[0];
     const k = spiel.kaufen(schiff, o.ware, o.menge);
+    umschlag += k.menge;
     if (k.menge) {
       const gekauft = [`${k.menge} ${o.ware}`];
       const waren = [o.ware];
@@ -177,16 +210,17 @@ function frei(spiel, schiff) {
         if (neu.menge <= 0 || neu.erloes - neu.kosten < p.MIN_PROFIT) continue;
         const r = spiel.kaufen(schiff, x.g, neu.menge);
         if (r.menge) {
+          umschlag += r.menge;
           ausgegeben += r.betrag;
           gekauft.push(`${r.menge} ${x.g}`);
           waren.push(x.g);
         }
       }
-      if (spiel.segeln(schiff, { stadt: o.ziel }, { still: true }).ok) {
-        a.plan = { waren, ziel: o.ziel.name };
-        a.wartetage = 0;
-        teile.push(`${gekauft.join(", ")} gekauft, Ziel ${o.ziel.name}`);
-      }
+      // Erst laden, dann ablegen (Liegezeit nach Umschlag)
+      a.plan = { waren, ziel: o.ziel.name };
+      a.wartetage = 0;
+      a.abfahrt = spiel.zeit + liegezeit(spiel, schiff, umschlag);
+      teile.push(`${gekauft.join(", ")} gekauft, Ziel ${o.ziel.name}${tageText(liegezeit(spiel, schiff, umschlag))}`);
     }
   } else if (++a.wartetage > WARTETAGE_FREI) {
     // Lange nichts gefunden: leer zum aussichtsreichsten Hafen
@@ -205,4 +239,6 @@ function frei(spiel, schiff) {
     }
   }
   if (teile.length) spiel.melde(`${schiff.name} (frei) in ${stadt.name}: ${teile.join(", ")}.`, "handel");
+  // Ohne nennenswerte Liegezeit gleich ablegen
+  if (a.abfahrt != null && spiel.zeit >= a.abfahrt) frei(spiel, schiff);
 }

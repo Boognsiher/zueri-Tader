@@ -7,6 +7,7 @@ import { Navigation, weglaenge, punktAufWeg } from "./navigation.js";
 import { Ausbau } from "./betriebe.js";
 import { Werft } from "./werft.js";
 import * as automatik from "./automatik.js";
+import { neueKonten, buche } from "./bilanz.js";
 
 const MONATE = ["Januar", "Februar", "März", "April", "Mai", "Juni", "Juli", "August", "September", "Oktober", "November", "Dezember"];
 
@@ -24,7 +25,7 @@ export class Spiel {
     this.schiffe = [];
     this.namen = [...D.spiel.schiffsnamen];
     this.meldungen = [];
-    this.bilanz = { einkauf: 0, verkauf: 0, unterhalt: 0, schiffe: 0, schiffeVerkauf: 0, betriebe: 0, betriebeKauf: 0, betriebeVerkauf: 0 };
+    this.konten = neueKonten(); // Buchhaltung für die Bilanz (bilanz.js)
     this.ausbau = new Ausbau(this);
     this.werft = new Werft(this);
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
@@ -49,6 +50,23 @@ export class Spiel {
   // Welt-Zeit mit Tagesbruchteil: Die Schiffe des Spielers fahren stufenlos
   get zeit() {
     return this.welt.tag + this.anteil;
+  }
+
+  // Monatsschlüssel wie "1650-04" zum Spieltag
+  monat(tag = this.tag) {
+    const [j, m, t] = this.D.spiel.start.datum;
+    const d = new Date(Date.UTC(j, m - 1, t + tag));
+    return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
+  }
+
+  monatsname(schluessel) {
+    const [j, m] = schluessel.split("-").map(Number);
+    return `${MONATE[m - 1]} ${j}`;
+  }
+
+  // Buchung für die Bilanz (Einnahme positiv, Ausgabe negativ)
+  buche(konto, betrag) {
+    buche(this.konten, this.monat(), konto, betrag);
   }
 
   melde(text, art = "info") {
@@ -142,7 +160,7 @@ export class Spiel {
     if (ausfuehren && menge > 0) {
       stadt.bestand[g] -= menge;
       this.gulden -= betrag;
-      this.bilanz.einkauf += betrag;
+      this.buche("handelEinkauf", -betrag);
       const posten = (schiff.ladung[g] ??= { menge: 0, einstand: 0 });
       posten.einstand = (posten.einstand * posten.menge + betrag) / (posten.menge + menge);
       posten.menge += menge;
@@ -168,7 +186,7 @@ export class Spiel {
     if (ausfuehren && menge > 0) {
       stadt.bestand[g] += menge;
       this.gulden += betrag;
-      this.bilanz.verkauf += betrag;
+      this.buche("handelVerkauf", betrag);
       posten.menge -= menge;
       if (posten.menge <= 1e-9) delete schiff.ladung[g];
     }
@@ -228,7 +246,12 @@ export class Spiel {
   // Zeitsteuerung: Fortschritt im laufenden Tag setzen, gibt angekommene Schiffe zurück
   vorruecken(anteil) {
     this.anteil = Math.max(0, Math.min(anteil, 0.999999));
-    return this.pruefeAnkuenfte();
+    const ankuenfte = this.pruefeAnkuenfte();
+    // Automatische Schiffe, die fertig geladen haben, legen ab
+    for (const s of this.schiffe) {
+      if (automatik.aktiv(s) && !s.fahrt && s.auto.abfahrt != null && this.zeit >= s.auto.abfahrt) automatik.weiter(this, s);
+    }
+    return ankuenfte;
   }
 
   // Wert der Ladung in Schiffen und Kontoren zum Einstandspreis
@@ -246,7 +269,7 @@ export class Spiel {
     for (const e of ereignisse) this.melde(e.text, "ereignis");
     const unterhalt = this.schiffe.reduce((a, s) => a + this.unterhalt(s), 0);
     this.gulden -= unterhalt;
-    this.bilanz.unterhalt += unterhalt;
+    this.buche("schiffeUnterhalt", -unterhalt);
     this.ausbau.tag();
     this.werft.tag();
     const ankuenfte = this.pruefeAnkuenfte();

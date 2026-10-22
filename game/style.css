@@ -418,3 +418,18 @@ button.autosymbol.pausiert { color: #fff6e8; background: linear-gradient(#4f8a55
 .regeln { margin-top: 0.6rem; }
 .regeln summary { cursor: pointer; font-weight: 600; }
 .regeln input[type="number"] { width: 4.6rem; }
+
+/* --- Bilanz ------------------------------------------------------------------- */
+.kopfknopf { background: transparent; color: #f3dfae; border-color: #8a7350; }
+.kopfknopf:hover:not(:disabled) { background: #f3dfae; color: var(--tinte); }
+.bilanztabelle td:first-child { text-align: left; }
+.bilanztabelle tr.kontogruppe td { font-weight: 600; padding-top: 0.5rem; border-bottom: 1px solid var(--rand); color: var(--holz); }
+.bilanztabelle tr.summe td { font-weight: 600; border-top: 1px solid var(--tinte-blass); }
+.bilanztabelle th { text-align: right; }
+.plus { color: var(--gruen); }
+.bilanzgrafik { width: 100%; height: 7rem; display: block; background: var(--papier); border: 1px solid var(--rand); border-radius: 4px; }
+.bilanzgrafik .nulllinie { stroke: var(--tinte-blass); stroke-width: 0.3; vector-effect: non-scaling-stroke; }
+.balken-plus { fill: var(--gruen); }
+.balken-minus { fill: var(--rot); }
+.monatsnamen { display: flex; font-size: 0.75rem; color: var(--tinte-blass); }
+.monatsnamen span { flex: 1; text-align: center; }

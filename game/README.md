@@ -20,7 +20,10 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Betriebe:** in jeder Stadt vorhandene Betriebe kaufen (wie Werkstätten in Bannerlord) oder auf freien Bauplätzen neue bauen. Sie arbeiten täglich, Gewinn oder Verlust geht an dich. Versorgung über den Markt (mit Handelsspanne) oder über das Kontor (ohne Spanne, Werkstätten brauchen nur 70 % der Zutaten): Eigene Ketten lohnen sich.
 - **Kontor:** Lager in einer Stadt (Stufe 1-3, je 400 Plätze). Waren zwischen Schiff und Kontor umlagern, am Markt kaufen und verkaufen, auch ohne Schiff, und Handelsregeln pro Ware, nach denen das Kontor jeden Tag selbst handelt
 - **Stufen und Stadtgebäude:** Betriebe bis Stufe 3 ausbauen. Markthalle (weniger Handelsspanne), Kirche (mehr Bauplätze), Zunfthaus (weniger Betriebsunterhalt)
-- **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung). Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf.
+- **Bevölkerung:** Städte wachsen, wenn sie zufrieden sind, bis zur Grenze ihres Wohnraums. Versorgungsgebäude: Brunnen und Spital (Zufriedenheit), Wohnhäuser (Wohnraum)
+- **Kontor als Anwesenheit:** Mit einem Kontor geht in der Stadt alles wie mit einem Schiff im Hafen. Im Kontor lassen sich Tage Bedarf der eigenen Werkstätten sperren
+- **Bilanz:** Einnahmen und Ausgaben nach Konten pro Monat und gesamt, Vermögen, Monatsergebnis (Knopf «Bilanz» oben)
+- **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung). Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf. Laden und Löschen braucht Liegezeit (voller Laderaum rund 0,8 Tage).
 - **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
 - 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
@@ -42,6 +45,7 @@ Noch nicht dabei: Spielziel, Gebäudestufen und Versorgungsgebäude, Diplomatie,
 | `src/speicher.js` | Spielstand speichern und laden |
 | `src/routenfenster.js` | Fenster zum Einrichten der Automatik |
 | `src/werft.js` | Bootshandel: neue und gebrauchte Schiffe, Verkauf |
+| `src/bilanz.js` | Buchhaltung für die Bilanz |
 | `src/karte.js` | Seekarte als SVG |
 | `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Meldungen |
 | `src/main.js` | Einstieg, Zeitsteuerung, Menü Spielstand |

@@ -11,6 +11,7 @@
 
 import { weglaenge } from "./navigation.js";
 import * as automatik from "./automatik.js";
+import { KONTEN, ergebnis, investitionen } from "./bilanz.js";
 
 const zahl = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
 const f = (n) => zahl.format(Math.round(n));
@@ -53,6 +54,12 @@ export class Oberflaeche {
     });
     this.e.handel.addEventListener("click", (ev) => this.klickHandel(ev));
     this.e.handel.addEventListener("change", (ev) => {
+      const sperrWare = ev.target.dataset.sperre;
+      if (sperrWare) {
+        this.spiel.ausbau.setzeSperre(this.fensterStadt, sperrWare, ev.target.value === "" ? 0 : Number(ev.target.value));
+        this.aktualisiere();
+        return;
+      }
       const regelWare = ev.target.dataset.regel;
       if (regelWare) {
         const a = this.spiel.ausbau;
@@ -238,8 +245,7 @@ export class Oberflaeche {
         ? `«${esc(schiff.name)}» handelt automatisch. Lenkst du es mit einem Klick auf die Karte, pausiert die Automatik. Mit ▶ läuft sie weiter.`
         : `Klick auf den See: «${esc(schiff.name)}» segelt dorthin. Klick auf eine Stadt: anlegen und handeln. Abwählen, um Städte nur anzusehen.`
     }</p>`;
-    html += `<p class="bilanz">Unterhalt ${f(s.schiffe.reduce((x, y) => x + s.unterhalt(y), 0))} Gulden pro Tag · bisher eingekauft ${f(s.bilanz.einkauf)},
-      verkauft ${f(s.bilanz.verkauf)}, Unterhalt ${f(s.bilanz.unterhalt)} Gulden</p>`;
+    html += `<p class="bilanz">Unterhalt der Flotte ${f(s.schiffe.reduce((x, y) => x + s.unterhalt(y), 0))} Gulden pro Tag · Einnahmen und Ausgaben unter «Bilanz» oben</p>`;
     this.e.flotte.innerHTML = html;
   }
 
@@ -291,12 +297,24 @@ export class Oberflaeche {
       <label class="stadtwahl">Stadt <select name="stadtwahl">${welt.staedte
         .map((x, i) => `<option value="${i}" ${x === stadt ? "selected" : ""}>${esc(x.name)}</option>`)
         .join("")}</select></label>
-      <p class="stadtkopf">${f(stadt.einwohner)} Einwohner · Zufriedenheit
-        <span class="balken" title="${zufr} von 100"><span style="width:${zufr}%"></span></span> ${zufr}</p>
+      ${this.stadtzahlen(stadt)}
       <button data-stadtfenster>Stadtfenster öffnen: Kontor, Betriebe${this.spiel.werft.istWerft(stadt) || this.spiel.werft.angeboteIn(stadt).length ? ", Werft" : ""}</button>`;
     html += this.stadtprofil(stadt);
     html += this.markttabelle(stadt, null);
     this.e.markt.innerHTML = html;
+  }
+
+  // Einwohner mit Trend und Wohnraum, Zufriedenheit mit Aufschlüsselung
+  stadtzahlen(stadt) {
+    const p = this.D.p;
+    const zufr = Math.round(stadt.zufriedenheit);
+    const t = stadt.zufriedenheitTeile;
+    const teile = t ? `Grundbedarf ${f(t.grund)} von ${p.SAT_BASIC}, gehobener Bedarf ${f(t.gehoben)} von ${p.SAT_COMFORT}, Gebäude ${f(t.gebaeude)}` : "";
+    const proMonat = (stadt.wachstum ?? 0) * 30 * stadt.einwohner;
+    const trend = Math.abs(proMonat) < 0.5 ? "stabil" : `${proMonat > 0 ? "+" : "−"}${f(Math.abs(proMonat))} im Monat`;
+    const voll = stadt.einwohner >= stadt.wohnraum() - 0.5;
+    return `<p class="stadtkopf"><span title="Wächst bei Zufriedenheit über ${p.POP_SAT_NEUTRAL}, schrumpft darunter. Obergrenze ist der Wohnraum.">${f(stadt.einwohner)} Einwohner (${trend}${voll ? ", Wohnraum voll" : ""}, Wohnraum ${f(stadt.wohnraum())})</span></p>
+      <p class="stadtkopf" title="${esc(teile)}">Zufriedenheit <span class="balken"><span style="width:${zufr}%"></span></span> ${zufr}${t ? ` <small>(Grund ${f(t.grund)}/${p.SAT_BASIC} · gehoben ${f(t.gehoben)}/${p.SAT_COMFORT} · Gebäude +${f(t.gebaeude)})</small>` : ""}</p>`;
   }
 
   stadtprofil(stadt) {
@@ -386,7 +404,7 @@ export class Oberflaeche {
     const stadt = this.fensterStadt;
     const untertitel = schiff
       ? `${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}» · ${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)} geladen · ${f(s.gulden)} Gulden`
-      : `${f(stadt.einwohner)} Einwohner · Zufriedenheit ${Math.round(stadt.zufriedenheit)} · ${f(s.gulden)} Gulden`;
+      : `${f(stadt.einwohner)} Einwohner · Zufriedenheit ${Math.round(stadt.zufriedenheit)} · ${f(s.gulden)} Gulden${s.ausbau.kontor(stadt) ? " · dein Kontor: alles bedienbar wie mit einem Schiff im Hafen" : ""}`;
     let html = `<header><div><h2>${schiff ? "Handel in " : ""}${esc(stadt.name)}</h2>
         <span class="untertitel">${untertitel}</span></div>
         <button class="schliessen" data-schliessen title="Schliessen (Esc)" aria-label="Schliessen">×</button></header>`;
@@ -394,7 +412,9 @@ export class Oberflaeche {
       const imHafen = s.schiffe.filter((x) => s.imHafen(x, stadt));
       html += imHafen.length
         ? `<div class="mitschiff">${imHafen.map((x) => `<button class="haupt" data-handeln-mit="${s.schiffe.indexOf(x)}">Mit «${esc(x.name)}» handeln</button>`).join(" ")}</div>`
-        : `<p class="hilfe">Keines deiner Schiffe liegt hier. Zum Handeln und Kaufen von Betrieben braucht es ein Schiff im Hafen.</p>`;
+        : s.ausbau.kontor(stadt)
+          ? `<p class="hilfe">Kein Schiff hier, aber dein Kontor: Kaufen, bauen und handeln über das Kontor geht trotzdem.</p>`
+          : `<p class="hilfe">Keines deiner Schiffe liegt hier und du hast kein Kontor. Zum Kaufen und Bauen braucht es ein Schiff im Hafen oder ein Kontor.</p>`;
     }
     const kontor = s.ausbau.kontor(stadt);
     const eigene = s.ausbau.betriebeIn(stadt).filter((b) => b.besitzer === "spieler").length;
@@ -482,7 +502,7 @@ export class Oberflaeche {
       const verkauf = a.kontorVerkaufen(stadt, g, wunsch, false);
       const markt = stadt.handelt(g);
       html += `<tr><td class="ware">${esc(g)}${a.regel(stadt, g) ? `<small>mit Regel</small>` : ""}</td>
-        <td class="zahl">${posten ? `${f(posten.menge)}<small>Ø ${f(posten.einstand)}</small>` : "–"}</td>
+        <td class="zahl">${posten ? `${f(posten.menge)}<small>${a.gesperrt(stadt, g) ? `${f(Math.min(posten.menge, a.gesperrt(stadt, g)))} gesperrt · ` : ""}Ø ${f(posten.einstand)}</small>` : "–"}</td>
         ${schiff ? `<td class="zahl">${schiff.ladung[g] ? f(schiff.ladung[g].menge) : "–"}</td>` : ""}
         <td class="zahl">${markt ? f(s.kaufpreis(stadt, g)) : "–"}</td>
         <td class="zahl">${markt ? f(s.verkaufspreis(stadt, g)) : "–"}</td>
@@ -495,12 +515,16 @@ export class Oberflaeche {
 
     // Handelsregeln
     html += `<details class="regeln" ${Object.keys(k.regeln ?? {}).length ? "open" : ""}><summary>Handelsregeln: Das Kontor kauft und verkauft jeden Tag selbst</summary>
-      <p class="hilfe">Pro Ware: kaufen, bis so viel im Kontor liegt (nur bis zum Höchstpreis), und verkaufen, was über einer Menge liegt (nur ab dem Mindestpreis). Leer lassen = aus bzw. egal. Höchstens ${kb.handel_pro_tag} Stück je Ware und Tag.</p>
-      <table class="auftraege"><thead><tr><th>Ware</th><th>kaufen bis</th><th>höchstens</th><th>verkaufen über</th><th>mindestens</th></tr></thead><tbody>`;
+      <p class="hilfe">Pro Ware: kaufen, bis so viel im Kontor liegt (nur bis zum Höchstpreis), und verkaufen, was über einer Menge liegt (nur ab dem Mindestpreis). Leer lassen = aus bzw. egal. Höchstens ${kb.handel_pro_tag} Stück je Ware und Tag. Die Regeln wirken, sobald die Zeit läuft (Fenster schliessen); jeder Handel erscheint in den Meldungen.
+      <b>Sperren:</b> So viele Tage Bedarf deiner Werkstätten (mit Kontor-Versorgung) bleiben im Kontor: Das Kontor verkauft sie nicht, Schiffe laden sie nicht weg.</p>
+      <table class="auftraege"><thead><tr><th>Ware</th><th>kaufen bis</th><th>höchstens</th><th>verkaufen über</th><th>mindestens</th><th>sperren (Tage)</th></tr></thead><tbody>`;
     for (const g of Object.keys(this.D.waren).filter((x) => stadt.handelt(x))) {
       const r = a.regel(stadt, g) ?? {};
       const feld = (name, platzhalter) => `<input type="number" min="0" placeholder="${platzhalter}" value="${r[name] ?? ""}" data-regel="${esc(g)}" data-regelfeld="${name}" aria-label="${esc(g)} ${name}">`;
-      html += `<tr><td>${esc(g)}</td><td>${feld("kaufenBis", "aus")}</td><td>${feld("kaufPreis", "egal")}</td><td>${feld("verkaufenUeber", "aus")}</td><td>${feld("verkaufPreis", "egal")}</td></tr>`;
+      const bedarf = a.bedarfProTag(stadt, g);
+      const tage = k.sperren?.[g] ?? "";
+      const sperre = `<input type="number" min="0" placeholder="–" value="${tage}" data-sperre="${esc(g)}" aria-label="${esc(g)} sperren Tage" title="${bedarf ? `Bedarf deiner Werkstätten: ${f(bedarf)} pro Tag` : "Keine eigene Werkstatt mit Kontor-Versorgung braucht diese Ware"}">${tage && bedarf ? `<small>${f(a.gesperrt(stadt, g))} gesperrt</small>` : ""}`;
+      html += `<tr><td>${esc(g)}${bedarf ? `<small>Bedarf ${f(bedarf)}/Tag</small>` : ""}</td><td>${feld("kaufenBis", "aus")}</td><td>${feld("kaufPreis", "egal")}</td><td>${feld("verkaufenUeber", "aus")}</td><td>${feld("verkaufPreis", "egal")}</td><td>${sperre}</td></tr>`;
     }
     html += `</tbody></table></details>`;
     return html;
@@ -615,6 +639,69 @@ export class Oberflaeche {
       html += `</ul>`;
     }
     return html;
+  }
+
+  // --- Bilanz ------------------------------------------------------------------------
+  bilanz() {
+    const s = this.spiel;
+    const k = s.konten;
+    const jetzt = s.monat();
+    const monate = Object.keys(k.monate).sort();
+    const vorher = monate.filter((m) => m < jetzt).pop();
+    const zeichen = (n) => `<span class="${n < 0 ? "minus" : n > 0 ? "plus" : ""}">${n < 0 ? "−" : n > 0 ? "+" : ""}${f(Math.abs(n))}</span>`;
+
+    // Vermögen
+    const schiffe = s.schiffe.reduce((a, x) => a + s.werft.verkaufserloes(x), 0);
+    const betriebe = s.ausbau.eigene().reduce((a, b) => a + s.ausbau.verkaufserloes(b), 0);
+    const waren = s.warenwert();
+    let html = `<header><div><h2>Bilanz</h2><span class="untertitel">Stand ${esc(s.datum())}</span></div>
+      <button class="schliessen" data-bilanz-zu title="Schliessen (Esc)" aria-label="Schliessen">×</button></header>
+      <h3>Vermögen</h3><table class="markt bilanztabelle"><tbody>
+      <tr><td>Bargeld</td><td class="zahl">${f(s.gulden)}</td></tr>
+      <tr><td>Waren in Schiffen und Kontoren <small>zum Einstandspreis</small></td><td class="zahl">${f(waren)}</td></tr>
+      <tr><td>Schiffe <small>Verkaufswert</small></td><td class="zahl">${f(schiffe)}</td></tr>
+      <tr><td>Betriebe <small>Verkaufswert an die Stadt</small></td><td class="zahl">${f(betriebe)}</td></tr>
+      <tr class="summe"><td>Vermögen</td><td class="zahl">${f(s.gulden + waren + schiffe + betriebe)}</td></tr>
+      </tbody></table>`;
+
+    // Monatsergebnis als Balken (letzte 12 Monate)
+    const letzte = monate.slice(-12);
+    if (letzte.length) {
+      const werte = letzte.map((m) => ergebnis(k.monate[m]));
+      const max = Math.max(1, ...werte.map(Math.abs));
+      const breite = 100 / letzte.length;
+      const balken = werte
+        .map((w, i) => {
+          const h = (Math.abs(w) / max) * 40;
+          const y = w >= 0 ? 45 - h : 45;
+          return `<rect x="${i * breite + breite * 0.15}" y="${y}" width="${breite * 0.7}" height="${Math.max(h, 0.3)}" class="${w >= 0 ? "balken-plus" : "balken-minus"}"><title>${esc(s.monatsname(letzte[i]))}: ${w >= 0 ? "+" : "−"}${f(Math.abs(w))} Gulden</title></rect>`;
+        })
+        .join("");
+      const namen = letzte.map((m, i) => `<text x="${i * breite + breite / 2}" y="97" class="monat">${esc(s.monatsname(m).slice(0, 3))}</text>`).join("");
+      html += `<h3>Laufendes Ergebnis pro Monat <small>ohne Investitionen</small></h3>
+        <svg class="bilanzgrafik" viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Monatsergebnis der letzten Monate">
+          <line x1="0" y1="45" x2="100" y2="45" class="nulllinie"/>${balken}</svg>
+        <div class="monatsnamen">${letzte.map((m) => `<span>${esc(s.monatsname(m).slice(0, 3))}</span>`).join("")}</div>`;
+      void namen;
+    }
+
+    // Konten
+    html += `<h3>Einnahmen und Ausgaben</h3><table class="markt bilanztabelle"><thead><tr><th>Konto</th>
+      <th>${esc(s.monatsname(jetzt))}</th><th>${vorher ? esc(s.monatsname(vorher)) : "Vormonat"}</th><th>gesamt</th></tr></thead><tbody>`;
+    let gruppe = "";
+    for (const konto of KONTEN) {
+      if (konto.gruppe !== gruppe) {
+        gruppe = konto.gruppe;
+        html += `<tr class="kontogruppe"><td colspan="4">${esc(gruppe)}</td></tr>`;
+      }
+      html += `<tr><td>${esc(konto.name)}</td><td class="zahl">${zeichen(k.monate[jetzt]?.[konto.id] ?? 0)}</td>
+        <td class="zahl">${zeichen(vorher ? k.monate[vorher]?.[konto.id] ?? 0 : 0)}</td><td class="zahl">${zeichen(k.gesamt[konto.id] ?? 0)}</td></tr>`;
+    }
+    const zeile = (name, fn) => `<tr class="summe"><td>${name}</td><td class="zahl">${zeichen(fn(k.monate[jetzt]))}</td>
+      <td class="zahl">${zeichen(vorher ? fn(k.monate[vorher]) : 0)}</td><td class="zahl">${zeichen(fn(k.gesamt))}</td></tr>`;
+    html += zeile("Laufendes Ergebnis", ergebnis) + zeile("Investitionen", investitionen) + zeile("Veränderung Bargeld", (t) => ergebnis(t) + investitionen(t));
+    html += `</tbody></table>`;
+    this.e.bilanzInhalt.innerHTML = html;
   }
 
   meldungen() {

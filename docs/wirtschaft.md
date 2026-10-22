@@ -52,7 +52,11 @@ Preis = Basispreis * (T / S) ^ k        begrenzt auf 40 % bis 250 % des Basispre
 
 ## Zufriedenheit
 
-Eine Zahl pro Stadt (0-100): 60 % aus der Deckung des Grundbedarfs (Korn, Fisch, Holz), 40 % aus gehobenem Bedarf (Wein, Tuch, Seide, Zucker, Gewürze, Käse). Sie gleitet langsam auf den Zielwert zu. Werkzeug ist Ausbaubedarf ohne Wirkung auf die Zufriedenheit.
+Eine Zahl pro Stadt (0-100): bis 55 Punkte aus der Deckung des Grundbedarfs (Korn, Fisch, Holz), bis 30 aus dem gehobenen Bedarf (Wein, Tuch, Seide, Zucker, Gewürze, Käse), die restlichen 15 nur über Versorgungsgebäude im Spiel (`SAT_BASIC`, `SAT_COMFORT`). Sie gleitet langsam auf den Zielwert zu. Werkzeug ist Ausbaubedarf ohne Wirkung auf die Zufriedenheit.
+
+## Bevölkerung
+
+Über einer Zufriedenheit von 60 (`POP_SAT_NEUTRAL`) wächst eine Stadt, bei 100 um 0,06 % pro Tag (`POP_GROWTH`), darunter schrumpft sie. Obergrenze ist der Wohnraum, 130 % der Startbevölkerung (`POP_MAX_FACTOR`, im Spiel erweiterbar mit Wohnhäusern). Produktion, Werkstätten, Verbrauch und Zielbestände wachsen mit der Bevölkerung, die Wirtschaft bleibt so im Gleichgewicht. Ohne Spieler liegt die Zufriedenheit bei 85, alle Städte wachsen in rund zwei Jahren an die Wohnraumgrenze.
 
 ## Ereignisse
 

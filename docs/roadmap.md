@@ -6,7 +6,7 @@ Grundsatz: **Erst Spielspass im Kern beweisen, dann Inhalt und Optik ausbauen.**
 
 - [x] **M1 Wirtschaftsprototyp ohne Grafik:** Waren, Städte, Preisformel, KI-Händler, Ereignisse, Balance-Checks (`tools/sim/`)
 - [x] **M2 Daten ausgelagert:** JSON in `data/`, Simulation liest sie, Exit-Code für automatische Tests
-- [ ] **M3 Stadtmodell in der Simulation:** Bevölkerung mit Wachstum, Gebäude-Slots, Zufriedenheit mit Folgen (siehe `docs/stadtausbau.md`). Im Spiel gibt es bereits Kontore und kaufbare Betriebe, in der Simulation noch nicht
+- [ ] **M3 Stadtmodell in der Simulation:** Bevölkerung mit Wachstum und Zufriedenheit mit Folgen sind in Simulation und Spiel umgesetzt. Offen: Gebäude in der Simulation (im Spiel gibt es Kontore, Betriebe, Stadt- und Versorgungsgebäude)
 - [ ] **M4 Diplomatie-Prototyp in der Simulation:** Beziehungswerte, Verträge, Embargos, Folgen für Preise und Routen (siehe `docs/diplomatie.md`)
 - [x] **M5 Engine wählen und Grundgerüst:** Web (reines JavaScript), Daten aus `data/` laden, Wirtschaft als Port der Simulation mit Test
 - [x] **M6 Minimale Oberfläche:** Karte, Stadtansicht, Handelsfenster. Ein Schiff, eine Route, ein Handel. Erste spielbare Demo in `game/`, vorgezogen vor M3 und M4

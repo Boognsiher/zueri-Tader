@@ -7,6 +7,7 @@
 // 3. Karte: Jeder Seeweg führt über Wasser.
 // 4.-9. Betriebe und Kontor, automatischer Handel, Speichern und Laden, Bootshandel, Eigenversorgung,
 //      Stufen, Stadtgebäude und Kontorhandel.
+// 10.  Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -242,7 +243,9 @@ console.log("\nAutomatischer Handel");
     { stadt: "Zürich", auftraege: [{ art: "kaufen", ware: "Seide", menge: 60, preis: null }] },
     { stadt: "Lachen", auftraege: [{ art: "verkaufen", ware: "Seide", menge: null, preis: null }] },
   ]);
-  pruefe("Route Zürich - Lachen startet", fehler === null && !!schiff.fahrt);
+  pruefe("Route Zürich - Lachen startet, das Schiff lädt zuerst (Liegezeit)", fehler === null && !schiff.fahrt && schiff.auto.abfahrt > spiel.zeit);
+  spiel.tagVoran();
+  pruefe("Nach dem Laden legt das Schiff ab", !!schiff.fahrt);
   let besuche = 0;
   for (let t = 0; t < 120; t++) {
     spiel.tagVoran();
@@ -495,6 +498,59 @@ console.log("\nStufen, Stadtgebäude, Kontorhandel");
   pruefe("Stufen, Stadtgebäude und Kontorregeln überstehen Speichern und Laden",
     geladen.ausbau.gebaeudeStufe(zuerich, "markthalle") === 3 && geladen.ausbau.kontor(zuerich).stufe === 2 &&
     geladen.ausbau.regel(zuerich, "Rohseide").kaufenBis === 300 && geladen.welt.stadt["Zürich"].prod.Korn === zuerich.prod.Korn);
+}
+
+// --- 10. Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz -------
+console.log("\nBevölkerung, Versorgung, Kontor, Bilanz");
+{
+  const spiel = new Spiel(D, 81);
+  const a = spiel.ausbau;
+  const schiff = spiel.schiffe[0];
+  const zuerich = spiel.welt.stadt["Zürich"];
+  const lachen = spiel.welt.stadt["Lachen"];
+  spiel.gulden = 500000;
+  spiel.kaufen(schiff, "Holz", 40);
+  a.kontorBauen(zuerich);
+  const k = a.kontor(zuerich);
+  k.lager.Holz = { menge: 400, einstand: 30 };
+  k.lager.Werkzeug = { menge: 100, einstand: 120 };
+
+  // Versorgungsgebäude
+  const z0 = zuerich.zufriedenheit;
+  a.baueGebaeude(zuerich, "spital");
+  a.baueGebaeude(zuerich, "brunnen");
+  for (let t = 0; t < 60; t++) spiel.tagVoran();
+  pruefe(`Spital und Brunnen heben die Zufriedenheit (${z0.toFixed(0)} -> ${zuerich.zufriedenheit.toFixed(0)})`, zuerich.zufriedenheit > z0 + 5);
+  const raum = zuerich.wohnraum();
+  a.baueGebaeude(zuerich, "wohnhaeuser");
+  pruefe(`Wohnhäuser erhöhen den Wohnraum (${raum.toFixed(0)} -> ${zuerich.wohnraum().toFixed(0)})`, zuerich.wohnraum() > raum);
+
+  // Kontor ersetzt das Schiff im Hafen
+  spiel.segeln(schiff, { stadt: lachen });
+  pruefe("Schiff unterwegs, trotzdem Betrieb kaufen dank Kontor", !schiff.ort && a.pruefeKauf(a.betriebeIn(zuerich)[0]) === null);
+  pruefe("Werft in Zürich nutzbar dank Kontor", spiel.werft.pruefeNeukauf(zuerich, "weidling") === null);
+  pruefe("Ohne Schiff und Kontor geht in Meilen nichts", a.pruefeKauf(a.betriebeIn(spiel.welt.stadt["Meilen"])[0]) !== null);
+
+  // Sperren: Bedarf der eigenen Werkstatt bleibt im Kontor
+  const seide = a.betriebeIn(zuerich).find((b) => b.typ === "seidenweberei");
+  a.kaufen(seide);
+  a.setzeZiel(seide, "kontor");
+  k.lager.Rohseide = { menge: 100, einstand: 40 };
+  const bedarf = a.bedarfProTag(zuerich, "Rohseide");
+  a.setzeSperre(zuerich, "Rohseide", 5);
+  pruefe(`Sperre 5 Tage = ${(5 * bedarf).toFixed(0)} Rohseide gesperrt`, Math.abs(a.gesperrt(zuerich, "Rohseide") - 5 * bedarf) < 1e-9 && bedarf > 0);
+  const v = a.kontorVerkaufen(zuerich, "Rohseide", Infinity);
+  pruefe(`Verkaufen lässt die Sperre im Kontor (${v.menge} verkauft, ${k.lager.Rohseide?.menge.toFixed(0)} bleiben)`, Math.abs((k.lager.Rohseide?.menge ?? 0) - 5 * bedarf) < 1);
+
+  // Bilanz
+  const kn = spiel.konten;
+  pruefe("Bilanz bucht Bauten, Betriebskauf, Unterhalt und Handel",
+    kn.gesamt.bauten < 0 && kn.gesamt.betriebeKauf < 0 && kn.gesamt.schiffeUnterhalt < 0 && kn.gesamt.handelEinkauf < 0 && kn.gesamt.kontorVerkauf > 0);
+  pruefe(`Bilanz führt Monate (${Object.keys(kn.monate).join(", ")})`, Object.keys(kn.monate).length >= 2);
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Bevölkerung, Sperren und Bilanz überstehen Speichern und Laden",
+    Math.abs(geladen.welt.stadt["Zürich"].einwohner - zuerich.einwohner) < 1e-9 && geladen.ausbau.kontor(zuerich).sperren.Rohseide === 5 &&
+    geladen.konten.gesamt.bauten === kn.gesamt.bauten && geladen.welt.stadt["Zürich"].wohnraumBonus === zuerich.wohnraumBonus);
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

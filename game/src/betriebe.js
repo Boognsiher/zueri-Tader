@@ -230,9 +230,14 @@ export class Ausbau {
     return this.spiel.schiffe.find((s) => this.spiel.imHafen(s, stadt)) ?? null;
   }
 
+  // Anwesend ist der Spieler mit einem Schiff im Hafen oder einem Kontor
+  vorOrt(stadt) {
+    return !!this.schiffImHafen(stadt) || !!this.kontor(stadt);
+  }
+
   // Baumaterial vor Ort: Kontor und alle eigenen Schiffe im Hafen
   materialVorOrt(stadt, g) {
-    let menge = this.kontor(stadt)?.lager[g]?.menge ?? 0;
+    let menge = this.kontor(stadt) ? this.verfuegbar(stadt, g) : 0;
     for (const s of this.spiel.schiffe) if (this.spiel.imHafen(s, stadt)) menge += s.ladung[g]?.menge ?? 0;
     return menge;
   }
@@ -248,7 +253,7 @@ export class Ausbau {
       let rest = n;
       const k = this.kontor(stadt);
       if (k?.lager[g]) {
-        const m = Math.min(rest, k.lager[g].menge);
+        const m = Math.min(rest, this.verfuegbar(stadt, g));
         entnimm(k.lager, g, m);
         rest -= m;
       }
@@ -263,7 +268,7 @@ export class Ausbau {
 
   // Gemeinsame Prüfung für alles, was gebaut wird: vor Ort, Gulden, Material
   pruefeKosten(stadt, gulden, material) {
-    if (!this.schiffImHafen(stadt)) return "Dafür muss eines deiner Schiffe im Hafen liegen.";
+    if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
     if (this.spiel.gulden < gulden) return "Zu wenig Gulden.";
     const fehlt = this.fehlendesMaterial(stadt, material);
     if (fehlt.length) return `Es fehlt Baumaterial: ${fehlt.join(", ")}.`;
@@ -273,14 +278,14 @@ export class Ausbau {
   bezahle(stadt, gulden, material) {
     this.nimmMaterial(stadt, material);
     this.spiel.gulden -= gulden;
-    this.spiel.bilanz.betriebeKauf += gulden;
+    this.spiel.buche("bauten", -gulden);
   }
 
   // --- Betriebe ----------------------------------------------------------------
   pruefeKauf(b) {
     const stadt = this.spiel.welt.stadt[b.stadt];
     if (b.besitzer === "spieler") return "Gehört dir schon.";
-    if (!this.schiffImHafen(stadt)) return "Dafür muss eines deiner Schiffe im Hafen liegen.";
+    if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
     if (this.spiel.gulden < this.kaufpreisBetrieb(b)) return "Zu wenig Gulden.";
     return null;
   }
@@ -294,7 +299,7 @@ export class Ausbau {
     if (this.pruefeKauf(b)) return false;
     const preis = this.kaufpreisBetrieb(b);
     this.spiel.gulden -= preis;
-    this.spiel.bilanz.betriebeKauf += preis;
+    this.spiel.buche("betriebeKauf", -preis);
     b.besitzer = "spieler";
     b.ziel = "markt";
     b.gestern = null;
@@ -309,7 +314,7 @@ export class Ausbau {
     if (b.besitzer !== "spieler") return false;
     const erloes = this.verkaufserloes(b);
     this.spiel.gulden += erloes;
-    this.spiel.bilanz.betriebeVerkauf += erloes;
+    this.spiel.buche("betriebeVerkauf", erloes);
     b.besitzer = "stadt";
     b.ziel = "markt";
     b.gestern = null;
@@ -382,8 +387,17 @@ export class Ausbau {
     this.bezahle(stadt, t.baukosten.gulden, ohneGulden(t.baukosten));
     const g = (this.gebaeude[stadt.name] ??= {});
     g[id] = (g[id] ?? 0) + 1;
+    this.wendeGebaeudeAn();
     this.spiel.melde(g[id] === 1 ? `${t.name} in ${stadt.name} gebaut.` : `${t.name} in ${stadt.name} auf Stufe ${g[id]} ausgebaut.`, "gut");
     return true;
+  }
+
+  // Versorgungsgebäude: Zufriedenheit und Wohnraum der Städte setzen
+  wendeGebaeudeAn() {
+    for (const stadt of this.spiel.welt.staedte) {
+      stadt.zufriedenheitBonus = this.gebaeudeWirkung(stadt, "zufriedenheit");
+      stadt.wohnraumBonus = this.gebaeudeWirkung(stadt, "wohnraum");
+    }
   }
 
   // --- Kontor ------------------------------------------------------------------------
@@ -397,7 +411,7 @@ export class Ausbau {
     if (this.pruefeKontorBau(stadt)) return false;
     const k = this.bau.kontor.baukosten;
     this.bezahle(stadt, k.gulden, ohneGulden(k));
-    this.kontore[stadt.name] = { stufe: 1, lager: {}, regeln: {} };
+    this.kontore[stadt.name] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
     this.spiel.melde(`Kontor in ${stadt.name} gebaut.`, "gut");
     return true;
   }
@@ -427,7 +441,8 @@ export class Ausbau {
     const von = richtung === "insKontor" ? schiff.ladung : k.lager;
     const nach = richtung === "insKontor" ? k.lager : schiff.ladung;
     const platz = richtung === "insKontor" ? this.lagerFrei(k) : this.spiel.freierLaderaum(schiff);
-    const menge = Math.floor(Math.min(wunsch, von[g]?.menge ?? 0, platz));
+    const vorhanden = richtung === "insKontor" ? von[g]?.menge ?? 0 : this.verfuegbar(schiff.ort, g);
+    const menge = Math.floor(Math.min(wunsch, vorhanden, platz));
     if (ausfuehren && menge > 0) {
       const einstand = von[g].einstand;
       entnimm(von, g, menge);
@@ -453,7 +468,7 @@ export class Ausbau {
     if (ausfuehren && menge > 0) {
       stadt.bestand[g] -= menge;
       this.spiel.gulden -= betrag;
-      this.spiel.bilanz.einkauf += betrag;
+      this.spiel.buche("kontorEinkauf", -betrag);
       addiere(k.lager, g, menge, betrag / menge);
     }
     return { menge, betrag };
@@ -464,7 +479,7 @@ export class Ausbau {
     const k = this.kontor(stadt);
     const posten = k?.lager[g];
     if (!posten || !stadt.handelt(g)) return { menge: 0, betrag: 0, gewinn: 0 };
-    const hoechstens = Math.floor(Math.min(wunsch, posten.menge));
+    const hoechstens = Math.floor(Math.min(wunsch, this.verfuegbar(stadt, g)));
     const bestand = stadt.bestand[g];
     let menge = 0;
     let betrag = 0;
@@ -477,10 +492,43 @@ export class Ausbau {
     if (ausfuehren && menge > 0) {
       stadt.bestand[g] += menge;
       this.spiel.gulden += betrag;
-      this.spiel.bilanz.verkauf += betrag;
+      this.spiel.buche("kontorVerkauf", betrag);
       entnimm(k.lager, g, menge);
     }
     return { menge, betrag, gewinn };
+  }
+
+  // Tagesbedarf der eigenen Werkstätten mit Kontor-Versorgung in dieser Stadt an einer Zutat
+  bedarfProTag(stadt, g) {
+    let summe = 0;
+    for (const b of this.betriebeIn(stadt)) {
+      const t = this.typ(b);
+      if (b.besitzer !== "spieler" || b.ziel !== "kontor" || t.art !== "werkstatt") continue;
+      const m = this.D.rezepte[t.ware][g];
+      if (m) summe += this.leistung(b) * m * this.bau.eigenversorgung.zutaten_faktor;
+    }
+    return summe;
+  }
+
+  // Gesperrte Menge: so viele Tage Bedarf der eigenen Werkstätten bleiben im Kontor
+  gesperrt(stadt, g) {
+    const tage = this.kontor(stadt)?.sperren?.[g] ?? 0;
+    return tage * this.bedarfProTag(stadt, g);
+  }
+
+  // Menge, die verkauft oder an Schiffe abgegeben werden darf
+  verfuegbar(stadt, g) {
+    const menge = this.kontor(stadt)?.lager[g]?.menge ?? 0;
+    return Math.max(0, menge - this.gesperrt(stadt, g));
+  }
+
+  setzeSperre(stadt, g, tage) {
+    const k = this.kontor(stadt);
+    if (!k) return false;
+    k.sperren ??= {};
+    if (!tage) delete k.sperren[g];
+    else k.sperren[g] = Math.max(0, tage);
+    return true;
   }
 
   // Handelsregel für eine Ware im Kontor:
@@ -502,16 +550,22 @@ export class Ausbau {
   // Täglicher Handel der Kontore nach ihren Regeln, höchstens handel_pro_tag Stück je Ware
   kontorHandel() {
     const proTag = this.bau.kontor.handel_pro_tag;
+    const zahl = new Intl.NumberFormat("de-CH", { maximumFractionDigits: 0 });
     for (const [name, k] of Object.entries(this.kontore)) {
       const stadt = this.spiel.welt.stadt[name];
+      const teile = [];
       for (const [g, r] of Object.entries(k.regeln ?? {})) {
         const vorhanden = k.lager[g]?.menge ?? 0;
         if (r.verkaufenUeber != null && vorhanden > r.verkaufenUeber) {
-          this.kontorVerkaufen(stadt, g, Math.min(proTag, Math.floor(vorhanden - r.verkaufenUeber)), true, r.verkaufPreis);
+          // kontorVerkaufen achtet selbst auf gesperrte Ware
+          const v = this.kontorVerkaufen(stadt, g, Math.min(proTag, Math.floor(vorhanden - r.verkaufenUeber)), true, r.verkaufPreis);
+          if (v.menge) teile.push(`${v.menge} ${g} verkauft (${zahl.format(v.betrag)})`);
         } else if (r.kaufenBis != null && vorhanden < r.kaufenBis) {
-          this.kontorKaufen(stadt, g, Math.min(proTag, Math.floor(r.kaufenBis - vorhanden)), true, r.kaufPreis);
+          const kauf = this.kontorKaufen(stadt, g, Math.min(proTag, Math.floor(r.kaufenBis - vorhanden)), true, r.kaufPreis);
+          if (kauf.menge) teile.push(`${kauf.menge} ${g} gekauft (${zahl.format(kauf.betrag)})`);
         }
       }
+      if (teile.length) this.spiel.melde(`Kontor ${name}: ${teile.join(", ")}.`, "handel");
     }
   }
 
@@ -582,13 +636,17 @@ export class Ausbau {
       b.summe += kasse;
       kasseGesamt += kasse;
     }
+    spiel.buche("betriebe", kasseGesamt);
     // Unterhalt der Kontore und Stadtgebäude
-    for (const k of Object.values(this.kontore)) kasseGesamt -= this.bau.kontor.unterhalt * (k.stufe ?? 1);
+    let kontorUnterhalt = 0;
+    for (const k of Object.values(this.kontore)) kontorUnterhalt += this.bau.kontor.unterhalt * (k.stufe ?? 1);
+    let gebaeudeUnterhalt = 0;
     for (const g of Object.values(this.gebaeude)) {
-      for (const [id, stufe] of Object.entries(g)) kasseGesamt -= this.gebaeudetypen[id].unterhalt * stufe;
+      for (const [id, stufe] of Object.entries(g)) gebaeudeUnterhalt += this.gebaeudetypen[id].unterhalt * stufe;
     }
-    spiel.gulden += kasseGesamt;
-    spiel.bilanz.betriebe += kasseGesamt;
+    spiel.buche("kontorUnterhalt", -kontorUnterhalt);
+    spiel.buche("gebaeudeUnterhalt", -gebaeudeUnterhalt);
+    spiel.gulden += kasseGesamt - kontorUnterhalt - gebaeudeUnterhalt;
     this.kontorHandel();
     return kasseGesamt;
   }
@@ -604,10 +662,12 @@ export class Ausbau {
     for (const k of Object.values(this.kontore)) {
       k.stufe ??= 1;
       k.regeln ??= {};
+      k.sperren ??= {};
     }
     this.betriebe = z.betriebe;
     for (const b of this.betriebe) b.stufe ??= 1;
     this.gebaeude = z.gebaeude ?? {};
     this.wendeKapazitaetAn();
+    this.wendeGebaeudeAn();
   }
 }

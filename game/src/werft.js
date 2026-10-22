@@ -1,6 +1,6 @@
 // Bootshandel: neue Schiffe in Werftstädten, Verkauf eigener Schiffe, Gebrauchtmarkt.
-// Alle Zahlen stehen in data/schiffe.json. Gekauft und verkauft wird nur, wenn eines der
-// eigenen Schiffe im Hafen liegt (man muss vor Ort sein).
+// Alle Zahlen stehen in data/schiffe.json. Gekauft wird nur, wenn der Spieler vor Ort ist:
+// mit einem Schiff im Hafen oder einem Kontor.
 
 export class Werft {
   constructor(spiel) {
@@ -18,14 +18,15 @@ export class Werft {
     return this.daten.werften.includes(stadt.name);
   }
 
+  // Anwesend: eigenes Schiff im Hafen oder eigenes Kontor
   vorOrt(stadt) {
-    return this.spiel.schiffe.some((s) => this.spiel.imHafen(s, stadt));
+    return this.spiel.ausbau.vorOrt(stadt);
   }
 
   // --- Neue Schiffe ---------------------------------------------------------------
   pruefeNeukauf(stadt, typId) {
     if (!this.istWerft(stadt)) return `In ${stadt.name} gibt es keine Werft (Werften: ${this.daten.werften.join(", ")}).`;
-    if (!this.vorOrt(stadt)) return "Dafür muss eines deiner Schiffe im Hafen liegen.";
+    if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
     if (this.spiel.gulden < this.typ(typId).preis) return "Zu wenig Gulden.";
     return null;
   }
@@ -34,7 +35,7 @@ export class Werft {
     if (this.pruefeNeukauf(stadt, typId)) return null;
     const t = this.typ(typId);
     this.spiel.gulden -= t.preis;
-    this.spiel.bilanz.schiffe += t.preis;
+    this.spiel.buche("schiffeKauf", -t.preis);
     const schiff = this.spiel.neuesSchiff(stadt, typId, false);
     this.spiel.melde(`Neuer ${t.name} «${schiff.name}» in ${stadt.name} gekauft.`, "gut");
     return schiff;
@@ -56,7 +57,7 @@ export class Werft {
     if (this.pruefeVerkauf(schiff)) return false;
     const erloes = this.verkaufserloes(schiff);
     this.spiel.gulden += erloes;
-    this.spiel.bilanz.schiffeVerkauf += erloes;
+    this.spiel.buche("schiffeVerkauf", erloes);
     this.spiel.schiffe = this.spiel.schiffe.filter((s) => s !== schiff);
     this.spiel.namen.push(schiff.name); // der Name wird wieder frei
     this.spiel.melde(`${this.typ(schiff.typ).name} «${schiff.name}» in ${schiff.ort.name} für ${erloes} Gulden verkauft.`);
@@ -70,7 +71,7 @@ export class Werft {
 
   pruefeGebraucht(angebot) {
     const stadt = this.spiel.welt.stadt[angebot.stadt];
-    if (!this.vorOrt(stadt)) return "Dafür muss eines deiner Schiffe im Hafen liegen.";
+    if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
     if (this.spiel.gulden < angebot.preis) return "Zu wenig Gulden.";
     return null;
   }
@@ -79,7 +80,7 @@ export class Werft {
     if (this.pruefeGebraucht(angebot)) return null;
     const stadt = this.spiel.welt.stadt[angebot.stadt];
     this.spiel.gulden -= angebot.preis;
-    this.spiel.bilanz.schiffe += angebot.preis;
+    this.spiel.buche("schiffeKauf", -angebot.preis);
     this.angebote = this.angebote.filter((a) => a !== angebot);
     const schiff = this.spiel.neuesSchiff(stadt, angebot.typ, true);
     this.spiel.melde(`Gebrauchten ${this.typ(angebot.typ).name} «${schiff.name}» in ${stadt.name} für ${angebot.preis} Gulden gekauft.`, "gut");

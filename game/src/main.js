@@ -90,8 +90,9 @@ async function start() {
       setzeTempo(0);
     },
     fortsetzen: () => {
-      if (tempoVorFenster && tempo === 0 && !ui.handelOffen && !routenfenster.offen) setzeTempo(tempoVorFenster);
-      if (!ui.handelOffen && !routenfenster.offen) tempoVorFenster = 0;
+      const offen = ui.handelOffen || routenfenster.offen || $("bilanz").open;
+      if (tempoVorFenster && tempo === 0 && !offen) setzeTempo(tempoVorFenster);
+      if (!offen) tempoVorFenster = 0;
     },
   };
 
@@ -114,6 +115,7 @@ async function start() {
       meldungen: $("meldungen"),
       handel: $("handel"),
       handelInhalt: $("handel-inhalt"),
+      bilanzInhalt: $("bilanz-inhalt"),
     },
     zeit,
   );
@@ -124,13 +126,31 @@ async function start() {
     },
   });
   ui.routenfenster = routenfenster;
+  // Bilanzfenster: hält die Zeit an wie die anderen Fenster
+  const bilanzDialog = $("bilanz");
+  function bilanzZu() {
+    if (!bilanzDialog.open) return;
+    bilanzDialog.close();
+    zeit.fortsetzen();
+  }
+  $("bilanzknopf").addEventListener("click", () => {
+    if (bilanzDialog.open) return bilanzZu();
+    ui.bilanz();
+    zeit.anhalten();
+    bilanzDialog.show();
+  });
+  bilanzDialog.addEventListener("click", (e) => {
+    if (e.target.closest("[data-bilanz-zu]")) bilanzZu();
+  });
+
   // Zugang für Tests und Fehlersuche in der Browser-Konsole
   window.zueriTrade = { spiel, ui };
 
   knoepfe.forEach((k) => k.addEventListener("click", () => setzeTempo(Number(k.dataset.tempo))));
   document.addEventListener("keydown", (e) => {
     if (e.key === "Escape") {
-      if (routenfenster.offen) routenfenster.schliesse();
+      if (bilanzDialog.open) bilanzZu();
+      else if (routenfenster.offen) routenfenster.schliesse();
       else if (ui.handelOffen) ui.schliesseHandel();
       else if (!e.target.closest("details")) ui.abwaehlen();
       return;
