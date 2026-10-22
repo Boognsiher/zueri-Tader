@@ -13,7 +13,7 @@ Hobbyprojekt, inspiriert von der Spielidee der Port-Royale-Reihe, aber mit eigen
 
 ## Status
 
-Konzeptphase. Die Wirtschaft ist als Simulation ohne Grafik vorhanden und getestet. Spiel und Oberfläche folgen, sobald die Engine gewählt ist.
+Erste spielbare Demo im Browser. Die Wirtschaft ist als Simulation vorhanden und getestet, das Spiel nutzt dieselben Daten und dieselbe Logik.
 
 | Bereich | Stand |
 |---|---|
@@ -21,11 +21,15 @@ Konzeptphase. Die Wirtschaft ist als Simulation ohne Grafik vorhanden und getest
 | Wirtschaftssimulation | läuft, alle Balance-Checks bestanden |
 | Stadtausbau | Entwurf (`docs/stadtausbau.md`, `data/buildings.json`), noch nicht in der Simulation |
 | Diplomatie | Entwurf (`docs/diplomatie.md`) |
-| Spiel / Oberfläche | noch nicht begonnen (Engine offen) |
+| Spiel / Oberfläche | spielbare Demo im Browser: Karte, Markt, Flotte, KI-Händler, Ereignisse (`game/`) |
 
 ## Schnellstart
 
 Voraussetzung: Python 3.8 oder neuer, keine weiteren Pakete.
+
+**Spielen:** unter Windows `spielen.bat` doppelklicken, sonst im Hauptordner `python -m http.server 8000` starten und `http://localhost:8000/game/` öffnen. Details in [`game/README.md`](game/README.md).
+
+**Simulation:**
 
 ```bash
 python3 tools/sim/wirtschaft_sim.py                      # Standardlauf, 720 Tage
@@ -34,7 +38,7 @@ python3 tools/sim/wirtschaft_sim.py --no-events          # ohne Zufallsereigniss
 python3 tools/sim/wirtschaft_sim.py --csv preise.csv     # Preisverlauf für Diagramme
 ```
 
-Die Simulation lässt die Wirtschaft ohne Spieler laufen (Städte produzieren und verbrauchen, KI-Händler handeln) und prüft am Ende, ob sie stabil und spielbar ist. Der Exit-Code ist 0, wenn alle Checks bestehen, sonst 1. Daher läuft sie auch automatisch als Test (`.github/workflows/sim.yml`).
+Die Simulation lässt die Wirtschaft ohne Spieler laufen (Städte produzieren und verbrauchen, KI-Händler handeln) und prüft am Ende, ob sie stabil und spielbar ist. Der Exit-Code ist 0, wenn alle Checks bestehen, sonst 1. Daher läuft sie auch automatisch als Test (`.github/workflows/sim.yml`), zusammen mit dem Test der Spielwirtschaft (`node game/test/wirtschaft_test.mjs`, braucht Node 18 oder neuer).
 
 ## Projektstruktur
 
@@ -45,7 +49,8 @@ zueri-trade/
 ├─ docs/                Konzept, Wirtschaft, Stadtausbau, Diplomatie, Entscheidungen, Roadmap
 ├─ data/                alle Spielzahlen als JSON (Waren, Städte, Rezepte, Parameter, Gebäude)
 ├─ tools/sim/           Wirtschaftssimulation (Balancing-Labor)
-├─ game/                das eigentliche Spiel (kommt nach der Engine-Entscheidung)
+├─ game/                das Spiel (Browser-Demo, reines JavaScript)
+├─ spielen.bat          startet die Demo unter Windows
 └─ .github/workflows/   automatischer Balance-Test
 ```
 

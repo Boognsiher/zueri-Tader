@@ -22,3 +22,14 @@ jobs:
           for f in data/*.json; do python3 -m json.tool "$f" > /dev/null && echo "OK $f"; done
       - name: Simulation (Seed ${{ matrix.seed }})
         run: python3 tools/sim/wirtschaft_sim.py --seed ${{ matrix.seed }}
+
+  spiel-test:
+    # Wirtschaft des Spiels (JavaScript): dieselben Balance-Checks, Spielerhandel, Seewege
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Spieltest
+        run: node game/test/wirtschaft_test.mjs

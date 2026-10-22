@@ -13,6 +13,8 @@ python3 tools/sim/wirtschaft_sim.py                  # Wirtschaftssimulation, St
 python3 tools/sim/wirtschaft_sim.py --seed 2         # anderer Zufallslauf
 python3 tools/sim/wirtschaft_sim.py --no-events      # ohne Ereignisse
 python3 tools/sim/wirtschaft_sim.py --csv preise.csv # Preisverlauf exportieren
+node game/test/wirtschaft_test.mjs                   # Test der Spielwirtschaft (gleiche Checks)
+python -m http.server 8000                           # Spiel starten, dann http://localhost:8000/game/
 ```
 
 Exit-Code 0 = alle Balance-Checks bestanden, 1 = mindestens ein Check durchgefallen.
@@ -20,7 +22,7 @@ Exit-Code 0 = alle Balance-Checks bestanden, 1 = mindestens ein Check durchgefal
 ## Regeln
 
 1. **Zahlen gehören in `data/`, nicht in den Code.** Waren, Preise, Städte, Rezepte, Parameter, Gebäude sind JSON-Dateien. Nur Logik kommt in den Code.
-2. **Nach jeder Änderung an `data/` oder an der Wirtschaftslogik die Simulation laufen lassen**, mit mindestens drei Seeds (1, 2, 3), und das Ergebnis prüfen. Ein durchgefallener Check ist ein Befund, den man erklärt oder behebt. Schwellenwerte werden nicht angepasst, nur damit ein Check besteht. Aussagekräftig sind nur Läufe mit der Standarddauer von 720 Tagen: Kurze Läufe zeigen noch den Einschwingeffekt am Anfang (zu hohe Rendite).
+2. **Nach jeder Änderung an `data/` oder an der Wirtschaftslogik die Simulation laufen lassen**, mit mindestens drei Seeds (1, 2, 3), und das Ergebnis prüfen. Ein durchgefallener Check ist ein Befund, den man erklärt oder behebt. Schwellenwerte werden nicht angepasst, nur damit ein Check besteht. Aussagekräftig sind nur Läufe mit der Standarddauer von 720 Tagen: Kurze Läufe zeigen noch den Einschwingeffekt am Anfang (zu hohe Rendite). Zusätzlich `node game/test/wirtschaft_test.mjs` laufen lassen.
 3. **Das Konzept hat Vorrang vor Einfällen.** Schwerpunkte sind Handel, Management, Diplomatie. Der Kampf bleibt klein (statische Ansicht). Neue Systeme erst, wenn sie im Konzept stehen oder der Nutzer sie entscheidet.
 4. **Entscheidungen festhalten** in `docs/entscheidungen.md` (Datum, Entscheidung, Begründung). Offene Fragen dort ebenfalls führen.
 5. **Keine Originalmaterialien** aus Port Royale oder anderen kommerziellen Spielen: keine Dateien, Grafiken, Screenshots, Modelle, Symbole, Texte, Namen von Schiffen oder Charakteren, keine ausgelesenen Daten. Der Grafikstil darf sich an Port Royale 3 orientieren (siehe `docs/optik.md`), aber keine konkreten Bilder übernehmen oder nachzeichnen. Referenzbilder nur lokal in `referenzen_lokal/` (steht in `.gitignore`). Fremde Assets nur mit passender Lizenz und Quellenangabe.
@@ -31,9 +33,11 @@ Exit-Code 0 = alle Balance-Checks bestanden, 1 = mindestens ein Check durchgefal
 
 - `data/params.json`: Stellschrauben. Wichtigste Balance-Schraube: `TARGET_DAYS_USE` / `TARGET_DAYS_PROD` (Zielbestand in Tagen)
 - `data/cities.json`, `goods.json`, `recipes.json`, `consumption.json`: Wirtschaftsdaten
+- `data/events.json`: Zufallsereignisse, `data/karte.json`: Seeteile, Ufer und Durchfahrt (bestimmt die Fahrzeiten), `data/spiel.json`: Startwerte der Demo
 - `data/buildings.json`: Entwurf der Gebäude (noch nicht von der Simulation gelesen)
-- `tools/sim/wirtschaft_sim.py`: Simulation (Datenabschnitt, Modell, Tagesschleife, Bericht)
+- `tools/sim/wirtschaft_sim.py`: Simulation (Datenabschnitt, Modell, Tagesschleife, Bericht), das Referenzmodell
+- `game/src/wirtschaft.js`: dieselbe Wirtschaftslogik im Spiel. Änderungen an der Logik immer in beiden Dateien
 
-## Offene Punkte (Stand Konzeptphase)
+## Offene Punkte (Stand erste Demo)
 
-Engine (Godot 4 oder Web/TypeScript), Echtzeit mit Pause oder rundenbasiert, Spielziel, Diplomatie-Details. Siehe `docs/entscheidungen.md`.
+Engine langfristig (Demo im Browser, Godot später möglich), Zeitmodell bestätigen (Demo: Echtzeit mit Pause), Spielziel, Diplomatie-Details. Siehe `docs/entscheidungen.md`.

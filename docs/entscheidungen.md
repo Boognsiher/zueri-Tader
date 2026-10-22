@@ -6,6 +6,8 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 
 | Datum | Entscheidung | Begründung |
 |---|---|---|
+| 22.10.2026 | Erste Demo als Web-Spiel in reinem JavaScript (ohne Build-Schritt), Start über einen lokalen Python-Webserver | Der Projektinhaber wollte eine spielbare Demo. Web läuft ohne Installation, lässt sich mit Node automatisch gegen die Balance-Checks testen und liest `data/*.json` direkt. Godot bleibt für später möglich (siehe `game/README.md`) |
+| 22.10.2026 | Fahrten zwischen Untersee und Obersee führen über den Seedamm (`data/karte.json`), in Simulation und Spiel | Sonst würden Schiffe auf der Karte über Land fahren. Die Fahrzeiten änderten sich kaum, alle Checks bestehen |
 | 22.10.2026 | Setting: Zürichsee im 17. Jahrhundert statt Karibik. 8 Seegemeinden von Zürich bis Schmerikon, Lastschiffe (Nauen, Ledischiffe), Währung Gulden | Vom Projektinhaber entschieden, passt zum Titel "Züri-Trade". Die Waren wurden eins zu eins übertragen (gleiche Preise und Mengen), damit die getestete Balance erhalten bleibt. Annahme: Das Jahrhundert bleibt, weil Konzept und Waren darauf aufbauen |
 | 22.10.2026 | Ereignisse stehen in `data/events.json` statt im Code | Nach einer Umbenennung der Waren hätten fest eingetragene Namen still nichts mehr bewirkt |
 | 22.10.2026 | Hobbyprojekt, das die Spielidee der Port-Royale-Reihe weiterentwickelt | Eigenes Spiel ist realistischer als Modifikationen des geschlossenen Originals |
@@ -27,13 +29,13 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 
 | Thema | Empfehlung |
 |---|---|
-| Zeitmodell | Echtzeit mit Pause, intern in festen Tagen gerechnet. Fühlt sich lebendig an und bleibt testbar. Alternative: rundenbasiert (einfacher zu bauen). |
+| Zeitmodell | Echtzeit mit Pause, intern in festen Tagen gerechnet. Fühlt sich lebendig an und bleibt testbar. Alternative: rundenbasiert (einfacher zu bauen). So in der Demo umgesetzt (drei Tempostufen, Halt bei Ankunft), Bestätigung nach dem Ausprobieren. |
 | Umfang | 15-25 Städte, 10-15 Waren |
 | Preisformel | `Basispreis × (Zielbestand / Lagerbestand)^k`, siehe `docs/wirtschaft.md` |
 
 ## Offen
 
-- **Engine:** Godot 4 (kostenlos, gutes UI-System, starke 2D-Unterstützung) oder Web mit TypeScript (flexible Oberflächen, einfach zu teilen). Entscheidung vor dem Ordner `game/`.
+- **Engine langfristig:** Die Demo läuft im Browser. Ob das so bleibt oder später Godot 4 kommt (z. B. für eine 3D-Stadtansicht), ist offen.
 - **Spielziel:** Reichtum, Titel, Monopole oder eine Kombination
 - **Einzelspieler oder Mehrspieler:** bisher Einzelspieler angenommen
 - **Diplomatie:** Umfang und Tiefe, siehe `docs/diplomatie.md`

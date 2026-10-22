@@ -1,29 +1,46 @@
 # game/
 
-Hier entsteht das eigentliche Spiel, sobald die Engine gewählt ist (Meilenstein M5, siehe `docs/roadmap.md`). Bis dahin ist der Ordner ein Platzhalter.
+Die spielbare Demo von Züri-Trade: Handel auf dem Zürichsee im Browser.
 
-## Engine-Entscheidung (offen)
+## Starten
 
-| Weg | Stärke | Schwäche |
-|---|---|---|
-| **Godot 4** | kostenlos, sehr gutes UI-System, starke 2D-Unterstützung, leichter Einstieg | eigene Skriptsprache (GDScript, Python-ähnlich) |
-| **Web (TypeScript)** | sehr flexible Oberflächen, einfach zu teilen, direkt im Browser testbar | weniger Spielgefühl, Performance bei grossen Simulationen |
+Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen lokalen Webserver (als Datei per Doppelklick geöffnet, blockiert der Browser das Laden). Python genügt, sonst ist nichts zu installieren.
 
-Eine Unity-Variante wurde erwogen, aber wegen Gewicht und Lizenzfragen zurückgestellt.
+- **Windows:** `spielen.bat` im Hauptordner doppelklicken. Der Browser öffnet sich mit dem Spiel.
+- **Von Hand:** im Hauptordner `python -m http.server 8000` starten und `http://localhost:8000/game/` öffnen.
 
-**Unreal Engine 5** ist technisch möglich, für ein oberflächenlastiges Verwaltungsspiel aber nicht empfohlen: Der Aufbau von Fenstern und Tabellen ist umständlich, Projekte bestehen weitgehend aus Binärdateien (schlecht für Git und für Claude Code), und der Aufwand ist für ein Hobbyprojekt hoch. Sinnvoll nur, wenn eine aufwändige 3D-Optik der Kern des Spiels werden soll.
+## Was die Demo kann
 
-## Optik
+- Seekarte des Zürichsees mit acht Seegemeinden von Zürich bis Schmerikon, Durchfahrt am Seedamm
+- Markt jeder Stadt: Lager, Kauf- und Verkaufspreis, bestes Gebot in einer anderen Stadt. Grosse Mengen verschieben den Preis (Mengeneffekt).
+- Eigene Schiffe (Nauen): laden, ablegen, Fahrzeit nach Weglänge, neue Schiffe kaufen, Unterhalt pro Tag
+- 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
+- Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
+- Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft
 
-Die Grafikrichtung (angelehnt an Port Royale 3, vereinfacht) steht in `docs/optik.md`. Karte und Oberfläche in 2D, die Stadtansicht zunächst einfach und später optional in 3D mit festen Bauplätzen. Godot kann 2D und 3D, das spricht für Godot.
+Noch nicht dabei: Spielziel, Speichern, Stadtausbau, Diplomatie, Kampf (siehe `docs/roadmap.md`).
 
-## Anforderungen an das Spiel
+## Aufbau
 
-- liest alle Spielzahlen aus `data/*.json` (dieselben Dateien wie die Simulation)
-- Wirtschaftslogik soll mit der Simulation in `tools/sim/` übereinstimmen. Die Simulation bleibt das Referenzmodell zum Balancieren.
-- Oberfläche vor Grafik: Karte, Stadtansicht, Handelsfenster, stimmiger UI-Stil (Seekarte, Pergament, Kontor)
-- Kampf als statische Ansicht, keine 3D-Schlachten
+| Datei | Inhalt |
+|---|---|
+| `index.html`, `style.css` | Seite und Stil (Pergament und Seekarte, siehe `docs/optik.md`) |
+| `src/daten.js` | lädt `data/*.json` |
+| `src/wirtschaft.js` | Wirtschaftsmodell: Preise, Städte, KI-Händler, Ereignisse. Entspricht `tools/sim/wirtschaft_sim.py` |
+| `src/spiel.js` | Spielerzustand: Geld, Schiffe, Handel, Kalender |
+| `src/karte.js` | Seekarte als SVG |
+| `src/oberflaeche.js` | Seitenleiste: Flotte, Markt, Meldungen |
+| `src/main.js` | Einstieg und Zeitsteuerung |
+| `src/zufall.js` | reproduzierbarer Zufallsgenerator |
+| `test/wirtschaft_test.mjs` | Test ohne Browser (`node game/test/wirtschaft_test.mjs`) |
 
-## Entscheidungshilfe
+Reines JavaScript (ES-Module), ohne Build-Schritt und ohne Pakete. Wirtschaft und Spielerzustand greifen nicht auf das DOM zu und laufen deshalb auch unter Node.
 
-Wenn das Spiel eher wie ein richtiges Spiel wirken soll: Godot. Wenn es eher ein Werkzeug-artiges Erlebnis mit sehr flexibler Oberfläche sein darf und einfach teilbar sein soll: Web.
+## Regeln für Änderungen
+
+- Zahlen gehören nach `data/`. Startwerte und Tempo der Demo stehen in `data/spiel.json`, die Karte in `data/karte.json`.
+- `src/wirtschaft.js` und `tools/sim/wirtschaft_sim.py` müssen dieselbe Logik haben. Wer eine Seite ändert, ändert die andere mit und lässt beide Tests laufen. Der Spieltest prüft dieselben Balance-Checks wie die Simulation.
+
+## Engine
+
+Für die Demo ist ein Web-Spiel gewählt (siehe `docs/entscheidungen.md`): läuft ohne Installation, lässt sich mit Node automatisch testen und teilt die Daten direkt mit der Simulation. Godot 4 bleibt eine Option für später, falls eine 3D-Stadtansicht kommt. Die Daten in `data/` und das Referenzmodell in `tools/sim/` wären dann weiter nutzbar.
