@@ -1,0 +1,26 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Simulationsausgaben
+preise*.csv
+
+# Lokale Referenzbilder (Inspiration, nicht einchecken, nicht ins Spiel übernehmen)
+referenzen_lokal/
+
+# Godot 4
+.godot/
+*.translation
+
+# Web / Node
+node_modules/
+dist/
+.vite/
+
+# Editor und System
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

@@ -1,0 +1,24 @@
+name: Wirtschaftssimulation
+
+# Lässt die Simulation mit mehreren Zufallsläufen laufen. Schlägt fehl, wenn ein
+# Balance-Check durchfällt (Exit-Code 1). So fällt eine kaputte Wirtschaft sofort auf.
+on:
+  push:
+  pull_request:
+
+jobs:
+  balance-check:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        seed: [1, 2, 3]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: JSON-Dateien prüfen
+        run: |
+          for f in data/*.json; do python3 -m json.tool "$f" > /dev/null && echo "OK $f"; done
+      - name: Simulation (Seed ${{ matrix.seed }})
+        run: python3 tools/sim/wirtschaft_sim.py --seed ${{ matrix.seed }}
