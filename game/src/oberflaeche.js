@@ -4,6 +4,8 @@
 //
 // Steuerung: Klick auf den See schickt das gewählte Schiff dorthin, Klick auf eine Stadt
 // lässt es dort anlegen. Liegt es schon dort, öffnet sich das Handelsfenster.
+// Ohne gewähltes Schiff (abwählen per Klick auf das Schiff, Esc oder Knopf) öffnet ein Klick
+// auf eine Stadt dasselbe Fenster als Stadtfenster: Preise, Betriebe, Kontor, ohne Schiff.
 
 import { weglaenge } from "./navigation.js";
 
@@ -33,6 +35,8 @@ export class Oberflaeche {
     this.menge = "10";
     this.reiter = "markt";
     this.handelOffen = false;
+    this.fensterSchiff = null; // Schiff im Handelsfenster, null = Stadtfenster
+    this.fensterStadt = null;
     this.routenfenster = null; // wird von main.js gesetzt
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
     this.e.markt.addEventListener("change", (ev) => {
@@ -53,27 +57,38 @@ export class Oberflaeche {
   }
 
   // --- Steuerung über die Karte ---------------------------------------------
+  // Ein Klick auf das schon gewählte Schiff wählt es ab
   waehleSchiff(schiff) {
-    if (this.handelOffen && schiff !== this.schiff) this.schliesseHandel();
+    if (schiff === this.schiff) return this.abwaehlen();
+    if (this.handelOffen) this.schliesseHandel();
     this.schiff = schiff;
     if (schiff.ort) this.stadt = schiff.ort;
     this.aktualisiere();
   }
 
+  abwaehlen() {
+    if (this.handelOffen && this.fensterSchiff) this.schliesseHandel();
+    this.schiff = null;
+    this.aktualisiere();
+  }
+
   klickStadt(stadt) {
     this.stadt = stadt;
-    if (this.spiel.imHafen(this.schiff, stadt)) {
-      this.oeffneHandel();
-      return;
-    }
+    if (!this.schiff) return this.oeffneStadt(stadt);
+    if (this.spiel.imHafen(this.schiff, stadt)) return this.oeffneHandel();
     this.segle({ stadt });
   }
 
   klickSee(punkt) {
+    if (!this.schiff) {
+      this.spiel.melde("Kein Schiff gewählt. Klicke zuerst ein Schiff an, um es zu steuern.", "warnung");
+      return this.aktualisiere();
+    }
     this.segle({ punkt });
   }
 
   segle(ziel) {
+    if (!this.schiff) return;
     const r = this.spiel.segeln(this.schiff, ziel);
     if (!r.ok) this.spiel.melde(r.grund, "warnung");
     else if (this.handelOffen) this.schliesseHandel();
@@ -91,8 +106,22 @@ export class Oberflaeche {
     }
   }
 
+  // Handelsfenster für das gewählte Schiff im Hafen
   oeffneHandel() {
-    if (!this.spiel.imHafen(this.schiff)) return;
+    if (!this.schiff || !this.spiel.imHafen(this.schiff)) return;
+    this.fensterSchiff = this.schiff;
+    this.fensterStadt = this.schiff.ort;
+    this.oeffneFenster();
+  }
+
+  // Stadtfenster ohne Schiff
+  oeffneStadt(stadt) {
+    this.fensterSchiff = null;
+    this.fensterStadt = stadt;
+    this.oeffneFenster();
+  }
+
+  oeffneFenster() {
     if (!this.handelOffen) {
       this.handelOffen = true;
       this.zeit.anhalten();
@@ -110,7 +139,7 @@ export class Oberflaeche {
 
   // --- Darstellung -----------------------------------------------------------
   aktualisiere() {
-    if (this.handelOffen && !this.spiel.imHafen(this.schiff)) this.schliesseHandel();
+    if (this.handelOffen && this.fensterSchiff && !this.spiel.imHafen(this.fensterSchiff)) this.schliesseHandel();
     this.kopf();
     this.flotte();
     this.besitz();
@@ -165,17 +194,22 @@ export class Oberflaeche {
     }
     html += `</ul>`;
     const schiff = this.schiff;
-    const aktionen = [];
-    if (s.imHafen(schiff)) aktionen.push(`<button data-handeln>Handelsfenster öffnen</button>`);
-    if (schiff.fahrt && !schiff.auto) aktionen.push(`<button data-anhalten>Anhalten</button>`);
-    aktionen.push(`<button data-automatik>Automatik …</button>`);
-    html += `<div class="schiffsaktionen">${aktionen.join("")}</div>`;
-    html += `<p class="steuerhilfe">${
+    if (!schiff) {
+      html += `<p class="steuerhilfe">Kein Schiff gewählt. Klick auf eine Stadt: Preise, Betriebe und Kontor ansehen. Ein Schiff wählst du per Klick in dieser Liste oder auf der Karte.</p>`;
+    } else {
+      const aktionen = [];
+      if (s.imHafen(schiff)) aktionen.push(`<button data-handeln>Handelsfenster öffnen</button>`);
+      if (schiff.fahrt && !schiff.auto) aktionen.push(`<button data-anhalten>Anhalten</button>`);
+      aktionen.push(`<button data-automatik>Automatik …</button>`);
+      aktionen.push(`<button data-abwaehlen title="Auch mit Esc oder einem Klick auf das gewählte Schiff">Abwählen</button>`);
+      html += `<div class="schiffsaktionen">${aktionen.join("")}</div>`;
+    }
+    if (schiff) html += `<p class="steuerhilfe">${
       schiff.auto
         ? `«${esc(schiff.name)}» handelt automatisch. Klicks auf die Karte steuern es erst wieder, wenn du unter «Automatik …» auf «Selbst steuern» stellst.`
-        : `Klick auf den See: «${esc(schiff.name)}» segelt dorthin. Klick auf eine Stadt: anlegen und handeln. Ein anderes Schiff wählst du per Klick in dieser Liste oder auf der Karte.`
-    }</p>
-      <p class="bilanz">Unterhalt ${f(D.p.UPKEEP * s.schiffe.length)} Gulden pro Tag · bisher eingekauft ${f(s.bilanz.einkauf)},
+        : `Klick auf den See: «${esc(schiff.name)}» segelt dorthin. Klick auf eine Stadt: anlegen und handeln. Abwählen, um Städte nur anzusehen.`
+    }</p>`;
+    html += `<p class="bilanz">Unterhalt ${f(D.p.UPKEEP * s.schiffe.length)} Gulden pro Tag · bisher eingekauft ${f(s.bilanz.einkauf)},
       verkauft ${f(s.bilanz.verkauf)}, Unterhalt ${f(s.bilanz.unterhalt)} Gulden</p>`;
     this.e.flotte.innerHTML = html;
   }
@@ -312,11 +346,20 @@ export class Oberflaeche {
     const s = this.spiel;
     const D = this.D;
     const welt = s.welt;
-    const schiff = this.schiff;
-    const stadt = schiff.ort;
-    let html = `<header><div><h2>Handel in ${esc(stadt.name)}</h2>
-        <span class="untertitel">${esc(D.spiel.schiffstyp)} «${esc(schiff.name)}» · ${s.ladungsmenge(schiff)} / ${D.p.SHIP_CAP} geladen · ${f(s.gulden)} Gulden</span></div>
+    const schiff = this.fensterSchiff;
+    const stadt = this.fensterStadt;
+    const untertitel = schiff
+      ? `${esc(D.spiel.schiffstyp)} «${esc(schiff.name)}» · ${s.ladungsmenge(schiff)} / ${D.p.SHIP_CAP} geladen · ${f(s.gulden)} Gulden`
+      : `${f(stadt.einwohner)} Einwohner · Zufriedenheit ${Math.round(stadt.zufriedenheit)} · ${f(s.gulden)} Gulden`;
+    let html = `<header><div><h2>${schiff ? "Handel in " : ""}${esc(stadt.name)}</h2>
+        <span class="untertitel">${untertitel}</span></div>
         <button class="schliessen" data-schliessen title="Schliessen (Esc)" aria-label="Schliessen">×</button></header>`;
+    if (!schiff) {
+      const imHafen = s.schiffe.filter((x) => s.imHafen(x, stadt));
+      html += imHafen.length
+        ? `<div class="mitschiff">${imHafen.map((x) => `<button class="haupt" data-handeln-mit="${s.schiffe.indexOf(x)}">Mit «${esc(x.name)}» handeln</button>`).join(" ")}</div>`
+        : `<p class="hilfe">Keines deiner Schiffe liegt hier. Zum Handeln und Kaufen von Betrieben braucht es ein Schiff im Hafen.</p>`;
+    }
     const kontor = s.ausbau.kontor(stadt);
     const eigene = s.ausbau.betriebeIn(stadt).filter((b) => b.besitzer === "spieler").length;
     html += `<nav class="reiter" role="tablist">${[
@@ -328,7 +371,7 @@ export class Oberflaeche {
       .join("")}</nav>`;
     const mengenwahl = `<div class="mengenwahl" role="group" aria-label="Handelsmenge">Menge:
       ${MENGEN.map(([wert, text]) => `<button data-menge="${wert}" class="${this.menge === wert ? "aktiv" : ""}">${text}</button>`).join("")}
-      <span class="frei">Frei im Laderaum: ${s.freierLaderaum(schiff)}</span></div>`;
+      ${schiff ? `<span class="frei">Frei im Laderaum: ${s.freierLaderaum(schiff)}</span>` : ""}</div>`;
     if (this.reiter === "kontor") {
       this.e.handelInhalt.innerHTML = html + this.kontorReiter(stadt, schiff, mengenwahl);
       return;
@@ -338,6 +381,11 @@ export class Oberflaeche {
       return;
     }
     html += this.stadtprofil(stadt);
+    if (!schiff) {
+      html += this.markttabelle(stadt, null);
+      this.e.handelInhalt.innerHTML = html;
+      return;
+    }
     html += mengenwahl;
     html += this.markttabelle(stadt, schiff);
 
@@ -375,22 +423,22 @@ export class Oberflaeche {
         ${grund ? `<p class="hinweis">${esc(grund)}</p>` : ""}`;
     }
     const wunsch = this.menge === "max" ? Infinity : Number(this.menge);
-    const waren = Object.keys(this.D.waren).filter((g) => k.lager[g] || schiff.ladung[g]);
+    const waren = Object.keys(this.D.waren).filter((g) => k.lager[g] || schiff?.ladung[g]);
     let html = `<p class="stadtkopf">Lager ${f(a.lagerMenge(k))} / ${f(kb.lager)} · Unterhalt ${kb.unterhalt} Gulden pro Tag</p>${mengenwahl}`;
-    if (!waren.length) return html + `<p class="hilfe">Kontor und Schiff sind leer.</p>`;
-    html += `<table class="markt"><thead><tr><th>Ware</th><th>Kontor</th><th>Schiff</th><th></th></tr></thead><tbody>`;
+    if (!waren.length) return html + `<p class="hilfe">${schiff ? "Kontor und Schiff sind leer." : "Das Kontor ist leer."}</p>`;
+    html += `<table class="markt"><thead><tr><th>Ware</th><th>Kontor</th>${schiff ? "<th>Schiff</th>" : ""}<th></th></tr></thead><tbody>`;
     for (const g of waren) {
-      const ins = a.umlagern(schiff, g, wunsch, "insSchiff", false);
-      const aus = a.umlagern(schiff, g, wunsch, "insKontor", false);
+      const ins = schiff ? a.umlagern(schiff, g, wunsch, "insSchiff", false) : 0;
+      const aus = schiff ? a.umlagern(schiff, g, wunsch, "insKontor", false) : 0;
       const v = a.kontorVerkaufen(stadt, g, wunsch, false);
       const posten = k.lager[g];
       const titel = v.menge ? `${v.menge} Stück für ${f(v.betrag)} Gulden` : stadt.handelt(g) ? "nichts im Kontor" : "kein Markt hier";
       html += `<tr><td class="ware">${esc(g)}</td>
         <td class="zahl">${posten ? `${f(posten.menge)}<small>Ø ${f(posten.einstand)}</small>` : "–"}</td>
-        <td class="zahl">${schiff.ladung[g] ? f(schiff.ladung[g].menge) : "–"}</td>
+        ${schiff ? `<td class="zahl">${schiff.ladung[g] ? f(schiff.ladung[g].menge) : "–"}</td>` : ""}
         <td class="aktionen breit">
-          <button data-umlagern="${esc(g)}" data-richtung="insSchiff" ${ins ? "" : "disabled"}>ins Schiff</button>
-          <button data-umlagern="${esc(g)}" data-richtung="insKontor" ${aus ? "" : "disabled"}>ins Kontor</button>
+          ${schiff ? `<button data-umlagern="${esc(g)}" data-richtung="insSchiff" ${ins ? "" : "disabled"}>ins Schiff</button>
+          <button data-umlagern="${esc(g)}" data-richtung="insKontor" ${aus ? "" : "disabled"}>ins Kontor</button>` : ""}
           <button data-kontorverkauf="${esc(g)}" ${v.menge ? "" : "disabled"} title="${esc(titel)}">verkaufen</button></td></tr>`;
     }
     return html + `</tbody></table>`;
@@ -460,6 +508,8 @@ export class Oberflaeche {
     } else if (knopf.dataset.anhalten !== undefined) {
       this.spiel.anhalten(this.schiff);
       this.aktualisiere();
+    } else if (knopf.dataset.abwaehlen !== undefined) {
+      this.abwaehlen();
     } else if (knopf.dataset.automatik !== undefined) {
       this.schliesseHandel();
       this.zeit.anhalten();
@@ -478,7 +528,13 @@ export class Oberflaeche {
     }
     const d = knopf.dataset;
     const a = s.ausbau;
-    const stadt = this.schiff.ort;
+    const stadt = this.fensterStadt;
+    const schiff = this.fensterSchiff;
+    if (d.handelnMit !== undefined) {
+      this.schiff = s.schiffe[Number(d.handelnMit)];
+      this.reiter = "markt";
+      return this.oeffneHandel();
+    }
     if (d.reiter) {
       this.reiter = d.reiter;
     } else if (d.menge) {
@@ -486,7 +542,7 @@ export class Oberflaeche {
     } else if (d.kontorbau !== undefined) {
       a.kontorBauen(stadt);
     } else if (d.umlagern) {
-      a.umlagern(this.schiff, d.umlagern, wunsch, d.richtung);
+      if (schiff) a.umlagern(schiff, d.umlagern, wunsch, d.richtung);
     } else if (d.kontorverkauf) {
       const r = a.kontorVerkaufen(stadt, d.kontorverkauf, wunsch);
       if (r.menge) s.melde(`${r.menge} ${d.kontorverkauf} aus dem Kontor für ${f(r.betrag)} Gulden verkauft.`, "handel");
@@ -497,10 +553,10 @@ export class Oberflaeche {
     } else if (d.bau) {
       a.bauen(stadt, d.bau);
     } else if (knopf.dataset.kauf) {
-      const r = s.kaufen(this.schiff, knopf.dataset.kauf, wunsch);
+      const r = schiff ? s.kaufen(schiff, knopf.dataset.kauf, wunsch) : { menge: 0 };
       if (r.menge) s.melde(`${r.menge} ${knopf.dataset.kauf} für ${f(r.betrag)} Gulden gekauft.`, "handel");
     } else if (knopf.dataset.verkauf) {
-      const r = s.verkaufen(this.schiff, knopf.dataset.verkauf, wunsch);
+      const r = schiff ? s.verkaufen(schiff, knopf.dataset.verkauf, wunsch) : { menge: 0 };
       if (r.menge) {
         const ergebnis = r.gewinn >= 0 ? `Gewinn ${f(r.gewinn)}` : `Verlust ${f(-r.gewinn)}`;
         s.melde(`${r.menge} ${knopf.dataset.verkauf} für ${f(r.betrag)} Gulden verkauft (${ergebnis}).`, r.gewinn >= 0 ? "gut" : "handel");
@@ -509,8 +565,11 @@ export class Oberflaeche {
       this.segle({ stadt: s.welt.staedte[Number(knopf.dataset.ziel)] });
       return;
     } else if (knopf.dataset.schiffkauf !== undefined) {
-      const neu = s.schiffKaufen(this.schiff.ort);
-      if (neu) this.schiff = neu;
+      const neu = s.schiffKaufen(stadt);
+      if (neu) {
+        this.schiff = neu;
+        this.fensterSchiff = neu;
+      }
     }
     this.aktualisiere();
   }

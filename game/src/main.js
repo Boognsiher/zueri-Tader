@@ -130,6 +130,7 @@ async function start() {
     if (e.key === "Escape") {
       if (routenfenster.offen) routenfenster.schliesse();
       else if (ui.handelOffen) ui.schliesseHandel();
+      else if (!e.target.closest("details")) ui.abwaehlen();
       return;
     }
     if (e.code === "Space" && !e.target.closest("button, input, select, dialog, summary")) {

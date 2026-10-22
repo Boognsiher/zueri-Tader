@@ -395,3 +395,5 @@ button.klein { font-size: 0.85rem; padding: 0.05em 0.5em; }
 .auftraege td { padding: 0.1rem 0.15rem; }
 .auftraege input[type="number"] { width: 4.8rem; }
 .auftraege select { max-width: 9.5rem; }
+
+.mitschiff { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 0.3rem 0 0.5rem; }
