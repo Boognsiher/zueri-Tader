@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="de-CH">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Züri-Trade</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=EB+Garamond:ital,wght@0,400;0,600;1,400&family=IM+Fell+English+SC&display=swap" rel="stylesheet">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%22-2 -3 4 4%22%3E%3Cpath d=%22M-1.5,0 L1.5,0 L1.1,.75 L-1.1,.75Z%22 fill=%22%236b4a2b%22/%3E%3Cpath d=%22M-.9,-2.6 L.9,-2.6 L.8,-.4 L-.8,-.4Z%22 fill=%22%23f6ecd4%22 stroke=%22%2333261a%22 stroke-width=%22.15%22/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="style.css">
+  <script type="module" src="src/main.js"></script>
+</head>
+<body>
+  <header class="leiste">
+    <h1>Züri-Trade</h1>
+    <div class="kennzahl"><span class="etikett">Datum</span><span id="datum">…</span></div>
+    <div class="kennzahl"><span class="etikett">Gulden</span><span id="gulden">…</span></div>
+    <div class="kennzahl"><span class="etikett">Warenwert</span><span id="warenwert">…</span></div>
+    <div class="zeit" role="group" aria-label="Spieltempo">
+      <button data-tempo="0" aria-pressed="true" title="Pause (Leertaste)">Pause</button>
+      <button data-tempo="1" aria-pressed="false" title="Normal">▶</button>
+      <button data-tempo="2" aria-pressed="false" title="Schnell">▶▶</button>
+      <button data-tempo="3" aria-pressed="false" title="Sehr schnell">▶▶▶</button>
+    </div>
+    <label class="anhalten"><input type="checkbox" id="anhalten" checked> bei Ankunft anhalten</label>
+  </header>
+
+  <main>
+    <div id="kartenbereich">
+      <svg id="karte" role="img" aria-label="Karte des Zürichsees mit Städten und Schiffen"></svg>
+      <ol id="meldungen" aria-live="polite"></ol>
+    </div>
+    <aside id="seite">
+      <section id="flotte" class="tafel"></section>
+      <section id="stadt" class="tafel"></section>
+    </aside>
+  </main>
+
+  <dialog id="einleitung">
+    <form method="dialog">
+      <h2>Zürich, im Frühling 1650</h2>
+      <p>Mit einem <b>Nauen</b> und <b>12'000 Gulden</b> beginnt dein Handelshaus. Am See leben acht Gemeinden von dem, was die anderen haben: In Wädenswil wird gekeltert, in Horgen und Meilen gewoben, über die Linth kommen Eisenerz und Käse nach Rapperswil.</p>
+      <ul>
+        <li><b>Stadt anklicken</b> zeigt ihren Markt. Grün heisst günstig, rot heisst teuer.</li>
+        <li><b>Kaufen</b> und <b>verkaufen</b> geht, wenn dein Schiff im Hafen liegt. Grosse Mengen verschieben den Preis.</li>
+        <li><b>Ablegen nach…</b> schickt das Schiff los. Die grauen Punkte sind andere Händler.</li>
+        <li>Die <b>Leertaste</b> hält die Zeit an und lässt sie weiterlaufen.</li>
+      </ul>
+      <p class="klein">Dies ist eine frühe Demo. Ein Spielziel gibt es noch nicht: Schau, wie weit du es bringst.</p>
+      <button value="los" autofocus>Leinen los</button>
+    </form>
+  </dialog>
+
+  <div id="fehler" hidden>
+    <h2>Die Spieldaten konnten nicht geladen werden</h2>
+    <p id="fehler-text"></p>
+    <p>Das Spiel muss über einen kleinen lokalen Webserver laufen, nicht als Datei. Im Hauptordner des Projekts:</p>
+    <pre>python -m http.server 8000</pre>
+    <p>Danach im Browser <code>http://localhost:8000/game/</code> öffnen.</p>
+  </div>
+</body>
+</html>

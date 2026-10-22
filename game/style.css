@@ -1,0 +1,287 @@
+/* Züri-Trade: Seekarte und Kontor auf Pergament (siehe docs/optik.md) */
+
+:root {
+  --papier: #efe3c6;
+  --papier-hell: #f6ecd4;
+  --papier-dunkel: #dccaa0;
+  --tinte: #33261a;
+  --tinte-blass: #6f5a43;
+  --rot: #8e2b1e;
+  --gruen: #2f6a35;
+  --wasser: #a9c6cc;
+  --wasser-tief: #86aab3;
+  --ufer: #5b6f6e;
+  --holz: #6b4a2b;
+  --rand: #b49c70;
+  --schatten: 0 1px 0 rgba(255, 255, 255, 0.5) inset, 0 2px 8px rgba(60, 40, 15, 0.25);
+  --schrift: "EB Garamond", Garamond, "Times New Roman", serif;
+  --titelschrift: "IM Fell English SC", "EB Garamond", serif;
+}
+
+* { box-sizing: border-box; }
+
+html, body { height: 100%; margin: 0; }
+
+body {
+  background: #3b2e22;
+  color: var(--tinte);
+  font-family: var(--schrift);
+  font-size: 17px;
+  line-height: 1.35;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+button {
+  font: inherit;
+  color: var(--tinte);
+  background: linear-gradient(#f7eed8, #e2d1aa);
+  border: 1px solid var(--rand);
+  border-radius: 4px;
+  padding: 0.2em 0.6em;
+  cursor: pointer;
+}
+button:hover:not(:disabled) { background: linear-gradient(#fff6e0, #ead9b2); border-color: var(--holz); }
+button:disabled { opacity: 0.45; cursor: default; }
+button:focus-visible, .stadt:focus-visible { outline: 2px solid var(--rot); outline-offset: 2px; }
+
+/* --- Kopfzeile ------------------------------------------------------------ */
+.leiste {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem 1.6rem;
+  padding: 0.45rem 1rem;
+  background: linear-gradient(#4a3826, #35281b);
+  color: var(--papier-hell);
+  border-bottom: 2px solid #1f160e;
+}
+.leiste h1 {
+  margin: 0;
+  font-family: var(--titelschrift);
+  font-weight: normal;
+  font-size: 1.6rem;
+  letter-spacing: 0.04em;
+  color: #f3dfae;
+}
+.kennzahl { display: flex; flex-direction: column; line-height: 1.1; }
+.kennzahl .etikett { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.08em; color: #c9b48a; }
+.kennzahl span:last-child { font-size: 1.15rem; font-variant-numeric: lining-nums tabular-nums; }
+#gulden.negativ { color: #ff9c8a; }
+.zeit { display: flex; gap: 0.25rem; margin-left: auto; }
+.zeit button { min-width: 2.6rem; }
+.zeit button[aria-pressed="true"] { background: #f3dfae; border-color: #f3dfae; font-weight: 600; }
+.anhalten { font-size: 0.9rem; color: #e4d2ab; display: flex; align-items: center; gap: 0.35rem; }
+
+/* --- Hauptbereich --------------------------------------------------------- */
+main {
+  flex: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 34rem);
+  min-height: 0;
+}
+
+#kartenbereich {
+  position: relative;
+  min-height: 0;
+  background: var(--papier-dunkel);
+  border-right: 2px solid #1f160e;
+}
+#karte { display: block; width: 100%; height: 100%; }
+
+#meldungen {
+  position: absolute;
+  left: 0.8rem;
+  bottom: 0.8rem;
+  margin: 0;
+  padding: 0.5rem 0.8rem;
+  list-style: none;
+  max-width: min(36rem, calc(100% - 1.6rem));
+  background: rgba(246, 236, 212, 0.92);
+  border: 1px solid var(--rand);
+  border-radius: 4px;
+  box-shadow: var(--schatten);
+  font-size: 0.92rem;
+}
+#meldungen:empty { display: none; }
+#meldungen li { padding: 0.1rem 0; }
+#meldungen li + li { opacity: 0.75; }
+#meldungen .wann { color: var(--tinte-blass); font-size: 0.85em; margin-right: 0.3em; }
+#meldungen .ereignis { color: var(--rot); }
+#meldungen .gut { color: var(--gruen); }
+
+#seite {
+  overflow-y: auto;
+  background: var(--papier);
+  padding: 0.6rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+.tafel {
+  background: var(--papier-hell);
+  border: 1px solid var(--rand);
+  border-radius: 6px;
+  padding: 0.6rem 0.8rem 0.7rem;
+  box-shadow: var(--schatten);
+}
+.tafel h2 {
+  margin: 0 0 0.3rem;
+  font-family: var(--titelschrift);
+  font-weight: normal;
+  font-size: 1.45rem;
+  border-bottom: 1px solid var(--rand);
+}
+.tafel h3 { margin: 0.7rem 0 0.3rem; font-size: 1rem; font-weight: 600; }
+.klein, .bilanz, .ohnemarkt, .profil { font-size: 0.88rem; color: var(--tinte-blass); }
+.bilanz { margin: 0.6rem 0 0; }
+.hinweis { font-style: italic; color: var(--tinte-blass); }
+
+/* Flotte */
+.schiffsliste { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.3rem; }
+.schiff {
+  width: 100%;
+  text-align: left;
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0 0.6rem;
+  background: var(--papier);
+}
+.schiff.gewaehlt { border-color: var(--rot); box-shadow: 0 0 0 1px var(--rot) inset; background: #fbf3df; }
+.schiffsname { font-weight: 600; }
+.laderaum { font-variant-numeric: tabular-nums; color: var(--tinte-blass); }
+.status, .ladung { grid-column: 1 / -1; font-size: 0.88rem; color: var(--tinte-blass); }
+.ladung { color: var(--holz); }
+.ziele { display: grid; grid-template-columns: repeat(auto-fill, minmax(8.5rem, 1fr)); gap: 0.3rem; }
+.ziel { display: flex; justify-content: space-between; align-items: baseline; gap: 0.4rem; }
+.ziel small { color: var(--tinte-blass); }
+.schiffkauf { margin-top: 0.6rem; width: 100%; }
+
+/* Stadt */
+.stadtkopf { margin: 0.1rem 0 0.3rem; display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap; }
+.balken { display: inline-block; width: 5rem; height: 0.55rem; border: 1px solid var(--rand); border-radius: 3px; background: var(--papier); overflow: hidden; }
+.balken span { display: block; height: 100%; background: var(--gruen); }
+.ereignisse { margin: 0.2rem 0; }
+.marke { display: inline-block; background: var(--rot); color: #fff3e6; border-radius: 3px; padding: 0 0.4em; font-size: 0.88rem; }
+.profil { margin: 0.3rem 0 0.5rem; }
+.profil b { color: var(--tinte); font-weight: 600; }
+
+.mengenwahl { display: flex; align-items: center; gap: 0.3rem; flex-wrap: wrap; margin: 0.4rem 0; font-size: 0.92rem; }
+.mengenwahl button { padding: 0.05em 0.55em; }
+.mengenwahl button.aktiv { background: var(--tinte); color: var(--papier-hell); border-color: var(--tinte); }
+.mengenwahl .frei { margin-left: auto; color: var(--tinte-blass); }
+
+.markt { width: 100%; border-collapse: collapse; font-size: 0.95rem; }
+.markt th { text-align: right; font-weight: 600; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--tinte-blass); padding: 0.2rem 0.3rem; border-bottom: 1px solid var(--rand); }
+.markt th:first-child { text-align: left; }
+.markt th:first-child small { text-transform: none; letter-spacing: 0; font-weight: normal; }
+.markt td { padding: 0.25rem 0.3rem; border-bottom: 1px dotted var(--rand); vertical-align: top; }
+.markt .zahl { text-align: right; font-variant-numeric: lining-nums tabular-nums; white-space: nowrap; }
+.markt small { display: block; font-size: 0.78rem; color: var(--tinte-blass); line-height: 1.15; }
+.markt .ware small { white-space: nowrap; }
+.markt .preis.guenstig { color: var(--gruen); font-weight: 600; }
+.markt .preis.teuer { color: var(--rot); font-weight: 600; }
+.markt .aktionen { text-align: right; width: 5.6rem; }
+.markt .aktionen button { display: block; width: 100%; padding: 0 0.4em; font-size: 0.85rem; }
+.markt .aktionen button + button { margin-top: 0.15rem; }
+.gruppe { display: inline-block; width: 0.55em; height: 0.55em; border-radius: 50%; margin-right: 0.35em; vertical-align: 0.05em; background: var(--tinte-blass); }
+.g-Grundversorgung { background: #8a7a4a; }
+.g-Rohstoff { background: #4f7a5a; }
+.g-Veredelt { background: #6d4f8c; }
+.g-Import { background: #b36b1f; }
+
+/* --- Karte ---------------------------------------------------------------- */
+.papier-hell { stop-color: var(--papier-hell); }
+.papier-dunkel { stop-color: var(--papier-dunkel); }
+.huegel { fill: none; stroke: #a98f62; stroke-width: 0.22; stroke-linecap: round; }
+.fluss { fill: none; stroke: var(--wasser-tief); stroke-width: 0.55; stroke-linecap: round; }
+.uferstreifen { fill: none; stroke: #c9d7cf; stroke-width: 2.4; stroke-linejoin: round; opacity: 0.7; }
+.wasser { fill: var(--wasser); }
+.wasser-muster { fill: url(#wellen); }
+.welle { fill: none; stroke: #c4dadd; stroke-width: 0.18; }
+.uferlinie { fill: none; stroke: var(--ufer); stroke-width: 0.56; stroke-linejoin: round; }
+.bruecke { stroke: var(--holz); stroke-width: 0.45; stroke-dasharray: 0.35 0.25; }
+
+.beschriftung { font-family: var(--schrift); font-style: italic; fill: var(--tinte-blass); text-anchor: middle; font-size: 1.8px; }
+.beschriftung.berg { font-size: 1.6px; letter-spacing: 0.15px; }
+.beschriftung.fluss { fill: #4f7884; font-size: 1.5px; stroke: none; }
+.beschriftung.see { font-family: var(--titelschrift); font-style: normal; fill: #557a83; font-size: 3px; letter-spacing: 0.6px; opacity: 0.8; }
+.beschriftung.klein { font-size: 1.3px; }
+
+.kartusche rect { fill: var(--papier-hell); stroke: var(--holz); stroke-width: 0.3; }
+.kartusche rect.innen { fill: none; stroke-width: 0.12; }
+.kartusche .titel { font-family: var(--titelschrift); font-size: 3.1px; text-anchor: middle; fill: var(--tinte); }
+.kartusche .untertitel { font-style: italic; font-size: 1.6px; text-anchor: middle; fill: var(--tinte-blass); }
+
+.windrose .ring { fill: none; stroke: var(--tinte-blass); stroke-width: 0.15; }
+.windrose .nadel { fill: var(--tinte); }
+.windrose .nadel.hell { fill: var(--papier-dunkel); stroke: var(--tinte); stroke-width: 0.12; }
+.himmelsrichtung { font-family: var(--titelschrift); font-size: 1.8px; text-anchor: middle; fill: var(--tinte); }
+
+.stadt { cursor: pointer; }
+.stadt .klickflaeche { fill: transparent; }
+.stadt .auswahlring { fill: none; stroke: transparent; stroke-width: 0.3; }
+.stadt.gewaehlt .auswahlring { stroke: var(--rot); stroke-dasharray: 0.7 0.4; }
+.stadt .haus { fill: var(--rot); stroke: var(--papier-hell); stroke-width: 0.25; }
+.stadt.gesperrt .haus { fill: #777; }
+.stadt.ereignis .haus { stroke: #f0b23c; stroke-width: 0.4; }
+.stadtname {
+  font-family: var(--titelschrift);
+  font-size: 2.15px;
+  text-anchor: middle;
+  fill: var(--tinte);
+  paint-order: stroke;
+  stroke: var(--papier-hell);
+  stroke-width: 0.5px;
+  stroke-linejoin: round;
+}
+.stadtinfo { font-size: 1.5px; text-anchor: middle; fill: var(--rot); font-weight: 600; paint-order: stroke; stroke: var(--papier-hell); stroke-width: 0.4px; }
+.stadt:hover .stadtname { fill: var(--rot); }
+
+.haendler-punkt { fill: #5f5546; opacity: 0.55; }
+
+.route { fill: none; stroke: var(--rot); stroke-width: 0.3; stroke-dasharray: 0.9 0.6; opacity: 0.8; }
+
+.spielerboot { cursor: pointer; }
+.spielerboot .rumpf { fill: var(--holz); stroke: #2b1d10; stroke-width: 0.12; }
+.spielerboot .mast { fill: #2b1d10; }
+.spielerboot .segel { fill: #fbf4e2; stroke: #6b5a40; stroke-width: 0.1; }
+.spielerboot .wimpel { fill: var(--rot); }
+.spielerboot.gewaehlt .segel { fill: #fff; stroke: var(--rot); stroke-width: 0.2; }
+.bootname { font-size: 1.35px; text-anchor: middle; fill: var(--holz); font-style: italic; paint-order: stroke; stroke: var(--papier-hell); stroke-width: 0.35px; }
+.spielerboot.gewaehlt .bootname { fill: var(--rot); font-weight: 600; }
+
+/* --- Dialoge -------------------------------------------------------------- */
+dialog {
+  max-width: 36rem;
+  border: 1px solid var(--holz);
+  border-radius: 8px;
+  background: var(--papier-hell);
+  color: var(--tinte);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  padding: 1.2rem 1.6rem;
+}
+dialog::backdrop { background: rgba(30, 20, 10, 0.55); }
+dialog h2 { font-family: var(--titelschrift); font-weight: normal; font-size: 1.7rem; margin: 0 0 0.5rem; }
+dialog ul { padding-left: 1.2rem; }
+dialog button { font-size: 1.1rem; padding: 0.3em 1.2em; margin-top: 0.4rem; }
+
+#fehler { position: fixed; inset: 0; background: var(--papier); padding: 2rem; overflow: auto; }
+#fehler pre { background: var(--papier-hell); border: 1px solid var(--rand); padding: 0.6rem; }
+
+/* --- Schmale Bildschirme -------------------------------------------------- */
+@media (max-width: 900px) {
+  main { grid-template-columns: minmax(0, 1fr); grid-template-rows: 48vh auto; }
+  .tafel { overflow-x: auto; }
+  .markt { font-size: 0.88rem; }
+  #kartenbereich { border-right: none; border-bottom: 2px solid #1f160e; }
+  #seite { overflow: visible; }
+  .zeit { margin-left: 0; }
+  #kartenbereich { display: flex; flex-direction: column; }
+  #karte { flex: none; }
+  #meldungen { position: static; max-width: none; margin: 0.4rem; font-size: 0.82rem; }
+  html, body { height: auto; }
+  main { flex: none; grid-template-rows: auto auto; }
+  #karte { height: auto; aspect-ratio: 110 / 62; }
+}

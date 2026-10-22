@@ -1,5 +1,5 @@
 {
-  "_info": "Karte des Zürichsees in Kartenkoordinaten (x 0-104, y 0-56, Zürich im Nordwesten). Jeder Seeteil ist so geformt, dass die direkte Linie zwischen zwei seiner Städte über Wasser führt. Fahrten zwischen Seeteilen führen über eine Durchfahrt. Die Fahrzeit richtet sich nach der Länge dieses Wegs (Simulation und Spiel). Ufer, Flüsse und Beschriftungen dienen nur der Darstellung.",
+  "_info": "Karte des Zürichsees in Kartenkoordinaten (x 0-104, y 0-56, Zürich im Nordwesten). Jeder Seeteil ist so geformt, dass die direkte Linie zwischen zwei seiner Städte über Wasser führt. Fahrten zwischen Seeteilen führen über eine Durchfahrt. Die Fahrzeit richtet sich nach der Länge dieses Wegs (Simulation und Spiel). Ufer, Flüsse und Beschriftungen dienen nur der Darstellung (beschriftung_unten: Städte, deren Name unter dem Punkt steht).",
   "seeteile": {
     "Untersee": {
       "staedte": ["Zürich", "Küsnacht", "Meilen", "Horgen", "Wädenswil", "Rapperswil"],
@@ -10,6 +10,7 @@
       "ufer": [[68.5, 40], [74, 38.5], [80, 37], [87, 35.5], [93, 35], [97.5, 36], [99, 39], [97, 41.5], [91, 45], [85, 49.5], [81, 50.5], [77, 48], [73, 45.5], [68.5, 44]]
     }
   },
+  "beschriftung_unten": ["Horgen", "Wädenswil", "Lachen"],
   "durchfahrten": [
     {"name": "Seedamm", "position": [70, 42], "verbindet": ["Untersee", "Obersee"]}
   ],
