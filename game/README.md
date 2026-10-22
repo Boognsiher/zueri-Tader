@@ -17,7 +17,7 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Schiff abwählen** (nochmals anklicken, Esc oder Knopf «Abwählen»): Ein Klick auf eine Stadt hebt sie dann nur hervor und zeigt sie in der Marktübersicht, ohne dass ein Schiff losfährt. Der Knopf «Stadtfenster öffnen» zeigt Kontor, Betriebe und Werft. Liegt ein eigenes Schiff dort, lässt sich von hier aus mit ihm handeln.
 - **Handelsfenster:** öffnet sich bei der Ankunft im Hafen (oder per Klick auf die Stadt, in der das Schiff liegt) und hält die Zeit an. Darin auch die Option, direkt zu einem anderen Hafen zu segeln, und der Schiffskauf.
 - **Flotten:** Schiffe im selben Hafen zusammenlegen (Laderaum addiert, Tempo des langsamsten), im Hafen wieder auflösen
-- **Schiffe:** Weidling (40 Laderaum, schnell), Nauen (120), Ledischiff (250, langsamer). Neu in den Werften von Zürich, Wädenswil und Rapperswil, gebraucht als zufällige Angebote in irgendeiner Stadt, Verkauf zu 50 % des Neupreises (Reiter «Werft»)
+- **Schiffe:** Weidling (40 Laderaum, etwas schneller), Nauen (120), Ledischiff (250, langsamer). Neu in den Werften von Zürich, Wädenswil und Rapperswil, gebraucht als zufällige Angebote in irgendeiner Stadt, Verkauf zu 50 % des Neupreises (Reiter «Werft»)
 - **Betriebe:** in jeder Stadt vorhandene Betriebe kaufen (wie Werkstätten in Bannerlord) oder auf freien Bauplätzen neue bauen. Sie arbeiten täglich, Gewinn oder Verlust geht an dich. Versorgung über den Markt (mit Handelsspanne) oder über das Kontor (ohne Spanne, Werkstätten brauchen nur 70 % der Zutaten): Eigene Ketten lohnen sich.
 - **Kontor:** Lager in einer Stadt (Stufe 1-3, je 400 Plätze). Waren zwischen Schiff und Kontor umlagern, am Markt kaufen und verkaufen, auch ohne Schiff, und Handelsregeln pro Ware, nach denen das Kontor jeden Tag selbst handelt
 - **Stufen und Stadtgebäude:** Betriebe bis Stufe 3 ausbauen. Markthalle (weniger Handelsspanne), Kirche (mehr Bauplätze), Zunfthaus (weniger Betriebsunterhalt)
@@ -26,12 +26,12 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Bilanz:** Einnahmen und Ausgaben nach Konten pro Monat und gesamt, Vermögen, Monatsergebnis (Knopf «Bilanz» oben)
 - **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung), oder **Versorgen**: nur Städte wählen, das Schiff verteilt Kontor-Ware dorthin, wo deine Werkstätten sie brauchen. Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf. Laden und Löschen braucht Liegezeit (voller Laderaum rund 0,8 Tage).
 - **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
-- 45 KI-Händler handeln mit, als graue Punkte auf dem See sichtbar
+- KI-Händler handeln mit (40 am Anfang, mehr mit wachsender Bevölkerung), als graue Punkte auf dem See sichtbar
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
 - **Meldungen** in zwei Reitern: «Wichtig» (Ereignisse, Ankünfte, Warnungen, Käufe und Bauten) und «Handel» (Käufe und Verkäufe, Automatik, Kontore); ein Punkt zeigt Neues im anderen Reiter
 - Echtzeit mit Pause in drei Tempostufen, Leertaste hält an, auf Wunsch Halt bei jeder Ankunft
 
-Noch nicht dabei: Spielziel, Gebäudestufen und Versorgungsgebäude, Diplomatie, Kampf (siehe `docs/roadmap.md`).
+Noch nicht dabei: Spielziel, Diplomatie, Kampf (siehe `docs/roadmap.md`).
 
 ## Aufbau
 
@@ -43,7 +43,7 @@ Noch nicht dabei: Spielziel, Gebäudestufen und Versorgungsgebäude, Diplomatie,
 | `src/spiel.js` | Spielerzustand: Geld, Schiffe, Fahrten, Handel, Kalender |
 | `src/navigation.js` | Wegsuche über Wasser für die frei gesteuerten Schiffe |
 | `src/betriebe.js` | Kontore und Betriebe (Stadtausbau) |
-| `src/automatik.js` | automatischer Handel: Handelsroute und freier Handel |
+| `src/automatik.js` | automatischer Handel: Handelsroute, Versorgen, freier Handel |
 | `src/speicher.js` | Spielstand speichern und laden |
 | `src/routenfenster.js` | Fenster zum Einrichten der Automatik |
 | `src/werft.js` | Bootshandel: neue und gebrauchte Schiffe, Verkauf |
