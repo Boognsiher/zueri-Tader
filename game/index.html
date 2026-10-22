@@ -24,6 +24,19 @@
       <button data-tempo="3" aria-pressed="false" title="Sehr schnell">▶▶▶</button>
     </div>
     <label class="anhalten"><input type="checkbox" id="anhalten" checked> bei Ankunft anhalten und Handelsfenster öffnen</label>
+    <details class="menue" id="menue">
+      <summary>Spielstand</summary>
+      <div class="menueliste">
+        <button data-menue="speichern">Speichern</button>
+        <button data-menue="laden">Gespeicherten Stand laden</button>
+        <button data-menue="auto">Automatischen Stand laden</button>
+        <button data-menue="export">Als Datei exportieren</button>
+        <button data-menue="import">Datei importieren …</button>
+        <button data-menue="neu">Neues Spiel</button>
+        <p class="klein" id="speicherinfo"></p>
+        <input type="file" id="importdatei" accept=".json,application/json" hidden>
+      </div>
+    </details>
   </header>
 
   <main>
@@ -31,9 +44,11 @@
       <svg id="karte" role="img" aria-label="Karte des Zürichsees mit Städten und Schiffen"></svg>
       <ol id="meldungen" aria-live="polite"></ol>
       <dialog id="handel" class="fenster" aria-label="Handelsfenster"><div id="handel-inhalt"></div></dialog>
+      <dialog id="automatik" class="fenster" aria-label="Automatik"><div id="automatik-inhalt"></div></dialog>
     </div>
     <aside id="seite">
       <section id="flotte" class="tafel"></section>
+      <section id="besitz" class="tafel"></section>
       <section id="markt" class="tafel"></section>
     </aside>
   </main>
@@ -46,10 +61,15 @@
         <li><b>Klick auf den See:</b> Dein Schiff segelt dorthin. Unterwegs kannst du jederzeit einen neuen Kurs setzen.</li>
         <li><b>Klick auf eine Stadt:</b> Das Schiff läuft den Hafen an. Bei der Ankunft öffnet sich das <b>Handelsfenster</b>. Grün heisst günstig, rot heisst teuer, grosse Mengen verschieben den Preis.</li>
         <li>Die <b>Marktübersicht</b> rechts zeigt die Preise jeder Stadt. Die grauen Punkte auf dem See sind andere Händler.</li>
+        <li>Im Handelsfenster unter <b>Betriebe</b> kaufst du Betriebe der Stadt oder baust neue, unter <b>Kontor</b> lagerst du Waren.</li>
+        <li><b>Automatik …</b> lässt ein Schiff eine Handelsroute fahren oder frei handeln.</li>
         <li>Die <b>Leertaste</b> hält die Zeit an und lässt sie weiterlaufen.</li>
       </ul>
-      <p class="klein">Dies ist eine frühe Demo. Ein Spielziel gibt es noch nicht: Schau, wie weit du es bringst.</p>
-      <button value="los" autofocus>Leinen los</button>
+      <p class="klein">Dies ist eine frühe Demo. Ein Spielziel gibt es noch nicht: Schau, wie weit du es bringst. Das Spiel speichert jeden Monat automatisch.</p>
+      <div class="fensterknoepfe">
+        <button value="weiter" id="weiterspielen" hidden>Weiterspielen</button>
+        <button value="los" class="haupt" autofocus>Leinen los</button>
+      </div>
     </form>
   </dialog>
 

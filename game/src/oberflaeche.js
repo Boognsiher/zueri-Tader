@@ -1,4 +1,5 @@
-// Kopfzeile, Seitenleiste (Flotte, Marktübersicht) und Handelsfenster.
+// Kopfzeile, Seitenleiste (Flotte, Besitz, Marktübersicht) und Handelsfenster mit den
+// Reitern Markt, Kontor und Betriebe.
 // Liest den Spielzustand und ruft Spiel-Methoden auf, rechnet selbst nichts.
 //
 // Steuerung: Klick auf den See schickt das gewählte Schiff dorthin, Klick auf eine Stadt
@@ -25,12 +26,14 @@ export class Oberflaeche {
     this.spiel = spiel;
     this.D = spiel.D;
     this.karte = karte;
-    this.e = elemente; // { datum, gulden, warenwert, flotte, markt, meldungen, handel, handelInhalt }
+    this.e = elemente; // { datum, gulden, warenwert, flotte, besitz, markt, meldungen, handel, handelInhalt }
     this.zeit = zeit; // { anhalten(), fortsetzen() } für das Handelsfenster
     this.schiff = spiel.schiffe[0];
-    this.stadt = this.schiff.ort;
+    this.stadt = this.schiff.ort ?? spiel.naechsteStadt(this.schiff.pos);
     this.menge = "10";
+    this.reiter = "markt";
     this.handelOffen = false;
+    this.routenfenster = null; // wird von main.js gesetzt
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
     this.e.markt.addEventListener("change", (ev) => {
       if (ev.target.name === "stadtwahl") {
@@ -39,6 +42,13 @@ export class Oberflaeche {
       }
     });
     this.e.handel.addEventListener("click", (ev) => this.klickHandel(ev));
+    this.e.handel.addEventListener("change", (ev) => {
+      const nr = ev.target.dataset.betriebZiel;
+      if (nr === undefined) return;
+      const b = this.spiel.ausbau.betriebe.find((x) => x.nr === Number(nr));
+      this.spiel.ausbau.setzeZiel(b, ev.target.value);
+      this.aktualisiere();
+    });
     this.e.handel.addEventListener("close", () => this.schliesseHandel());
   }
 
@@ -103,6 +113,7 @@ export class Oberflaeche {
     if (this.handelOffen && !this.spiel.imHafen(this.schiff)) this.schliesseHandel();
     this.kopf();
     this.flotte();
+    this.besitz();
     this.marktuebersicht();
     if (this.handelOffen) this.handelsfenster();
     this.meldungen();
@@ -129,6 +140,13 @@ export class Oberflaeche {
     return `ankert vor ${esc(s.naechsteStadt(schiff.pos).name)}`;
   }
 
+  modus(schiff) {
+    const a = schiff.auto;
+    if (!a) return "";
+    if (a.art === "route") return `Route: ${a.halte.map((h) => h.stadt).join(" – ")}`;
+    return `Freier Handel, Einsatz bis ${f(a.einsatz)} Gulden`;
+  }
+
   flotte() {
     const s = this.spiel;
     const D = this.D;
@@ -141,6 +159,7 @@ export class Oberflaeche {
         <span class="schiffsname">${esc(D.spiel.schiffstyp)} «${esc(schiff.name)}»</span>
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${D.p.SHIP_CAP}</span>
         <span class="status">${this.status(schiff)}</span>
+        ${schiff.auto ? `<span class="modus">${esc(this.modus(schiff))}</span>` : ""}
         ${ladung ? `<span class="ladung">${ladung}</span>` : ""}
       </button></li>`;
     }
@@ -148,12 +167,52 @@ export class Oberflaeche {
     const schiff = this.schiff;
     const aktionen = [];
     if (s.imHafen(schiff)) aktionen.push(`<button data-handeln>Handelsfenster öffnen</button>`);
-    if (schiff.fahrt) aktionen.push(`<button data-anhalten>Anhalten</button>`);
-    if (aktionen.length) html += `<div class="schiffsaktionen">${aktionen.join("")}</div>`;
-    html += `<p class="steuerhilfe">Klick auf den See: «${esc(schiff.name)}» segelt dorthin. Klick auf eine Stadt: anlegen und handeln. Ein anderes Schiff wählst du per Klick in dieser Liste oder auf der Karte.</p>
+    if (schiff.fahrt && !schiff.auto) aktionen.push(`<button data-anhalten>Anhalten</button>`);
+    aktionen.push(`<button data-automatik>Automatik …</button>`);
+    html += `<div class="schiffsaktionen">${aktionen.join("")}</div>`;
+    html += `<p class="steuerhilfe">${
+      schiff.auto
+        ? `«${esc(schiff.name)}» handelt automatisch. Klicks auf die Karte steuern es erst wieder, wenn du unter «Automatik …» auf «Selbst steuern» stellst.`
+        : `Klick auf den See: «${esc(schiff.name)}» segelt dorthin. Klick auf eine Stadt: anlegen und handeln. Ein anderes Schiff wählst du per Klick in dieser Liste oder auf der Karte.`
+    }</p>
       <p class="bilanz">Unterhalt ${f(D.p.UPKEEP * s.schiffe.length)} Gulden pro Tag · bisher eingekauft ${f(s.bilanz.einkauf)},
       verkauft ${f(s.bilanz.verkauf)}, Unterhalt ${f(s.bilanz.unterhalt)} Gulden</p>`;
     this.e.flotte.innerHTML = html;
+  }
+
+  // Kontore und eigene Betriebe auf einen Blick
+  besitz() {
+    const a = this.spiel.ausbau;
+    const eigene = a.eigene();
+    const kontore = Object.entries(a.kontore);
+    if (!eigene.length && !kontore.length) {
+      this.e.besitz.innerHTML = `<h2>Besitz</h2><p class="hilfe">Noch keine Kontore und Betriebe. Im Handelsfenster unter «Betriebe» kannst du Betriebe der Stadt kaufen oder neue bauen.</p>`;
+      return;
+    }
+    let html = `<h2>Besitz</h2>`;
+    if (kontore.length) {
+      html += `<h3>Kontore</h3><ul class="besitzliste">${kontore
+        .map(([stadt, k]) => {
+          const waren = Object.entries(k.lager)
+            .sort((x, y) => y[1].menge - x[1].menge)
+            .slice(0, 4)
+            .map(([g, p]) => `${f(p.menge)} ${esc(g)}`)
+            .join(", ");
+          return `<li><b>${esc(stadt)}</b> ${f(a.lagerMenge(k))} / ${f(a.bau.kontor.lager)}${waren ? `<small>${waren}</small>` : ""}</li>`;
+        })
+        .join("")}</ul>`;
+    }
+    if (eigene.length) {
+      const summe = eigene.reduce((x, b) => x + (b.gestern?.kasse ?? 0), 0);
+      html += `<h3>Betriebe <small>gestern ${summe >= 0 ? "+" : "−"}${f(Math.abs(summe))} Gulden</small></h3><ul class="besitzliste">${eigene
+        .map((b) => {
+          const k = b.gestern?.kasse;
+          const wert = k === undefined ? "–" : `${k >= 0 ? "+" : "−"}${f(Math.abs(k))}`;
+          return `<li><b>${esc(a.typ(b).name)}</b> ${esc(b.stadt)}${b.ziel === "kontor" ? " → Kontor" : ""} <span class="zahl ${k < 0 ? "minus" : ""}">${wert}</span></li>`;
+        })
+        .join("")}</ul>`;
+    }
+    this.e.besitz.innerHTML = html;
   }
 
   // Stadtinfo und Preise einer beliebigen Stadt, ohne Handel
@@ -258,10 +317,28 @@ export class Oberflaeche {
     let html = `<header><div><h2>Handel in ${esc(stadt.name)}</h2>
         <span class="untertitel">${esc(D.spiel.schiffstyp)} «${esc(schiff.name)}» · ${s.ladungsmenge(schiff)} / ${D.p.SHIP_CAP} geladen · ${f(s.gulden)} Gulden</span></div>
         <button class="schliessen" data-schliessen title="Schliessen (Esc)" aria-label="Schliessen">×</button></header>`;
-    html += this.stadtprofil(stadt);
-    html += `<div class="mengenwahl" role="group" aria-label="Handelsmenge">Menge:
+    const kontor = s.ausbau.kontor(stadt);
+    const eigene = s.ausbau.betriebeIn(stadt).filter((b) => b.besitzer === "spieler").length;
+    html += `<nav class="reiter" role="tablist">${[
+      ["markt", "Markt"],
+      ["kontor", kontor ? "Kontor" : "Kontor (keins)"],
+      ["betriebe", `Betriebe${eigene ? ` (${eigene} eigene)` : ""}`],
+    ]
+      .map(([w, t]) => `<button role="tab" data-reiter="${w}" aria-selected="${this.reiter === w}">${t}</button>`)
+      .join("")}</nav>`;
+    const mengenwahl = `<div class="mengenwahl" role="group" aria-label="Handelsmenge">Menge:
       ${MENGEN.map(([wert, text]) => `<button data-menge="${wert}" class="${this.menge === wert ? "aktiv" : ""}">${text}</button>`).join("")}
       <span class="frei">Frei im Laderaum: ${s.freierLaderaum(schiff)}</span></div>`;
+    if (this.reiter === "kontor") {
+      this.e.handelInhalt.innerHTML = html + this.kontorReiter(stadt, schiff, mengenwahl);
+      return;
+    }
+    if (this.reiter === "betriebe") {
+      this.e.handelInhalt.innerHTML = html + this.betriebeReiter(stadt);
+      return;
+    }
+    html += this.stadtprofil(stadt);
+    html += mengenwahl;
     html += this.markttabelle(stadt, schiff);
 
     html += `<details class="direktfahrt"><summary>Direkt zu einem Hafen segeln</summary><div class="ziele">`;
@@ -279,6 +356,90 @@ export class Oberflaeche {
       title="Unterhalt ${D.p.UPKEEP} Gulden pro Tag, Laderaum ${D.p.SHIP_CAP}">
       Neuen ${esc(D.spiel.schiffstyp)} kaufen: ${f(D.p.SHIP_COST)} Gulden</button>`;
     this.e.handelInhalt.innerHTML = html;
+  }
+
+  kontorReiter(stadt, schiff, mengenwahl) {
+    const s = this.spiel;
+    const a = s.ausbau;
+    const k = a.kontor(stadt);
+    const kb = a.bau.kontor;
+    if (!k) {
+      const grund = a.pruefeKontorBau(stadt);
+      const material = Object.entries(kb.baukosten)
+        .filter(([g]) => g !== "gulden")
+        .map(([g, n]) => `${n} ${g}`)
+        .join(", ");
+      return `<p>Ein Kontor ist dein Lager in ${esc(stadt.name)} (${f(kb.lager)} Einheiten). Betriebe können hineinliefern, Schiffe laden und entladen, und Handelsrouten nutzen es automatisch.</p>
+        <p>Kosten: ${f(kb.baukosten.gulden)} Gulden und ${esc(material)} (aus dem Schiff), Unterhalt ${kb.unterhalt} Gulden pro Tag.</p>
+        <button class="haupt" data-kontorbau ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">Kontor bauen</button>
+        ${grund ? `<p class="hinweis">${esc(grund)}</p>` : ""}`;
+    }
+    const wunsch = this.menge === "max" ? Infinity : Number(this.menge);
+    const waren = Object.keys(this.D.waren).filter((g) => k.lager[g] || schiff.ladung[g]);
+    let html = `<p class="stadtkopf">Lager ${f(a.lagerMenge(k))} / ${f(kb.lager)} · Unterhalt ${kb.unterhalt} Gulden pro Tag</p>${mengenwahl}`;
+    if (!waren.length) return html + `<p class="hilfe">Kontor und Schiff sind leer.</p>`;
+    html += `<table class="markt"><thead><tr><th>Ware</th><th>Kontor</th><th>Schiff</th><th></th></tr></thead><tbody>`;
+    for (const g of waren) {
+      const ins = a.umlagern(schiff, g, wunsch, "insSchiff", false);
+      const aus = a.umlagern(schiff, g, wunsch, "insKontor", false);
+      const v = a.kontorVerkaufen(stadt, g, wunsch, false);
+      const posten = k.lager[g];
+      const titel = v.menge ? `${v.menge} Stück für ${f(v.betrag)} Gulden` : stadt.handelt(g) ? "nichts im Kontor" : "kein Markt hier";
+      html += `<tr><td class="ware">${esc(g)}</td>
+        <td class="zahl">${posten ? `${f(posten.menge)}<small>Ø ${f(posten.einstand)}</small>` : "–"}</td>
+        <td class="zahl">${schiff.ladung[g] ? f(schiff.ladung[g].menge) : "–"}</td>
+        <td class="aktionen breit">
+          <button data-umlagern="${esc(g)}" data-richtung="insSchiff" ${ins ? "" : "disabled"}>ins Schiff</button>
+          <button data-umlagern="${esc(g)}" data-richtung="insKontor" ${aus ? "" : "disabled"}>ins Kontor</button>
+          <button data-kontorverkauf="${esc(g)}" ${v.menge ? "" : "disabled"} title="${esc(titel)}">verkaufen</button></td></tr>`;
+    }
+    return html + `</tbody></table>`;
+  }
+
+  betriebeReiter(stadt) {
+    const s = this.spiel;
+    const a = s.ausbau;
+    const k = a.kontor(stadt);
+    let html = `<p class="hilfe">Betriebe arbeiten jeden Tag: Sie kaufen ihre Zutaten am Markt der Stadt (oder nehmen sie aus deinem Kontor) und verkaufen die Erzeugnisse dort (oder liefern ins Kontor). Gewinn oder Verlust geht an dich. Die Preise sind Marktwerte nach den heutigen Preisen hier.</p>`;
+    html += `<h3>Betriebe in ${esc(stadt.name)}</h3><ul class="betriebe">`;
+    for (const b of a.betriebeIn(stadt)) {
+      const t = a.typ(b);
+      const zutaten = t.art === "werkstatt" ? ` aus ${Object.entries(this.D.rezepte[t.ware]).map(([z, m]) => `${m * t.leistung} ${z}`).join(" und ")}` : "";
+      const erwartet = a.tagesgewinn(b.typ, stadt);
+      html += `<li class="betrieb ${b.besitzer === "spieler" ? "eigen" : ""}"><div class="betriebkopf"><b>${esc(t.name)}</b> <span class="klein">${t.leistung} ${esc(t.ware)} pro Tag${esc(zutaten)}${b.gebaut ? " · neu gebaut" : ""}</span></div>`;
+      if (b.besitzer === "spieler") {
+        const g = b.gestern;
+        const gestern = g ? `${f(g.menge)} ${esc(t.ware)}, Kasse ${g.kasse >= 0 ? "+" : "−"}${f(Math.abs(g.kasse))}` : "–";
+        html += `<div class="betriebinfo">dein Betrieb · gestern: ${gestern} · seit Kauf ${b.summe >= 0 ? "+" : "−"}${f(Math.abs(b.summe))} Gulden${b.verdorben > 0 ? ` · <span class="minus">Kontor voll, ${f(b.verdorben)} verdorben</span>` : ""}</div>
+          <div class="betriebknoepfe"><label>liefert an <select data-betrieb-ziel="${b.nr}">
+            <option value="markt" ${b.ziel === "markt" ? "selected" : ""}>Markt der Stadt</option>
+            <option value="kontor" ${b.ziel === "kontor" ? "selected" : ""} ${k ? "" : "disabled"}>Kontor${k ? "" : " (keins)"}</option></select></label>
+            <button data-betrieb-verkauf="${b.nr}">an die Stadt verkaufen: ${f(a.verkaufserloes(b.typ, stadt))} Gulden</button></div>`;
+      } else {
+        const grund = a.pruefeKauf(b);
+        html += `<div class="betriebinfo">gehört der Stadt · erwartet ${erwartet >= 0 ? "+" : "−"}${f(Math.abs(erwartet))} Gulden pro Tag</div>
+          <div class="betriebknoepfe"><button class="haupt" data-betrieb-kauf="${b.nr}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">kaufen: ${f(a.wert(b.typ, stadt))} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}</div>`;
+      }
+      html += `</li>`;
+    }
+    html += `</ul>`;
+
+    const frei = a.freiePlaetze(stadt);
+    html += `<h3>Neu bauen <small>${frei} von ${a.bauplaetze(stadt)} Bauplätzen frei</small></h3>`;
+    const moeglich = a.bau.betriebe.filter((t) => t.art === "werkstatt" || t.ware in a.basis[stadt.name].prod);
+    html += `<table class="markt bauliste"><thead><tr><th>Betrieb</th><th>Kosten</th><th>erwartet</th><th></th></tr></thead><tbody>`;
+    for (const t of moeglich) {
+      const kosten = a.baukosten(t.id, stadt);
+      const grund = a.pruefeBau(stadt, t.id);
+      const erwartet = a.tagesgewinn(t.id, stadt);
+      const material = Object.entries(kosten.material).map(([g, n]) => `${n} ${g}`).join(", ");
+      html += `<tr><td class="ware">${esc(t.name)}<small>${t.leistung} ${esc(t.ware)} pro Tag</small></td>
+        <td class="zahl">${f(kosten.gulden)}<small>+ ${esc(material)}</small></td>
+        <td class="zahl ${erwartet < 0 ? "minus" : ""}">${erwartet >= 0 ? "+" : "−"}${f(Math.abs(erwartet))}<small>pro Tag</small></td>
+        <td class="aktionen"><button data-bau="${t.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">bauen</button></td></tr>`;
+    }
+    html += `</tbody></table><p class="ohnemarkt">Baumaterial muss im Kontor oder in einem deiner Schiffe hier liegen. Rohstoffbetriebe gehen nur, wo die Stadt den Rohstoff hat. Fährt der Mauszeiger über einen gesperrten Knopf, steht dort der Grund.</p>`;
+    return html;
   }
 
   meldungen() {
@@ -299,6 +460,10 @@ export class Oberflaeche {
     } else if (knopf.dataset.anhalten !== undefined) {
       this.spiel.anhalten(this.schiff);
       this.aktualisiere();
+    } else if (knopf.dataset.automatik !== undefined) {
+      this.schliesseHandel();
+      this.zeit.anhalten();
+      this.routenfenster.oeffne(this.schiff);
     }
   }
 
@@ -311,8 +476,26 @@ export class Oberflaeche {
       this.schliesseHandel();
       return;
     }
-    if (knopf.dataset.menge) {
-      this.menge = knopf.dataset.menge;
+    const d = knopf.dataset;
+    const a = s.ausbau;
+    const stadt = this.schiff.ort;
+    if (d.reiter) {
+      this.reiter = d.reiter;
+    } else if (d.menge) {
+      this.menge = d.menge;
+    } else if (d.kontorbau !== undefined) {
+      a.kontorBauen(stadt);
+    } else if (d.umlagern) {
+      a.umlagern(this.schiff, d.umlagern, wunsch, d.richtung);
+    } else if (d.kontorverkauf) {
+      const r = a.kontorVerkaufen(stadt, d.kontorverkauf, wunsch);
+      if (r.menge) s.melde(`${r.menge} ${d.kontorverkauf} aus dem Kontor für ${f(r.betrag)} Gulden verkauft.`, "handel");
+    } else if (d.betriebKauf) {
+      a.kaufen(a.betriebe.find((b) => b.nr === Number(d.betriebKauf)));
+    } else if (d.betriebVerkauf) {
+      a.verkaufen(a.betriebe.find((b) => b.nr === Number(d.betriebVerkauf)));
+    } else if (d.bau) {
+      a.bauen(stadt, d.bau);
     } else if (knopf.dataset.kauf) {
       const r = s.kaufen(this.schiff, knopf.dataset.kauf, wunsch);
       if (r.menge) s.melde(`${r.menge} ${knopf.dataset.kauf} für ${f(r.betrag)} Gulden gekauft.`, "handel");

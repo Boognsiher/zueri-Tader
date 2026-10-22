@@ -329,3 +329,69 @@ dialog.fenster .schiffkauf { font-size: 1rem; padding: 0.2em 0.6em; }
   .markt .aktionen { width: 4.6rem; }
   dialog.fenster { padding: 0.5rem 0.6rem; }
 }
+
+/* --- Spielstand-Menü -------------------------------------------------------- */
+.menue { position: relative; }
+.menue summary { cursor: pointer; list-style: none; color: #f3dfae; border: 1px solid #8a7350; border-radius: 4px; padding: 0.15em 0.7em; }
+.menue summary::-webkit-details-marker { display: none; }
+.menue[open] summary { background: #f3dfae; color: var(--tinte); }
+.menueliste {
+  position: absolute; right: 0; top: calc(100% + 0.3rem); z-index: 20; width: 19rem;
+  display: grid; gap: 0.3rem; padding: 0.6rem; background: var(--papier-hell); color: var(--tinte);
+  border: 1px solid var(--holz); border-radius: 6px; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+}
+.menueliste button { text-align: left; }
+.menueliste .klein { margin: 0.2rem 0 0; }
+
+/* --- Allgemeine Bausteine --------------------------------------------------- */
+button.haupt { background: linear-gradient(#a8452f, #7f2a1c); color: #fff6e8; border-color: #5d1d12; }
+button.haupt:hover:not(:disabled) { background: linear-gradient(#b85138, #8e2f20); }
+button.klein { font-size: 0.85rem; padding: 0.05em 0.5em; }
+.hilfe { font-size: 0.88rem; color: var(--tinte-blass); margin: 0.3rem 0; }
+.fehler { color: var(--rot); font-weight: 600; }
+.minus { color: var(--rot); }
+.fensterknoepfe { display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.8rem; }
+.tafel h3 small, dialog h3 small { font-weight: normal; color: var(--tinte-blass); font-size: 0.85rem; }
+
+/* --- Seitenleiste ---------------------------------------------------------- */
+.modus { grid-column: 1 / -1; font-size: 0.85rem; color: var(--gruen); font-weight: 600; }
+.schiffsaktionen { flex-wrap: wrap; }
+.besitzliste { list-style: none; margin: 0; padding: 0; font-size: 0.92rem; }
+.besitzliste li { display: flex; flex-wrap: wrap; gap: 0 0.4rem; padding: 0.15rem 0; border-bottom: 1px dotted var(--rand); }
+.besitzliste li .zahl { margin-left: auto; font-variant-numeric: tabular-nums; }
+.besitzliste small { flex-basis: 100%; color: var(--tinte-blass); font-size: 0.8rem; }
+
+/* --- Handelsfenster: Reiter, Kontor, Betriebe -------------------------------- */
+.reiter { display: flex; gap: 0.2rem; border-bottom: 1px solid var(--rand); margin: 0.2rem 0 0.4rem; }
+.reiter button { border-radius: 4px 4px 0 0; border-bottom: none; background: var(--papier); margin-bottom: -1px; }
+.reiter button[aria-selected="true"] { background: var(--papier-hell); border-color: var(--holz); font-weight: 600; }
+.markt .aktionen.breit { width: auto; }
+.markt .aktionen.breit button { display: inline-block; width: auto; margin: 0.1rem 0 0 0.15rem; }
+.betriebe { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.35rem; }
+.betrieb { border: 1px solid var(--rand); border-radius: 5px; padding: 0.35rem 0.5rem; background: var(--papier); }
+.betrieb.eigen { border-color: var(--gruen); background: #f1f0d8; }
+.betriebkopf .klein { color: var(--tinte-blass); font-size: 0.85rem; }
+.betriebinfo { font-size: 0.85rem; color: var(--tinte-blass); }
+.betriebknoepfe { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem; margin-top: 0.25rem; font-size: 0.9rem; }
+.betriebknoepfe select, dialog select, dialog input[type="number"] {
+  font: inherit; font-size: 0.9rem; color: var(--tinte); background: var(--papier-hell);
+  border: 1px solid var(--rand); border-radius: 4px; padding: 0.05em 0.3em;
+}
+.bauliste .aktionen button { display: inline-block; }
+
+/* --- Automatik-Fenster ------------------------------------------------------- */
+.modi { display: flex; flex-wrap: wrap; gap: 0.3rem; margin: 0.4rem 0; }
+.modi label { border: 1px solid var(--rand); border-radius: 4px; padding: 0.15em 0.6em; cursor: pointer; background: var(--papier); }
+.modi label.aktiv { border-color: var(--holz); background: #fbf3df; font-weight: 600; }
+.einsatz input { width: 7rem; }
+.halte { padding-left: 1.4rem; margin: 0.4rem 0; display: grid; gap: 0.4rem; }
+.halt { border: 1px solid var(--rand); border-radius: 5px; padding: 0.35rem 0.5rem; background: var(--papier); }
+.haltkopf { display: flex; align-items: center; gap: 0.4rem; }
+.haltknoepfe { margin-left: auto; display: flex; gap: 0.2rem; }
+.haltknoepfe button { padding: 0 0.45em; }
+.kontorhinweis { font-size: 0.78rem; background: var(--gruen); color: #fff; border-radius: 3px; padding: 0 0.35em; }
+.auftraege { width: 100%; border-collapse: collapse; margin: 0.3rem 0; font-size: 0.9rem; }
+.auftraege th { text-align: left; font-size: 0.75rem; text-transform: uppercase; color: var(--tinte-blass); font-weight: 600; }
+.auftraege td { padding: 0.1rem 0.15rem; }
+.auftraege input[type="number"] { width: 4.8rem; }
+.auftraege select { max-width: 9.5rem; }
