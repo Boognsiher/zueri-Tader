@@ -43,10 +43,12 @@ export class Werft {
 
   // --- Verkauf eigener Schiffe ----------------------------------------------------------
   verkaufserloes(schiff) {
+    if (schiff.mitglieder) return schiff.mitglieder.reduce((a, m) => a + this.verkaufserloes(m), 0);
     return Math.round((this.typ(schiff.typ).preis * this.daten.verkaufsanteil) / 100) * 100;
   }
 
   pruefeVerkauf(schiff) {
+    if (schiff.mitglieder) return "Eine Flotte erst auflösen, dann die Schiffe einzeln verkaufen.";
     if (this.spiel.schiffe.length <= 1) return "Dein letztes Schiff kannst du nicht verkaufen.";
     if (!this.spiel.imHafen(schiff)) return "Das Schiff muss im Hafen liegen.";
     if (this.spiel.ladungsmenge(schiff) > 0) return "Erst die Ladung verkaufen oder ins Kontor bringen.";

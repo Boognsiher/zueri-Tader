@@ -222,6 +222,7 @@ export class Oberflaeche {
         : "";
       html += `<li class="schiffzeile">${auto}<button class="schiff ${schiff === this.schiff ? "gewaehlt" : ""}" data-schiff="${nr}">
         <span class="schiffsname">${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}»${schiff.gebraucht ? " <small>gebraucht</small>" : ""}</span>
+        ${schiff.mitglieder ? `<span class="mitglieder">${schiff.mitglieder.length} Schiffe: ${esc(schiff.mitglieder.map((m) => `${this.D.schiffe.typ[m.typ].name} «${m.name}»`).join(", "))} · Tempo ${f(s.schiffstyp(schiff).tempo * 100)} %</span>` : ""}
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)}</span>
         <span class="status">${this.status(schiff)}</span>
         ${schiff.auto ? `<span class="modus ${schiff.auto.pausiert ? "pausiert" : ""}">${schiff.auto.pausiert ? "pausiert: " : ""}${esc(this.modus(schiff))}</span>` : ""}
@@ -239,6 +240,13 @@ export class Oberflaeche {
       if (schiff.auto?.pausiert) aktionen.push(`<button data-aufnehmen="${s.schiffe.indexOf(schiff)}">▶ Automatik fortsetzen</button>`);
       aktionen.push(`<button data-automatik>Automatik …</button>`);
       aktionen.push(`<button data-abwaehlen title="Auch mit Esc oder einem Klick auf das gewählte Schiff">Abwählen</button>`);
+      // Flotten: andere eigene Schiffe im selben Hafen anschliessen, Flotte auflösen
+      if (s.imHafen(schiff)) {
+        for (const x of s.schiffe) {
+          if (x !== schiff && s.imHafen(x, schiff.ort)) aktionen.push(`<button data-zusammen="${s.schiffe.indexOf(x)}" title="Laderaum addiert sich, die Flotte fährt so schnell wie das langsamste Schiff">Mit «${esc(x.name)}» zur Flotte</button>`);
+        }
+        if (schiff.mitglieder) aktionen.push(`<button data-aufloesen>Flotte auflösen</button>`);
+      }
       html += `<div class="schiffsaktionen">${aktionen.join("")}</div>`;
     }
     if (schiff) html += `<p class="steuerhilfe">${
@@ -729,6 +737,13 @@ export class Oberflaeche {
       this.aktualisiere();
     } else if (knopf.dataset.abwaehlen !== undefined) {
       this.abwaehlen();
+    } else if (knopf.dataset.zusammen !== undefined) {
+      this.spiel.zusammenlegen(this.schiff, this.spiel.schiffe[Number(knopf.dataset.zusammen)]);
+      this.aktualisiere();
+    } else if (knopf.dataset.aufloesen !== undefined) {
+      const neu = this.spiel.aufloesen(this.schiff);
+      if (neu) this.schiff = neu[0];
+      this.aktualisiere();
     } else if (knopf.dataset.automatik !== undefined) {
       this.schliesseHandel();
       this.zeit.anhalten();

@@ -86,8 +86,20 @@ export class Spiel {
     return schiff;
   }
 
+  // Schiffstyp; eine Flotte bekommt einen zusammengesetzten Typ: Laderaum und Umschlag
+  // addieren sich, das Tempo ist das des langsamsten Schiffs
   schiffstyp(schiff) {
-    return this.D.schiffe.typ[schiff.typ];
+    if (!schiff.mitglieder) return this.D.schiffe.typ[schiff.typ];
+    const typen = schiff.mitglieder.map((m) => this.D.schiffe.typ[m.typ]);
+    return {
+      id: "flotte",
+      name: "Flotte",
+      laderaum: typen.reduce((a, t) => a + t.laderaum, 0),
+      tempo: Math.min(...typen.map((t) => t.tempo)),
+      umschlag_pro_tag: typen.reduce((a, t) => a + t.umschlag_pro_tag, 0),
+      groesse: Math.max(...typen.map((t) => t.groesse)),
+      unterhalt: typen.reduce((a, t) => a + t.unterhalt, 0),
+    };
   }
 
   laderaum(schiff) {
@@ -95,8 +107,65 @@ export class Spiel {
   }
 
   unterhalt(schiff) {
+    if (schiff.mitglieder) return schiff.mitglieder.reduce((a, m) => a + this.unterhalt(m), 0);
     const t = this.schiffstyp(schiff);
     return t.unterhalt * (schiff.gebraucht ? this.D.schiffe.gebraucht.unterhalt_faktor : 1);
+  }
+
+  // --- Flotten -----------------------------------------------------------------
+  // Eine Flotte ist ein Eintrag in der Schiffsliste mit mitglieder = [{name, typ, gebraucht}].
+  pruefeZusammenlegen(a, b) {
+    if (a === b) return "Dasselbe Schiff.";
+    if (!this.imHafen(a) || !this.imHafen(b) || a.ort !== b.ort) return "Beide Schiffe müssen im selben Hafen liegen.";
+    return null;
+  }
+
+  // b schliesst sich a an; Ladung wird zusammengelegt, Automatik endet
+  zusammenlegen(a, b) {
+    if (this.pruefeZusammenlegen(a, b)) return false;
+    const mitglied = (s) => (s.mitglieder ? s.mitglieder : [{ name: s.name, typ: s.typ, gebraucht: s.gebraucht }]);
+    a.mitglieder = [...mitglied(a), ...mitglied(b)];
+    a.typ = "flotte";
+    a.gebraucht = false;
+    for (const [g, p] of Object.entries(b.ladung)) {
+      const ziel = (a.ladung[g] ??= { menge: 0, einstand: 0 });
+      ziel.einstand = (ziel.einstand * ziel.menge + p.einstand * p.menge) / (ziel.menge + p.menge);
+      ziel.menge += p.menge;
+    }
+    a.auto = null;
+    this.schiffe = this.schiffe.filter((s) => s !== b);
+    this.melde(`${b.name} schliesst sich der Flotte «${a.name}» an (${a.mitglieder.length} Schiffe, Laderaum ${this.laderaum(a)}).`);
+    return true;
+  }
+
+  pruefeAufloesen(flotte) {
+    if (!flotte.mitglieder) return "Das ist keine Flotte.";
+    if (!this.imHafen(flotte)) return "Die Flotte muss im Hafen liegen.";
+    return null;
+  }
+
+  // Flotte in Einzelschiffe zerlegen; die Ladung wird der Reihe nach auf die Laderäume verteilt
+  aufloesen(flotte) {
+    if (this.pruefeAufloesen(flotte)) return null;
+    const ladung = Object.entries(flotte.ladung).map(([g, p]) => ({ g, ...p }));
+    const neu = flotte.mitglieder.map((m) => ({
+      name: m.name, typ: m.typ, gebraucht: m.gebraucht, pos: [...flotte.pos], ort: flotte.ort, fahrt: null, ladung: {}, auto: null,
+    }));
+    for (const s of neu) {
+      let frei = this.laderaum(s);
+      for (const posten of ladung) {
+        if (frei <= 0) break;
+        const m = Math.min(frei, posten.menge);
+        if (m <= 0) continue;
+        s.ladung[posten.g] = { menge: m, einstand: posten.einstand };
+        posten.menge -= m;
+        frei -= m;
+      }
+    }
+    const i = this.schiffe.indexOf(flotte);
+    this.schiffe.splice(i, 1, ...neu);
+    this.melde(`Flotte «${flotte.name}» in ${flotte.ort.name} aufgelöst.`);
+    return neu;
   }
 
   // Geschwindigkeit in Karteneinheiten pro Tag

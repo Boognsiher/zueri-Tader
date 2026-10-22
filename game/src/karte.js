@@ -225,7 +225,7 @@ export class Karte {
       const groesse = this.spiel.schiffstyp(schiff).groesse;
       boot.querySelector(".boot-koerper").setAttribute("transform", `scale(${links ? -groesse : groesse},${groesse})`);
       const name = boot.querySelector(".bootname");
-      const zeichen = schiff.auto ? (schiff.auto.pausiert ? " ⏸" : " ⟳") : "";
+      const zeichen = (schiff.mitglieder ? ` ×${schiff.mitglieder.length}` : "") + (schiff.auto ? (schiff.auto.pausiert ? " ⏸" : " ⟳") : "");
       if (name.textContent !== schiff.name + zeichen) name.textContent = schiff.name + zeichen;
       name.setAttribute("y", (2.3 * groesse).toFixed(2));
       boot.classList.toggle("gewaehlt", schiff === this.auswahl.schiff);

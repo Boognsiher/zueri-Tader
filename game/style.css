@@ -437,3 +437,5 @@ button.autosymbol.pausiert { color: #fff6e8; background: linear-gradient(#4f8a55
 .versorgstaedte { display: grid; grid-template-columns: repeat(auto-fill, minmax(9rem, 1fr)); gap: 0.3rem; margin: 0.4rem 0; }
 .versorgstaedte label { border: 1px solid var(--rand); border-radius: 4px; padding: 0.15em 0.5em; background: var(--papier); }
 .versorgstaedte label.ohne { opacity: 0.55; }
+
+.mitglieder { grid-column: 1 / -1; font-size: 0.82rem; color: var(--holz); }

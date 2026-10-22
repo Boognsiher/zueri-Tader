@@ -9,6 +9,7 @@
 //      Stufen, Stadtgebäude und Kontorhandel.
 // 10.  Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz.
 // 11.  Automatik «Versorgen».
+// 12.  Flotten.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -587,6 +588,38 @@ console.log("\nVersorgen");
   const lieferungen = spiel.meldungen.filter((m) => m.text.includes("(Versorgen)") && m.text.includes("ausgeladen")).length;
   pruefe(`Rohseide kommt nach Zürich (${lieferungen}+ Lieferungen), die Weberei arbeitet (${seideProduziert} Seide in 120 Tagen)`,
     lieferungen >= 3 && seideProduziert > 0.5 * 120 * a.leistung(weberei));
+}
+
+// --- 12. Flotten ----------------------------------------------------------------------
+console.log("\nFlotten");
+{
+  const spiel = new Spiel(D, 95);
+  spiel.gulden = 200000;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  const nauen = spiel.schiffe[0];
+  const ledi = spiel.werft.kaufeNeu(zuerich, "ledischiff");
+  const weid = spiel.werft.kaufeNeu(zuerich, "weidling");
+  spiel.kaufen(nauen, "Korn", 50);
+  spiel.kaufen(ledi, "Korn", 30);
+  spiel.kaufen(weid, "Seide", 10);
+  const unterhalt = spiel.unterhalt(nauen) + spiel.unterhalt(ledi) + spiel.unterhalt(weid);
+  pruefe("Nauen und Ledischiff zur Flotte", spiel.zusammenlegen(nauen, ledi));
+  pruefe("Weidling schliesst sich an", spiel.zusammenlegen(nauen, weid));
+  const t = spiel.schiffstyp(nauen);
+  pruefe(`Laderaum addiert sich (${t.laderaum} = 120 + 250 + 40)`, t.laderaum === 410 && spiel.schiffe.length === 1);
+  pruefe(`Tempo des langsamsten Schiffs (${t.tempo})`, t.tempo === D.schiffe.typ.ledischiff.tempo);
+  pruefe("Unterhalt addiert sich", Math.abs(spiel.unterhalt(nauen) - unterhalt) < 1e-9);
+  pruefe("Ladung zusammengelegt (80 Korn, 10 Seide)", Math.round(nauen.ladung.Korn.menge) === 80 && Math.round(nauen.ladung.Seide.menge) === 10);
+  const k = spiel.kaufen(nauen, "Korn", 1000);
+  pruefe(`Flotte lädt mehr als ein Ledischiff (${80 + k.menge} Korn)`, 80 + k.menge > 250);
+  pruefe("Flotte lässt sich nicht als Ganzes verkaufen", spiel.werft.pruefeVerkauf(nauen) !== null);
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Flotte übersteht Speichern und Laden", geladen.schiffe[0].mitglieder?.length === 3 && spiel.laderaum(geladen.schiffe[0]) === 410);
+  const menge = spiel.ladungsmenge(nauen);
+  const einzeln = spiel.aufloesen(nauen);
+  pruefe("Flotte auflösen gibt drei Schiffe zurück", einzeln.length === 3 && spiel.schiffe.length === 3);
+  pruefe("Ladung bleibt erhalten und passt in die Laderäume",
+    Math.abs(einzeln.reduce((a, s) => a + spiel.ladungsmenge(s), 0) - menge) < 1e-9 && einzeln.every((s) => spiel.ladungsmenge(s) <= spiel.laderaum(s)));
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

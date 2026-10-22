@@ -56,6 +56,7 @@ export function speichere(spiel) {
         fahrt: s.fahrt ? { weg: s.fahrt.weg, start: s.fahrt.start, ende: s.fahrt.ende, ziel: nr(s.fahrt.ziel) } : null,
         ladung: s.ladung,
         auto: s.auto,
+        mitglieder: s.mitglieder ?? null,
       })),
       ausbau: spiel.ausbau.zustand(),
     },
@@ -109,6 +110,7 @@ export function lade(D, stand) {
     fahrt: z.fahrt ? { ...z.fahrt, ziel: stadt(z.fahrt.ziel) } : null,
     ladung: z.ladung,
     auto: z.auto,
+    ...(z.mitglieder ? { mitglieder: z.mitglieder } : {}),
   }));
   spiel.ausbau.laden(sp.ausbau);
   spiel.werft.laden(sp.werft);
