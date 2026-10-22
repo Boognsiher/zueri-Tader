@@ -12,7 +12,7 @@
     "SHIP_CAP": {"wert": 120, "info": "Laderaum eines Schiffs in Einheiten"},
     "SHIP_COST": {"wert": 20000, "info": "Schiffspreis in Gulden (für die Amortisationsrechnung)"},
     "UPKEEP": {"wert": 10, "info": "Unterhalt pro Schiff und Tag in Gulden"},
-    "AI_SHIPS": {"wert": 45, "info": "Anzahl KI-Händlerschiffe"},
+    "AI_SHIPS_PER_1000": {"wert": 4.75, "info": "KI-Händlerschiffe je 1000 Einwohner aller Städte. Wachsen die Städte, kommen Händler dazu (es verschwinden keine)"},
     "START_MONEY": {"wert": 12000, "info": "Startkapital pro KI-Händler in Gulden"},
     "MIN_ROI": {"wert": 0.05, "info": "KI-Händler fahren nur, wenn eine Tour mindestens diese Rendite bringt"},
     "MIN_PROFIT": {"wert": 60, "info": "KI-Händler fahren nur, wenn eine Tour mindestens diesen Gewinn bringt"},

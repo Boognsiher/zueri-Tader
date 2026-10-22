@@ -71,6 +71,8 @@ KI-Händler testen die Wirtschaft. Sie wählen die Fahrt mit dem höchsten Gewin
 
 Diese KI ist ein Prüfstand, kein Gegner. Ein menschlicher Spieler wird bessere Routen finden.
 
+Die Zahl der KI-Händler wächst mit der Bevölkerung: 4,75 Schiffe je 1000 Einwohner (`AI_SHIPS_PER_1000`), am Anfang 38, nach dem Wachstum der Städte 49. Mit deutlich weniger Händlern fehlt Transportkapazität, die Preisgefälle und Renditen steigen stark (3 je 1000: 61 % pro Tour).
+
 ## Testergebnis (Standardwerte, 8 Städte am Zürichsee, 45 Schiffe, 720 Tage, Seeds 1-3)
 
 | Messwert | Ergebnis | Ziel |

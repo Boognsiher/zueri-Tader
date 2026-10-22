@@ -365,6 +365,9 @@ class Stats:
         self.tours = []
         self.events = defaultdict(int)
         self.money0 = 0.0
+        self.injected = 0.0      # Startgeld von Schiffen, die nach dem Einlauf dazukommen
+        self.ship_days = 0       # Schiffstage nach dem Einlauf
+        self.ships_start = 0
         self.ballast_trips = 0
 
 
@@ -411,11 +414,19 @@ def record(day, cities, k, stats, writer):
         stats.sat_n[c.name] += 1
 
 
+def ai_target(cities, args):
+    """Anzahl KI-Haendler: fest (--ships) oder AI_SHIPS_PER_1000 je 1000 Einwohner."""
+    if args.ships is not None:
+        return args.ships
+    return round(AI_SHIPS_PER_1000 * sum(c.pop for c in cities) / 1000)
+
+
 def run(args):
     rng = random.Random(args.seed)
     cities = [City(c) for c in CITIES]
-    ships = [Ship(rng.choice(cities)) for _ in range(args.ships)]
+    ships = [Ship(rng.choice(cities)) for _ in range(ai_target(cities, args))]
     stats = Stats()
+    stats.ships_start = len(ships)
     writer = None
     fh = None
     if args.csv:
@@ -435,6 +446,13 @@ def run(args):
             short = c.step(day, stats)
             if short and stats.on:
                 stats.short_days[c.name] += 1
+        # Mit der Bevoelkerung kommen neue Haendler dazu (es verschwinden keine)
+        while len(ships) < ai_target(cities, args):
+            ships.append(Ship(rng.choice(cities)))
+            if stats.on:
+                stats.injected += START_MONEY
+        if stats.on:
+            stats.ship_days += len(ships)
         order = ships[:]
         rng.shuffle(order)
         for s in order:
@@ -460,7 +478,7 @@ def report(args, cities, ships, stats):
     checks = []
 
     print(f"\nSimulation: {args.days} Tage ({WARMUP} Einlauf), {len(cities)} Staedte, "
-          f"{args.ships} Schiffe, k={args.k}, Seed={args.seed}, "
+          f"{stats.ships_start} -> {len(ships)} KI-Schiffe, k={args.k}, Seed={args.seed}, "
           f"Ereignisse={'aus' if args.no_events else 'an'}")
     if stats.events:
         print("Ereignisse:", ", ".join(f"{k} {v}" for k, v in sorted(stats.events.items())))
@@ -525,7 +543,7 @@ def report(args, cities, ships, stats):
     # --- Rendite -----------------------------------------------------------
     rois = [t[0] for t in stats.tours]
     tdays = [t[2] for t in stats.tours]
-    per_ship_day = (sum(s.money for s in ships) - stats.money0) / len(ships) / days
+    per_ship_day = (sum(s.money for s in ships) - stats.money0 - stats.injected) / max(stats.ship_days, 1)
     payback = SHIP_COST / per_ship_day if per_ship_day > 0 else float("inf")
     print("\n=== RENDITE ===")
     print(f"Touren: {len(rois)}, Dauer im Mittel {statistics.mean(tdays):.1f} Tage, "
@@ -562,7 +580,7 @@ def report(args, cities, ships, stats):
 def main():
     ap = argparse.ArgumentParser(description="Wirtschaftssimulation Handelsspiel")
     ap.add_argument("--days", type=int, default=720)
-    ap.add_argument("--ships", type=int, help="Anzahl KI-Haendlerschiffe (Standard: AI_SHIPS)")
+    ap.add_argument("--ships", type=int, help="feste Anzahl KI-Haendlerschiffe (Standard: AI_SHIPS_PER_1000 je 1000 Einwohner)")
     ap.add_argument("--k", type=float, help="Preisempfindlichkeit (Standard: K)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--no-events", action="store_true")
@@ -570,8 +588,6 @@ def main():
     ap.add_argument("--data", default=DEFAULT_DATA_DIR, help="Ordner mit den JSON-Daten")
     args = ap.parse_args()
     load_data(args.data)
-    if args.ships is None:
-        args.ships = AI_SHIPS
     if args.k is None:
         args.k = K
     cities, ships, stats = run(args)

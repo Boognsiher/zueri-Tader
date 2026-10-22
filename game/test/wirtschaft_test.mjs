@@ -54,7 +54,7 @@ for (const seed of [1, 2, 3]) {
   }
   const tage = TAGE - D.p.WARMUP;
   const rendite = st.touren.reduce((a, t) => a + t.rendite, 0) / st.touren.length;
-  const proSchiffTag = (welt.haendler.reduce((a, h) => a + h.geld, 0) - geld0) / welt.haendler.length / tage;
+  const proSchiffTag = (welt.haendler.reduce((a, h) => a + h.geld, 0) - geld0 - st.eingeschossen) / st.schiffstage;
   const amortisation = D.p.SHIP_COST / proSchiffTag;
   const routen = {};
   for (const t of st.touren) routen[t.route] = (routen[t.route] || 0) + 1;
@@ -64,7 +64,7 @@ for (const seed of [1, 2, 3]) {
   const rand = (100 * preisRand) / preisPunkte;
   const zufriedenheit = welt.staedte.reduce((a, s) => a + s.zufriedenheit, 0) / welt.staedte.length;
 
-  console.log(`\nSeed ${seed}: ${st.touren.length} Touren`);
+  console.log(`\nSeed ${seed}: ${st.touren.length} Touren, ${welt.haendler.length} KI-Händler am Ende`);
   pruefe(`Mittlere Tourrendite ${(100 * rendite).toFixed(0)}% (Ziel 10-30%)`, rendite >= 0.1 && rendite <= 0.3);
   pruefe(`Schiff amortisiert sich in ${amortisation.toFixed(0)} Tagen (Ziel 30-300)`, amortisation >= 30 && amortisation <= 300);
   pruefe(`Häufigste Route ${spitze.toFixed(1)}% der Touren (Ziel <= 12%)`, spitze <= 12);

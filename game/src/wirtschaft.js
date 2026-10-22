@@ -333,7 +333,7 @@ export class Haendler {
 }
 
 export function neueStatistik() {
-  return { an: false, produziert: {}, verdorben: {}, touren: [], leerfahrten: 0 };
+  return { an: false, produziert: {}, verdorben: {}, touren: [], leerfahrten: 0, eingeschossen: 0, schiffstage: 0 };
 }
 
 // Die Welt ohne Spieler: Städte, KI-Händler, Ereignisse, Tageszähler
@@ -345,9 +345,14 @@ export class Welt {
     this.staedte = D.staedte.map((c) => new Stadt(c, D));
     this.stadt = Object.fromEntries(this.staedte.map((s) => [s.name, s]));
     this.haendler = [];
-    for (let i = 0; i < D.p.AI_SHIPS; i++) this.haendler.push(new Haendler(this.zufall.wahl(this.staedte), D));
+    for (let i = 0; i < this.kiZiel(); i++) this.haendler.push(new Haendler(this.zufall.wahl(this.staedte), D));
     this.st = null; // Statistik, nur in Tests
     this.tageCache = {};
+  }
+
+  // Anzahl KI-Händler: AI_SHIPS_PER_1000 je 1000 Einwohner aller Städte
+  kiZiel() {
+    return Math.round((this.D.p.AI_SHIPS_PER_1000 * this.staedte.reduce((a, s) => a + s.einwohner, 0)) / 1000);
   }
 
   fahrtage(a, b) {
@@ -370,6 +375,12 @@ export class Welt {
       }
     }
     for (const stadt of this.staedte) stadt.schritt(tag, this.st);
+    // Mit der Bevölkerung kommen neue Händler dazu (es verschwinden keine)
+    while (this.haendler.length < this.kiZiel()) {
+      this.haendler.push(new Haendler(this.zufall.wahl(this.staedte), this.D));
+      if (this.st && this.st.an) this.st.eingeschossen += this.D.p.START_MONEY;
+    }
+    if (this.st && this.st.an) this.st.schiffstage += this.haendler.length;
     for (const h of this.zufall.mischen(this.haendler.slice())) h.handle(tag, this, this.st);
     this.tag++;
     return meldungen;
