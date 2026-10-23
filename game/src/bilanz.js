@@ -12,6 +12,8 @@ export const KONTEN = [
   { id: "gebaeudeUnterhalt", name: "Unterhalt der Stadtgebäude", gruppe: "Betriebe und Gebäude" },
   { id: "schiffeUnterhalt", name: "Unterhalt der Schiffe", gruppe: "Schiffe" },
   { id: "schiffeReparatur", name: "Reparaturen nach Gefechten", gruppe: "Schiffe" },
+  { id: "versicherungPraemie", name: "Versicherungsprämien", gruppe: "Schiffe" },
+  { id: "versicherungLeistung", name: "Leistungen der Versicherung", gruppe: "Schiffe" },
   { id: "kapitaenslohn", name: "Lohn der Kapitäne", gruppe: "Schiffe" },
   { id: "ratsanteil", name: "Anteil aus Ratssitzen", gruppe: "Betriebe und Gebäude" },
   { id: "prisengeld", name: "Prisengeld", gruppe: "Krieg" },

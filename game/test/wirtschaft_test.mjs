@@ -13,6 +13,7 @@
 // 13.  Stände, Kriege, Kaperbriefe und Gefechte.
 // 14.  Kapitäne: Anheuern, Lohn, Stufen, Bonus, Verschollen, Speichern.
 // 15.  Spielziel: Rang, Ratssitze, Preis, Wirkung, Speichern.
+// 16.  Risiko-Ereignisse und Versicherung.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -30,6 +31,15 @@ const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..",
 const D = await ladeDaten(async (datei) => JSON.parse(await readFile(path.join(DATA, datei), "utf-8")));
 
 let fehler = 0;
+
+// Für Tests von Fahrzeiten und Lieferketten: ohne Risiko-Ereignisse (Sturm, Überfall ...), die
+// Ankunft und Ladung bewusst verändern. Die Ereignisse selbst prüft Abschnitt 16.
+function ohneRisiko(spiel) {
+  const r = structuredClone(spiel.D.risiko);
+  for (const e of Object.values(r.ereignisse)) e.chance = 0;
+  spiel.risiko.r = r;
+  return spiel;
+}
 function pruefe(text, ok) {
   console.log(`${ok ? "OK " : "!! "}${text}`);
   if (!ok) fehler++;
@@ -82,7 +92,7 @@ for (const seed of [1, 2, 3]) {
 // --- 2. Handel des Spielers -----------------------------------------------
 console.log("\nHandel des Spielers");
 {
-  const spiel = new Spiel(D, 7);
+  const spiel = ohneRisiko(new Spiel(D, 7));
   const schiff = spiel.schiffe[0];
   const g = Object.keys(schiff.ort.bestand)[0];
   const geld0 = spiel.gulden;
@@ -558,7 +568,7 @@ console.log("\nBevölkerung, Versorgung, Kontor, Bilanz");
 // --- 11. Automatik «Versorgen» -----------------------------------------------------
 console.log("\nVersorgen");
 {
-  const spiel = new Spiel(D, 91);
+  const spiel = ohneRisiko(new Spiel(D, 91));
   const a = spiel.ausbau;
   // Ledischiff: Für die weite Strecke Zürich - Rapperswil reicht ein Nauen nicht (Laderaum)
   const schiff = spiel.schiffe[0];
@@ -825,6 +835,79 @@ console.log("\nSpielziel");
   z.sitze = staedte.map((s) => s.name);
   z.pruefeRang();
   pruefe("Alle Ratssitze und genug Vermögen: Ziel erreicht", z.amZiel() && z.rang.id === "herr_des_sees");
+}
+
+// --- 16. Risiko-Ereignisse ---------------------------------------------------
+console.log("\nRisiko");
+{
+  // Eigene Kopie der Daten, damit die Chancen für den Test auf 1 gesetzt werden können
+  const D2 = structuredClone(D);
+  const spiel = new Spiel(D2, 9);
+  const r = spiel.risiko;
+  const e = D2.risiko.ereignisse;
+  const schiff = spiel.schiffe[0];
+  const ziel = spiel.welt.stadt["Rapperswil"];
+  const losfahren = () => {
+    spiel.schiffe[0].ort = spiel.welt.stadt["Zürich"];
+    spiel.schiffe[0].fahrt = null;
+    spiel.segeln(schiff, { stadt: ziel }, { still: true });
+  };
+  for (const k of Object.keys(e)) e[k].chance = 0;
+  schiff.ladung.Korn = { menge: 100, einstand: 10 };
+  losfahren();
+  const ende0 = schiff.fahrt.ende;
+  const pos0 = spiel.position(schiff);
+  r.tag();
+  pruefe("Ohne Chance passiert nichts", schiff.fahrt.ende === ende0 && schiff.ladung.Korn.menge === 100);
+
+  // Sturm: Verzögerung und Schaden, Schiff springt nicht
+  spiel.anteil = 0.5;
+  e.sturm.chance = 1;
+  const p1 = spiel.position(schiff);
+  r.tag();
+  const p2 = spiel.position(schiff);
+  pruefe("Sturm verzögert die Ankunft und beschädigt das Schiff", schiff.fahrt.ende > ende0 && schiff.kampf.schaden > 0);
+  pruefe("Das Schiff springt bei einer Verzögerung nicht", Math.hypot(p2.x - p1.x, p2.y - p1.y) < 0.2);
+  e.sturm.chance = 0;
+  void pos0;
+
+  // Überfall: Ladung weg, Geleit und Versicherung
+  e.ueberfall.chance = 1;
+  e.ueberfall.kriegsfaktor = 1;
+  const menge0 = schiff.ladung.Korn.menge;
+  r.tag();
+  const verlust = menge0 - (schiff.ladung.Korn?.menge ?? 0);
+  pruefe(`Überfall raubt einen Teil der Ladung (${verlust.toFixed(0)} von ${menge0})`, verlust >= menge0 * e.ueberfall.verlust_anteil[0] - 1e-9 && verlust <= menge0 * e.ueberfall.verlust_anteil[1] + 1e-9);
+  pruefe("Ein Wachtschiff schützt besser als ein Nauen", r.schutz({ ...schiff, mitglieder: null, typ: "wachtschiff", kampf: { schaden: 0 } }) > r.schutz(schiff));
+  const g0 = spiel.gulden;
+  r.versichern(schiff, true);
+  schiff.ladung.Korn = { menge: 100, einstand: 10 };
+  r.tag();
+  const praemie = r.praemie(schiff);
+  pruefe("Versichert: Prämie wird abgezogen und der Verlust zu 80 % ersetzt", spiel.konten.gesamt.versicherungPraemie <= -praemie + 1e-9 && spiel.konten.gesamt.versicherungLeistung > 0 && spiel.gulden > g0 - praemie - 1);
+  r.versichern(schiff, false);
+  pruefe("Versicherung lässt sich kündigen", !schiff.versichert);
+
+  // Rückenwind verkürzt die Fahrt, Havarie verzögert und beschädigt stark
+  e.ueberfall.chance = 0;
+  e.rueckenwind.chance = 1;
+  losfahren();
+  const ende1 = schiff.fahrt.ende;
+  r.tag();
+  pruefe("Rückenwind verkürzt die Fahrt", schiff.fahrt.ende < ende1);
+  e.rueckenwind.chance = 0;
+  e.havarie.chance = 1;
+  losfahren();
+  schiff.kampf.schaden = 0;
+  const ende2 = schiff.fahrt.ende;
+  r.tag();
+  pruefe("Havarie verzögert und beschädigt stärker als der Mindestschaden eines Sturms", schiff.fahrt.ende > ende2 && schiff.kampf.schaden >= D2.schiffe.typ.nauen.rumpf * e.havarie.schaden_anteil[0] * 0.3);
+  pruefe("Ein Schiff geht durch Sturm oder Havarie nie unter", schiff.kampf.schaden <= D2.schiffe.typ.nauen.rumpf * 0.9 + 1e-9);
+
+  // Speichern und Laden: Versicherung und Zufall bleiben
+  r.versichern(schiff, true);
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Versicherung und Risiko-Zufall überstehen Speichern und Laden", geladen.schiffe[0].versichert === true && JSON.stringify(geladen.risiko.zustand()) === JSON.stringify(r.zustand()));
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

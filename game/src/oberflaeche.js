@@ -239,7 +239,7 @@ export class Oberflaeche {
           : `<span class="autosymbol" title="Automatik läuft" aria-label="Automatik läuft">⟳</span>`
         : "";
       html += `<li class="schiffzeile">${auto}<button class="schiff ${schiff === this.schiff ? "gewaehlt" : ""}" data-schiff="${nr}">
-        <span class="schiffsname">${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}»${schiff.gebraucht ? " <small>gebraucht</small>" : ""}</span>
+        <span class="schiffsname">${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}»${schiff.gebraucht ? " <small>gebraucht</small>" : ""}${schiff.versichert ? ' <small title="versichert">🛡</small>' : ""}</span>
         ${schiff.mitglieder ? `<span class="mitglieder">${schiff.mitglieder.length} Schiffe: ${esc(schiff.mitglieder.map((m) => `${this.D.schiffe.typ[m.typ].name} «${m.name}»`).join(", "))} · Tempo ${f(s.schiffstyp(schiff).tempo * 100)} %</span>` : ""}
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)}</span>
         ${this.kampfzeile(schiff)}
@@ -259,6 +259,12 @@ export class Oberflaeche {
       if (schiff.fahrt) aktionen.push(`<button data-anhalten>Anhalten</button>`);
       if (schiff.auto?.pausiert) aktionen.push(`<button data-aufnehmen="${s.schiffe.indexOf(schiff)}">▶ Automatik fortsetzen</button>`);
       aktionen.push(`<button data-automatik>Automatik …</button>`);
+      const praemie = s.risiko.praemie(schiff);
+      aktionen.push(
+        schiff.versichert
+          ? `<button data-versicherung="aus" aria-pressed="true" title="Ersetzt ${f(this.D.risiko.versicherung.erstattung * 100)} % von Ladungsverlust und Reparaturen nach Sturm und Havarie">Versichert (${f(praemie)} Gulden/Tag) · kündigen</button>`
+          : `<button data-versicherung="an" aria-pressed="false" title="Ersetzt ${f(this.D.risiko.versicherung.erstattung * 100)} % von Ladungsverlust und Reparaturen nach Sturm und Havarie">Versichern: ${f(praemie)} Gulden/Tag</button>`,
+      );
       aktionen.push(`<button data-abwaehlen title="Auch mit Esc oder einem Klick auf das gewählte Schiff">Abwählen</button>`);
       // Flotten: andere eigene Schiffe im selben Hafen anschliessen, Flotte auflösen
       if (s.imHafen(schiff)) {
@@ -993,6 +999,9 @@ export class Oberflaeche {
     } else if (knopf.dataset.aufloesen !== undefined) {
       const neu = this.spiel.aufloesen(this.schiff);
       if (neu) this.schiff = neu[0];
+      this.aktualisiere();
+    } else if (knopf.dataset.versicherung !== undefined) {
+      this.spiel.risiko.versichern(this.schiff, knopf.dataset.versicherung === "an");
       this.aktualisiere();
     } else if (knopf.dataset.haltung !== undefined) {
       this.spiel.kampf.setzeHaltung(this.schiff, knopf.dataset.haltung);

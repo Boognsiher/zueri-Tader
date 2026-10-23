@@ -13,6 +13,7 @@ import { Diplomatie } from "./diplomatie.js";
 import { Kampf, neueKampfdaten } from "./kampf.js";
 import { Kapitaene } from "./kapitaene.js";
 import { Ziel } from "./ziel.js";
+import { Risiko } from "./risiko.js";
 import { Zufall } from "./zufall.js";
 
 const MELDUNGEN_JE_REIHE = 60;
@@ -42,6 +43,7 @@ export class Spiel {
     this.kampf = new Kampf(this);
     this.kapitaene = new Kapitaene(this, seed);
     this.ziel = new Ziel(this);
+    this.risiko = new Risiko(this, seed);
     this.spielsekunden = 0; // echte Spielzeit mit laufender Uhr, für die Abstimmung des Spieltempos
     if (!leer) this.kapitaene.starte();
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
@@ -157,6 +159,7 @@ export class Spiel {
       ziel.menge += p.menge;
     }
     a.auto = null;
+    delete a.versichert; // die Versicherung der Flotte beginnt neu
     if (!a.kapitaen && b.kapitaen) a.kapitaen = b.kapitaen; // sonst bleibt b's Kapitän in Reserve
     else if (b.kapitaen) delete b.kapitaen;
     a.kampf.schaden += b.kampf.schaden;
@@ -193,6 +196,7 @@ export class Spiel {
         frei -= m;
       }
     }
+    for (const s of neu) delete s.versichert;
     if (flotte.kapitaen) neu[0].kapitaen = flotte.kapitaen; // der Kapitän der Flotte bleibt beim ersten Schiff
     const i = this.schiffe.indexOf(flotte);
     this.schiffe.splice(i, 1, ...neu);
@@ -405,6 +409,7 @@ export class Spiel {
     this.kampf.tag();
     this.kapitaene.tag();
     this.ziel.tag();
+    this.risiko.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
     for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
