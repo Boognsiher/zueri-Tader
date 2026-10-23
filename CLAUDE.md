@@ -18,7 +18,7 @@ python3 tools/daten/bilanz.py                        # Datenbilanz je Zone (Ange
 node game/test/wirtschaft_test.mjs                   # Test der Spielwirtschaft (gleiche Checks, dauert rund eine Viertelstunde)
 NUR=zonen node game/test/wirtschaft_test.mjs         # nur ein Abschnitt (Teil des Titels)
 node tools/sim/spieler_bot.mjs 6000                  # Bot spielt 6000 Tage (Wachstum von Vermögen und Rang)
-python -m http.server 8000                           # Spiel starten, dann http://localhost:8000/game/
+python tools/spielserver.py                          # Spiel starten (ohne Browser-Cache), dann http://localhost:8000/game/
 ```
 
 Exit-Code 0 = alle Balance-Checks bestanden, 1 = mindestens ein Check durchgefallen.

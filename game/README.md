@@ -7,7 +7,7 @@ Die spielbare Demo von Züri-Trade: Handel auf dem Zürichsee im Browser.
 Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen lokalen Webserver (als Datei per Doppelklick geöffnet, blockiert der Browser das Laden). Python genügt, sonst ist nichts zu installieren.
 
 - **Windows:** `spielen.bat` im Hauptordner doppelklicken. Der Browser öffnet sich mit dem Spiel.
-- **Von Hand:** im Hauptordner `python -m http.server 8000` starten und `http://localhost:8000/game/` öffnen.
+- **Von Hand:** im Hauptordner `python tools/spielserver.py` starten und `http://localhost:8000/game/` öffnen.
 
 ## Was die Demo kann
 

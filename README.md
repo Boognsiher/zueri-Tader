@@ -27,7 +27,7 @@ Erste spielbare Demo im Browser. Die Wirtschaft ist als Simulation vorhanden und
 
 Voraussetzung: Python 3.8 oder neuer, keine weiteren Pakete.
 
-**Spielen:** unter Windows `spielen.bat` doppelklicken, sonst im Hauptordner `python -m http.server 8000` starten und `http://localhost:8000/game/` öffnen. Details in [`game/README.md`](game/README.md).
+**Spielen:** unter Windows `spielen.bat` doppelklicken, sonst im Hauptordner `python tools/spielserver.py` starten und `http://localhost:8000/game/` öffnen. Details in [`game/README.md`](game/README.md).
 
 **Simulation:**
 
