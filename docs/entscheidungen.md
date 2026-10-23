@@ -49,6 +49,7 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 | 22.10.2026 | Unreal Engine 5 geprüft, nicht empfohlen | Für ein oberflächenlastiges Verwaltungsspiel unnötig aufwändig, Projekte bestehen weitgehend aus Binärdateien (schlecht für Git und Claude Code). Siehe `game/README.md` |
 | 23.10.2026 | Kartenkamera für das Handy: Die Karte lässt sich verschieben (ein Finger oder Maus) und zoomen (zwei Finger, Mausrad, Knöpfe +/−). Wird ein Schiff gewählt, holt die Kamera es heran (auf schmalen Bildschirmen auf 2,6-fachen Zoom) und folgt ihm. Verschieben oder Zoomen mit zwei Fingern beendet die Verfolgung, der Knopf ◎ schaltet sie wieder ein, ⤢ zeigt die ganze Karte. Auf schmalen Bildschirmen ist das Kartenfeld höher (62 % der Bildschirmhöhe) | Wunsch des Projektinhabers: Auf dem Handy war die ganze Karte zu klein. Die Kamera ändert nur die viewBox des SVG, die Spiellogik bleibt unberührt (`game/src/kamera.js`) |
 | 23.10.2026 | Schiffssymbole nach Typ: Weidling (kleiner Kahn mit Dreieckssegel), Nauen (Rahsegel), Ledischiff (lang und flach, Ladung an Deck, zwei Segel), Wachtschiff (schlank, Ruder, Schilde, Dreieckssegel), Kriegsnauen (Brustwehr, Geschützpforten, zwei Masten). Kriegsschiffe der Stände nutzen dieselben Symbole in Standesfarbe. KI-Händler erscheinen als kleine, graue Nauen mit Fahrtrichtung statt als Punkte | Wunsch des Projektinhabers. Die Symbole sind eigene Zeichnungen (siehe Regel 5), alle KI-Händler fahren in der Simulation als Nauen (`SHIP_CAP` 120), daher ein einheitliches Symbol (`game/src/karte.js`) |
+| 23.10.2026 | Mehr Spieltiefe in vier Richtungen: Spielziel und Aufstieg, Diplomatie mit Folgen, Risiko und Ereignisse, Personal und Stadtausbau. Kapitäne bekommen Stufen und werden mit Handel besser. Erweiterung um weitere Seen als eigene Karten und Wirtschaftszonen, verbunden durch Flüsse mit Zoll in den Flussstädten, erstes Beispiel Walensee. Entwurf in `docs/tiefe.md` | Wunsch des Projektinhabers nach Rückmeldung zur Demo: Der Verlauf (Schiffe kaufen, Automatik, Betriebe, warten) trägt nicht, das Geld wächst von selbst. Passt zu den Säulen Management und Diplomatie, der Umfang der Erweiterung (Zahl der Seen) bleibt offen |
 
 ## Empfehlung, noch nicht bestätigt
 
@@ -60,6 +61,9 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 
 ## Offen
 
+- **Spielziel:** Welche Etappen (Rang, Titel, Ratssitz, Monopol)? Siehe `docs/tiefe.md`
+- **Kapitäne:** Anheuern, Verlust, Eigenschaften, Lohnmodell. Siehe `docs/tiefe.md`
+- **Mehrere Seen:** Anzahl Zonen, Umladen oder durchfahren, Schiffbarkeit der Flüsse im 17. Jahrhundert. Siehe `docs/tiefe.md`
 - **Engine langfristig:** Die Demo läuft im Browser. Ob das so bleibt oder später Godot 4 kommt (z. B. für eine 3D-Stadtansicht), ist offen.
 - **Spielziel:** Reichtum, Titel, Monopole oder eine Kombination
 - **Einzelspieler oder Mehrspieler:** bisher Einzelspieler angenommen

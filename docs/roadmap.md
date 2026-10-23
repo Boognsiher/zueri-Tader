@@ -13,6 +13,8 @@ Grundsatz: **Erst Spielspass im Kern beweisen, dann Inhalt und Optik ausbauen.**
 - [ ] **M7 Vertical Slice:** kleine, komplette Spielrunde mit wenigen Städten, Flotte, einer Nation und einer Kampfbegegnung
 - [ ] **M8 Kampf:** statische Ansicht, Auflösung aus Schiffswerten, Risiko für Ladung und Schiff. Erste Fassung im Spiel: Kriegsschiffe, Kampfhaltungen, automatische Gefechte mit Bericht. Offen: taktische Entscheidungen im Gefecht, Besatzung und Ausrüstung
 - [ ] **M9 Ausbau und Politur:** mehr Städte und Waren, Balance, Sound, Menüs. Speichern und Laden sowie automatischer Handel sind schon in der Demo
+- [ ] **M10 Spieltiefe:** Kapitäne mit Stufen, Risiko-Ereignisse, Spielziel mit Etappen, Zoll und Verträge (Entwurf in `docs/tiefe.md`)
+- [ ] **M11 Weitere Seen:** zweite Karte (Walensee) als eigene Wirtschaftszone, Flussstädte mit Zoll als Tore
 
 ## Hinweise zur Reihenfolge
 
