@@ -399,9 +399,12 @@ export class Karte {
     }
     // Fremde Schiffe erscheinen nur in Sichtweite eigener Schiffe und Städte
     const sicht = this.spiel.sichtpunkte();
+    // In Landzonen fahren Fuhrwerke, später Wagen und Lastwagen, sonst Nauen
+    this.landzonen ??= new Set(this.D.zonen.zonen.filter((z) => z.art === "land").map((z) => z.id));
+    const jahr = this.spiel.jahr();
+    const landtyp = jahr < 1830 ? "fuhrwerk" : jahr < 1925 ? "frachtwagen" : "lkw";
     welt.haendler.forEach((h, i) => {
-      // In Landzonen fahren Fuhrwerke, später Wagen und Lastwagen, sonst Nauen
-      const typ = this.D.zonen.zonen.find((z) => z.id === h.ort.zone)?.art === "land" ? (this.spiel.jahr() < 1830 ? "fuhrwerk" : this.spiel.jahr() < 1925 ? "frachtwagen" : "lkw") : "nauen";
+      const typ = this.landzonen.has(h.ort.zone) ? landtyp : "nauen";
       if (this.haendlerTypen[i] !== typ) {
         this.haendlerBoote[i].remove();
         this.haendlerBoote[i] = bootSymbol(this.ebeneHaendler, "haendlerboot", typ);

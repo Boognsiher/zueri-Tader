@@ -372,20 +372,29 @@ export class Welt {
   }
 
   // Sind zwei Zonen durch Kanäle verbunden (auch über mehrere Kanäle)? Dann handeln die KI-Händler zwischen ihnen.
+  // Die Gruppen werden gemerkt und erst neu berechnet, wenn ein Kanal dazukommt (die Abfrage steht in inneren Schleifen).
   verbunden(a, b) {
     if (a === b) return true;
-    const gesehen = new Set([a]);
-    for (let neu = true; neu; ) {
-      neu = false;
-      for (const [x, y] of this.kanalPaare) {
-        if (gesehen.has(x) !== gesehen.has(y)) {
-          gesehen.add(x);
-          gesehen.add(y);
-          neu = true;
+    if (this.gruppenKanaele !== this.kanalPaare.length) {
+      this.gruppenKanaele = this.kanalPaare.length;
+      this.gruppe = {};
+      for (const z of this.zonen) {
+        if (this.gruppe[z] !== undefined) continue;
+        const gesehen = new Set([z]);
+        for (let neu = true; neu; ) {
+          neu = false;
+          for (const [x, y] of this.kanalPaare) {
+            if (gesehen.has(x) !== gesehen.has(y)) {
+              gesehen.add(x);
+              gesehen.add(y);
+              neu = true;
+            }
+          }
         }
+        for (const g of gesehen) this.gruppe[g] = z;
       }
     }
-    return gesehen.has(b);
+    return this.gruppe[a] !== undefined && this.gruppe[a] === this.gruppe[b];
   }
 
   // Jahr (mit Bruchteil) und Epochenkurven (data/epochen.json)

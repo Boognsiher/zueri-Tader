@@ -16,6 +16,13 @@ function imPolygon([x, y], ufer) {
   return drin;
 }
 
+// Umgebendes Rechteck [xmin, ymin, xmax, ymax] eines Ufers
+function rechteck(ufer) {
+  const xs = ufer.map((p) => p[0]);
+  const ys = ufer.map((p) => p[1]);
+  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
+}
+
 function abstand(a, b) {
   return Math.hypot(a[0] - b[0], a[1] - b[1]);
 }
@@ -62,6 +69,8 @@ export class Navigation {
 
   baueKnoten() {
     const D = this.D;
+    // Rechtecke zuerst: imWasser prüft nur die Teile, in deren Rechteck der Punkt liegt
+    this.rechtecke = this.teile.map(rechteck);
     const knoten = [];
     for (const d of D.karte.durchfahrten) knoten.push(d.position);
     for (const s of D.staedte) knoten.push(s.pos);
@@ -89,10 +98,16 @@ export class Navigation {
     this.knoten = knoten;
     this.nachbarn = null; // wird bei der ersten Suche berechnet
     this.komponente = null;
+    this.vomStartMerk = null; // Sicht vom letzten Startpunkt (die Karte sucht von einem Schiff zu allen Städten)
   }
 
   imWasser(p) {
-    return this.teile.some((ufer) => imPolygon(p, ufer));
+    const [x, y] = p;
+    for (let i = 0; i < this.teile.length; i++) {
+      const r = this.rechtecke[i];
+      if (x >= r[0] && x <= r[2] && y >= r[1] && y <= r[3] && imPolygon(p, this.teile[i])) return true;
+    }
+    return false;
   }
 
   // Führt die gerade Linie von a nach b ganz über Wasser?
@@ -141,19 +156,26 @@ export class Navigation {
         nr++;
       }
     }
-    const vomStart = new Set();
-    for (let j = 0; j < k.length; j++) if (this.frei(von, k[j])) vomStart.add(this.komponente[j]);
+    // Freie Sicht vom Start und zum Ziel je Hilfspunkt, jede Linie nur einmal geprüft
+    if (this.vomStartMerk?.von[0] !== von[0] || this.vomStartMerk.von[1] !== von[1]) {
+      const frei = k.map((p) => this.frei(von, p));
+      this.vomStartMerk = { von: [...von], frei, komponenten: new Set(k.map((_, j) => this.komponente[j]).filter((_, j) => frei[j])) };
+    }
+    const vonFrei = this.vomStartMerk.frei;
+    const vomStart = this.vomStartMerk.komponenten;
+    const nachFreiMerk = new Array(k.length);
+    const nachFrei = (j) => (nachFreiMerk[j] ??= this.frei(k[j], nach));
     let erreichbar = false;
-    for (let j = 0; j < k.length && !erreichbar; j++) if (vomStart.has(this.komponente[j]) && this.frei(k[j], nach)) erreichbar = true;
+    for (let j = 0; j < k.length && !erreichbar; j++) if (vomStart.has(this.komponente[j]) && nachFrei(j)) erreichbar = true;
     if (!erreichbar) return null;
     // Dijkstra über die Hilfspunkte, Start = k.length, Ziel = k.length + 1
     const start = k.length;
     const ziel = k.length + 1;
     const punkt = (i) => (i === start ? von : i === ziel ? nach : k[i]);
     const kanten = (i) => {
-      if (i === start) return k.map((p, j) => [j, abstand(von, p)]).filter(([j]) => this.frei(von, k[j]));
+      if (i === start) return k.map((p, j) => [j, abstand(von, p)]).filter(([j]) => vonFrei[j]);
       const liste = [...this.nachbarn[i]];
-      if (this.frei(k[i], nach)) liste.push([ziel, abstand(k[i], nach)]);
+      if (nachFrei(i)) liste.push([ziel, abstand(k[i], nach)]);
       return liste;
     };
     const dist = new Map([[start, 0]]);

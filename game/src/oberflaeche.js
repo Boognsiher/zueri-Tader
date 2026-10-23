@@ -403,9 +403,20 @@ export class Oberflaeche {
 
   // Fahrzeit in Tagen (auf halbe Tage gerundet) für die Anzeige
   // tempo: Karteneinheiten pro Tag (Standard: Nauen)
+  // Die Weglänge wird gemerkt (die Markttabelle fragt bei jedem Neuaufbau); ein neuer Kanal baut die Hilfspunkte neu und leert den Speicher.
   tage(von, nach, tempo = this.D.p.SPEED) {
-    const w = this.spiel.nav.route(von, nach) ?? this.spiel.navLand.route(von, nach);
-    return w ? Math.round((2 * weglaenge(w)) / tempo) / 2 : null;
+    const nav = this.spiel.nav;
+    if (this.laengenKnoten !== nav.knoten) {
+      this.laengenKnoten = nav.knoten;
+      this.laengen = new Map();
+    }
+    const schluessel = `${von}|${nach}`;
+    if (!this.laengen.has(schluessel)) {
+      const w = nav.route(von, nach) ?? this.spiel.navLand.route(von, nach);
+      this.laengen.set(schluessel, w ? weglaenge(w) : null);
+    }
+    const l = this.laengen.get(schluessel);
+    return l === null ? null : Math.round((2 * l) / tempo) / 2;
   }
 
   // Markttabelle. Mit schiff: Laderaum-Spalte und Knöpfe zum Kaufen und Verkaufen.
