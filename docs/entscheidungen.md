@@ -72,6 +72,7 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 
 - **Spielziel:** Welche Etappen (Rang, Titel, Ratssitz, Monopol)? Siehe `docs/tiefe.md`
 - **Kapitäne:** Anheuern, Verlust, Eigenschaften, Lohnmodell. Siehe `docs/tiefe.md`
+- **Epochenwandel (Schiene, Strasse, Rheinhandel):** Idee des Projektinhabers vom 23.10.2026, Entwurf in `docs/tiefe.md`. Offen: Länge des Endgames, Tempo der Zeit nach 1850, Linien zeichnen oder über Menüs ausbauen, neue Zonen Rheinmündung und Frankreich
 - **Mehrere Seen:** Anzahl Zonen, Umladen oder durchfahren, Schiffbarkeit der Flüsse im 17. Jahrhundert. Siehe `docs/tiefe.md`
 - **Engine langfristig:** Die Demo läuft im Browser. Ob das so bleibt oder später Godot 4 kommt (z. B. für eine 3D-Stadtansicht), ist offen.
 - **Spielziel:** Reichtum, Titel, Monopole oder eine Kombination

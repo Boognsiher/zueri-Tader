@@ -40,6 +40,23 @@ Jeder See ist eine **Zone** mit eigenen Städten, eigenem Wasser, eigenen KI-Hä
 
 Offen: Historische Machbarkeit (Flussläufe und Schiffbarkeit im 17. Jahrhundert, die Bahn gab es erst ab 1847), Karten mit mehr Städten je See, Ereignisse an den Zonengrenzen (Schmuggler, Zollkontrolle), Preisunterschiede zwischen den Zonen nachmessen.
 
+## Idee: Epochenwandel vom Schiff zu Schiene und Strasse (Entwurf, nicht umgesetzt)
+
+Idee des Projektinhabers: Mit der industriellen Revolution verliert der Schiffsverkehr auf den Seen an Bedeutung. Danach zählt der Schiffstransport nur noch auf den grossen Strömen, ab Basel Richtung Holland und Deutschland, und von Genf aus Richtung Frankreich. Im Endgame baut man Gleise, später Autobahnen, plant und verwaltet Logistikwege und verschafft sich damit Vorteile. Der Wandel soll langsam gehen, das Spielprinzip mit dem Handel bleibt.
+
+Wie das zum Bestehenden passt:
+- Die **Verbindungen** (`data/zonen.json`) sind schon die Grundlage: Fluss, Fuhrweg und Bahn sind Verkehrsarten mit Laufzeit, Fracht, Kapazität und Zoll. Neu wären Strasse (LKW) und Autobahn, dazu Ausbaustufen einer Verbindung (mehr Kapazität, kürzere Laufzeit, tiefere Fracht) gegen Investition.
+- Der Seeverkehr der **KI-Händler** und der Schiffe des Spielers würde über die Epochen langsam an Gewicht verlieren, etwa durch sinkende Margen auf den Seen (mehr Konkurrenz der Schiene, tiefere Preisunterschiede) und steigende Margen auf den neuen Wegen. Das lässt sich über die Preisniveaus je Zone und Jahr steuern (`preisfaktor` je Epoche), ohne das Handelsmodell zu ändern.
+- **Terminals** (Basel, Genf) wären die Knoten: Dort endet der Flussverkehr Richtung Holland, Deutschland und Frankreich. Neue Zonen «Niederlande/Rheinmündung» und «Rhône/Frankreich» wären weitere Ziele.
+- Das **Spielziel** wandelt sich mit: Rang und Ratssitze bleiben, dazu kommen Verkehrsnetz und Konzessionen (Bahn, später Strasse), die man erwerben und ausbauen kann.
+- **Zeitplan:** Passt zu den Jahren in `data/ziel.json`. Schiene ab 1847 (steht schon), Strasse und LKW im 20. Jahrhundert. Dafür müsste das Endspiel länger sein als bis 1850, oder die Zeit ab 1850 läuft schneller (mehr Tage pro Stunde).
+
+Offene Fragen:
+- Wie lang soll das Endgame sein (Jahre, Stunden), und läuft die Zeit ab der Eisenbahn schneller?
+- Wird der Seeverkehr wirklich unrentabel (man steigt um), oder bleibt er eine günstige Nische?
+- Plant der Spieler Linien auf einer Karte (Gleise zeichnen) oder baut er Verbindungen über Menüs aus wie heute?
+- Welche Zonen kommen dazu (Rheinmündung, Frankreich), und wie viele Städte brauchen sie?
+
 ## Vorgeschlagene Reihenfolge
 
 1. **Kapitäne mit Stufen** und **Risiko-Ereignisse** für Schiffe: erste Fassungen im Spiel. Offen: Ereignisse für Betriebe und Kontore (Brand, Verderb, Diebstahl), Schmuggler und Zollkontrolle, sobald es Zoll gibt.
