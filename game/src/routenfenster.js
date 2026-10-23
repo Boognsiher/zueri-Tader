@@ -33,6 +33,7 @@ export class Routenfenster {
     this.entwurf = {
       art: a ? a.art : "selbst",
       einsatz: a?.art === "frei" ? a.einsatz : Math.max(1000, Math.round(this.spiel.gulden / 2 / 100) * 100),
+      auffuellen: a?.art === "frei" ? !!a.auffuellen : false,
       halte: a?.art === "route" ? JSON.parse(JSON.stringify(a.halte)) : standard,
       // Versorgen: vorausgewählt alle Städte mit Kontor
       versorgen: a?.art === "versorgen" ? [...a.staedte] : this.zonenStaedte().filter((s) => this.spiel.ausbau.kontor(s)).map((s) => s.name),
@@ -89,7 +90,9 @@ export class Routenfenster {
           .join("")}</div>`;
     } else if (e.art === "frei") {
       html += `<p class="hilfe">Der Kapitän sucht in jedem Hafen das Geschäft mit dem höchsten Gewinn pro Tag, kauft, fährt hin und verkauft. Findet er länger nichts, wechselt er den Hafen.</p>
-        <label class="einsatz">Einsatz pro Fahrt höchstens <input type="number" min="0" step="500" value="${e.einsatz}" data-feld="einsatz"> Gulden</label>`;
+        <label class="einsatz">Einsatz pro Fahrt höchstens <input type="number" min="0" step="500" value="${e.einsatz}" data-feld="einsatz"> Gulden</label>
+        <label class="einsatz"><input type="checkbox" data-feld="auffuellen" ${e.auffuellen ? "checked" : ""}> <b>Kontore auffüllen:</b> In deinen Kontoren mit Einkaufsregel («kaufen bis») lädt das Schiff Ware bis zum Zielbestand ab. Fehlende Ware kauft es dort, wo sie billiger ist, und bringt sie hin, wenn das mehr bringt als das beste Geschäft. Einkaufslager («nur einkaufen») kaufen selbst und werden nicht beliefert.</label>
+        <p class="hilfe">Liegt im Hafen eines deiner Kontore Ware, lädt der Kapitän zuerst von dort.</p>`;
     } else {
       html += `<p class="hilfe">Das Schiff fährt die Häfen der Reihe nach ab und beginnt danach von vorn. Menge leer = alles bzw. so viel wie passt. Preis leer = egal, beim Kaufen Höchstpreis, beim Verkaufen Mindestpreis. Reihenfolge in jedem Hafen: verkaufen, kaufen, ins Kontor entladen (auch eben Gekauftes), aus dem Kontor laden.</p><ol class="halte">`;
       e.halte.forEach((h, i) => {
@@ -144,7 +147,8 @@ export class Routenfenster {
     const feld = ev.target.dataset?.feld;
     if (!feld) return;
     let wert = ev.target.value;
-    if (ev.target.type === "number") {
+    if (ev.target.type === "checkbox") wert = ev.target.checked;
+    else if (ev.target.type === "number") {
       wert = wert === "" ? null : Number(wert);
       if (feld === "einsatz") wert = wert ?? 0;
     }
@@ -203,7 +207,7 @@ export class Routenfenster {
         this.fehler = "Der Einsatz muss grösser als 0 sein.";
         return this.zeichne();
       }
-      starteFrei(spiel, this.schiff, e.einsatz);
+      starteFrei(spiel, this.schiff, e.einsatz, { auffuellen: e.auffuellen });
     } else {
       const fehler = starteRoute(spiel, this.schiff, JSON.parse(JSON.stringify(e.halte)));
       if (fehler) {

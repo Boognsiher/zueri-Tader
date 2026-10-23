@@ -357,6 +357,20 @@ if (abschnitt("Automatischer Handel")) {
   const gulden0 = rk.gulden;
   starteRoute(rk, s6, [{ stadt: "Horgen", auftraege: [{ art: "kaufen", ware: "Holz", menge: 50, preis: null }] }, { stadt: "Zürich", auftraege: [] }]);
   pruefe("Route: «kaufen» nimmt zuerst aus dem Kontor, den Rest am Markt", s6.ladung.Holz?.menge === 50 && !rk.ausbau.kontor(h2).lager.Holz && gulden0 - rk.gulden < 50 * 40);
+
+  // Kontore auffüllen: Das Kontor in Wädenswil kauft nicht selbst (Höchstpreis 1), das Schiff bringt Holz bis 80
+  for (const an of [false, true]) {
+    const af = new Spiel(D, 5);
+    af.gulden = 40000;
+    const wd = af.welt.stadt["Wädenswil"];
+    af.ausbau.kontore["Wädenswil"] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
+    af.ausbau.setzeRegel(wd, "Holz", { kaufenBis: 80, kaufPreis: 1 });
+    starteFrei(af, af.schiffe[0], 5000, { auffuellen: an });
+    for (let t = 0; t < 40; t++) af.tagVoran();
+    const holz = af.ausbau.kontor(wd).lager.Holz?.menge ?? 0;
+    if (an) pruefe(`Freier Handel mit «Kontore auffüllen» beliefert das Kontor (${holz} von 80 Holz)`, holz === 80);
+    else pruefe("Ohne «Kontore auffüllen» liefert der freie Handel nichts ins Kontor", holz === 0);
+  }
 }
 
 // --- 6. Speichern und Laden ---------------------------------------------------

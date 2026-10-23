@@ -12,13 +12,17 @@
 // Laden und Löschen braucht Zeit: Das Schiff bleibt im Hafen, bis die umgeschlagene Menge
 // geschafft ist (schiffe.json: umschlag_pro_tag je Schiffstyp). auto.abfahrt = frühester Abfahrtszeitpunkt.
 // Eigenes Kontor geht vor: Liegt im Hafen ein Kontor mit Ware, lädt die Automatik zuerst von dort
-// (bezahlt, ohne Handelsspanne) und kauft nur den Rest am Markt.
+// (bezahlt, ohne Handelsspanne) und kauft nur den Rest am Markt. Bei einem normalen Kontor nur, was über
+// dem Zielbestand seiner Einkaufsregel («kaufen bis») liegt; ein Einkaufslager («nur einkaufen») gibt alles ab.
+// Kontore auffüllen (freier Handel, auto.auffuellen): Das Schiff lädt Ware bis zum Zielbestand in normale
+// Kontore ab und bringt fehlende Ware hin, wenn sie anderswo billiger ist und das mehr bringt als das beste
+// Geschäft. Einkaufslager werden nicht beliefert, sie kaufen selbst.
 // Reparatur: Ab kampf.automatik_reparatur_ab Schaden bleibt das Schiff im nächsten Hafen liegen, bis es
 // ganz repariert ist (auto.reparatur). Repariert wird im Tageslauf von kampf.js.
 //
 // schiff.auto = null (selbst steuern)
 //   | { art: "route", halte: [{ stadt, auftraege: [{ art, ware, menge, preis }] }], index, erledigt, pausiert }
-//   | { art: "frei", einsatz, plan: { waren, ziel } | null, wartetage, pausiert }
+//   | { art: "frei", einsatz, auffuellen, plan: { waren, ziel } | null, wartetage, pausiert }
 //   | { art: "versorgen", staedte: [Name], ziel, wartetage, pausiert }
 // Städte stehen als Namen drin, damit sich der Zustand speichern lässt.
 
@@ -57,10 +61,10 @@ export function starteRoute(spiel, schiff, halte) {
   return null;
 }
 
-export function starteFrei(spiel, schiff, einsatz) {
+export function starteFrei(spiel, schiff, einsatz, { auffuellen = false } = {}) {
   // Beim Start nicht warten: Gibt es hier kein Geschäft, sucht der Kapitän sofort einen besseren Hafen
-  schiff.auto = { art: "frei", einsatz: Math.max(0, Number(einsatz) || 0), plan: null, wartetage: WARTETAGE_FREI };
-  spiel.melde(`${schiff.name} handelt jetzt frei (Einsatz bis ${zahl.format(schiff.auto.einsatz)} Gulden).`);
+  schiff.auto = { art: "frei", einsatz: Math.max(0, Number(einsatz) || 0), auffuellen: !!auffuellen, plan: null, wartetage: WARTETAGE_FREI };
+  spiel.melde(`${schiff.name} handelt jetzt frei (Einsatz bis ${zahl.format(schiff.auto.einsatz)} Gulden${auffuellen ? ", füllt Kontore auf" : ""}).`);
   weiter(spiel, schiff);
 }
 
@@ -210,6 +214,16 @@ function frei(spiel, schiff) {
   a.abfahrt = null;
   const teile = [];
   let umschlag = 0;
+  // Kontore auffüllen: zuerst bis zum Zielbestand ins Kontor hier abladen
+  if (a.auffuellen) {
+    for (const [g, m] of Object.entries(fehlbestand(spiel, stadt))) {
+      const n = schiff.ladung[g] ? spiel.ausbau.umlagern(schiff, g, m, "insKontor") : 0;
+      if (n) {
+        umschlag += n;
+        teile.push(`${n} ${g} ins Kontor`);
+      }
+    }
+  }
   // Ladung verkaufen: die geplante Ware am Ziel, anderes nur mit mindestens 5 % Gewinn
   for (const g of Object.keys(schiff.ladung)) {
     if (!stadt.handelt(g)) continue;
@@ -231,7 +245,7 @@ function frei(spiel, schiff) {
     let geladen = 0;
     const gekauft = [];
     for (const g of kontorPlan.waren) {
-      const m = spiel.ausbau.umlagern(schiff, g, Infinity, "insSchiff");
+      const m = spiel.ausbau.umlagern(schiff, g, kontorPlan.mengen[g], "insSchiff");
       if (m) {
         geladen += m;
         gekauft.push(`${m} ${g} aus dem Kontor`);
@@ -249,6 +263,29 @@ function frei(spiel, schiff) {
   }
   const bewerter = { D: spiel.D, geld: budget, laderaum: spiel.freierLaderaum(schiff) };
   const optionen = budget > 0 ? Haendler.prototype.optionen.call(bewerter, stadt, tag, spiel.welt) : [];
+  // Kontore auffüllen, wenn das mehr bringt als das beste Geschäft
+  const lief = a.auffuellen && budget > 0 ? lieferung(spiel, schiff, stadt, budget) : null;
+  if (lief && (!optionen.length || lief.wert >= Math.max(...optionen.map((o) => o.rate)))) {
+    const gekauft = [];
+    const waren = [];
+    for (const x of lief.posten) {
+      const r = spiel.kaufen(schiff, x.g, x.menge, true, x.grenze);
+      if (r.menge) {
+        umschlag += r.menge;
+        gekauft.push(`${r.menge} ${x.g}`);
+        waren.push(x.g);
+      }
+    }
+    if (waren.length) {
+      a.plan = { waren, ziel: lief.ziel.name };
+      a.wartetage = 0;
+      a.abfahrt = spiel.zeit + liegezeit(spiel, schiff, umschlag);
+      teile.push(`${gekauft.join(", ")} gekauft für das Kontor ${lief.ziel.name}${tageText(liegezeit(spiel, schiff, umschlag))}`);
+      spiel.melde(`${schiff.name} (frei) in ${stadt.name}: ${teile.join(", ")}.`, "handel");
+      if (spiel.zeit >= a.abfahrt) frei(spiel, schiff);
+      return;
+    }
+  }
   if (optionen.length) {
     optionen.sort((x, y) => y.rate - x.rate);
     const o = optionen[0];
@@ -327,7 +364,9 @@ function ausKontor(spiel, schiff, hier) {
   const a = spiel.ausbau;
   const k = a.kontor(hier);
   if (!k || !spiel.imHafen(schiff, hier)) return null;
-  const waren = Object.keys(k.lager).filter((g) => a.verfuegbar(hier, g) >= 1);
+  // Ein normales Kontor behält den Zielbestand seiner Einkaufsregel, ein Einkaufslager gibt alles ab
+  const frei = (g) => Math.max(0, a.verfuegbar(hier, g) - (k.nurEinkauf ? 0 : (k.regeln?.[g]?.kaufenBis ?? 0)));
+  const waren = Object.keys(k.lager).filter((g) => frei(g) >= 1);
   if (!waren.length) return null;
   const platz = spiel.freierLaderaum(schiff);
   let beste = null;
@@ -339,16 +378,16 @@ function ausKontor(spiel, schiff, hier) {
     const kandidaten = waren
       .filter((g) => ziel.handelt(g))
       .map((g) => {
-        const m = Math.min(a.verfuegbar(hier, g), platz);
+        const m = Math.min(frei(g), platz);
         // mittlerer Erlös, wenn die ganze Menge verkauft wird
-        const erloes = a.verfuegbar(hier, g) > 0 ? a.verkaufspreis(ziel, g, ziel.bestand[g] + m / 2) : 0;
+        const erloes = a.verkaufspreis(ziel, g, ziel.bestand[g] + m / 2);
         return { g, marge: erloes - k.lager[g].einstand, einstand: k.lager[g].einstand };
       })
       .filter((x) => x.marge >= 0.05 * x.einstand)
       .sort((x, y) => y.marge - x.marge);
     for (const x of kandidaten) {
       if (rest <= 0) break;
-      const m = Math.min(a.verfuegbar(hier, x.g), rest);
+      const m = Math.min(frei(x.g), rest);
       gewinn += m * x.marge;
       rest -= m;
       liste.push(x.g);
@@ -356,6 +395,58 @@ function ausKontor(spiel, schiff, hier) {
     if (!liste.length) continue;
     const wert = gewinn / (1 + spiel.welt.fahrtage(hier, ziel));
     if (!beste || wert > beste.wert) beste = { ziel, waren: liste, wert };
+  }
+  return beste ? { ...beste, mengen: Object.fromEntries(beste.waren.map((g) => [g, frei(g)])) } : null;
+}
+
+// Fehlender Bestand eines normalen Kontors bis zum Zielbestand seiner Einkaufsregeln: { Ware: Menge }.
+// Einkaufslager bekommen nichts, sie kaufen selbst.
+function fehlbestand(spiel, stadt) {
+  const k = spiel.ausbau.kontor(stadt);
+  const aus = {};
+  if (!k || k.nurEinkauf) return aus;
+  for (const [g, r] of Object.entries(k.regeln ?? {})) {
+    const fehlt = Math.floor((r.kaufenBis ?? 0) - (k.lager[g]?.menge ?? 0));
+    if (fehlt >= 1) aus[g] = fehlt;
+  }
+  return aus;
+}
+
+// Lieferung für ein Kontor: Ware, die einem Kontor fehlt und hier billiger ist als am Markt dort (ohne
+// Markt dort: als der Höchstpreis seiner Regel). Bewertet nach Ersparnis pro Tag Fahrt wie die Geschäfte (rate).
+// Gibt { ziel, posten: [{ g, menge, grenze }], wert } oder null.
+function lieferung(spiel, schiff, hier, geld) {
+  let beste = null;
+  const platz = spiel.freierLaderaum(schiff);
+  for (const name of Object.keys(spiel.ausbau.kontore)) {
+    const ziel = spiel.welt.stadt[name];
+    if (ziel === hier || !spiel.welt.verbunden(ziel.zone, hier.zone) || ziel.gesperrt(spiel.welt.tag) || spiel.diplomatie.hafenGesperrt(ziel)) continue;
+    const regeln = spiel.ausbau.kontor(ziel).regeln ?? {};
+    const liste = Object.entries(fehlbestand(spiel, ziel))
+      .filter(([g]) => hier.handelt(g) && hier.bestand[g] >= 5)
+      .map(([g, fehlt]) => {
+        const p = spiel.kaufpreis(hier, g);
+        // Vergleich: was die Ware in der Kontor-Stadt kostet; ohne Markt dort der Höchstpreis der Regel
+        const grenze = ziel.handelt(g) ? spiel.kaufpreis(ziel, g) : (regeln[g]?.kaufPreis ?? hier.basispreis(g));
+        return { g, fehlt, p, grenze, vorteil: grenze - p };
+      })
+      .filter((x) => x.vorteil > 0)
+      .sort((x, y) => y.vorteil - x.vorteil);
+    const posten = [];
+    let rest = platz;
+    let kasse = geld;
+    let ersparnis = 0;
+    for (const x of liste) {
+      const m = Math.floor(Math.min(x.fehlt, rest, kasse / x.p));
+      if (m < 1) continue;
+      posten.push({ g: x.g, menge: m, grenze: x.grenze });
+      rest -= m;
+      kasse -= m * x.p;
+      ersparnis += m * x.vorteil;
+    }
+    if (!posten.length) continue;
+    const wert = ersparnis / (1 + spiel.welt.fahrtage(hier, ziel));
+    if (!beste || wert > beste.wert) beste = { ziel, posten, wert };
   }
   return beste;
 }
