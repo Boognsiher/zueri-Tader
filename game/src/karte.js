@@ -3,6 +3,7 @@
 // Klicks auf den See, auf Städte und auf eigene Schiffe gehen an die Oberfläche.
 
 import { punktAufWeg, weglaenge } from "./navigation.js";
+import { Kamera } from "./kamera.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const BOOT_MASSSTAB = 0.6; // Symbolgrösse der eigenen Schiffe, mal der Grösse des Schiffstyps
@@ -48,12 +49,49 @@ export class Karte {
     this.rueckrufe = rueckrufe; // { stadt(stadt), schiff(schiff), see([x, y]) }
     this.auswahl = { stadt: null, schiff: null };
     this.baue();
+    this.baueKamera();
+  }
+
+  // Kamera mit Knöpfen: heran, weg, ganze Karte, Schiff verfolgen
+  baueKamera() {
+    const knoepfe = document.createElement("div");
+    knoepfe.className = "kamerakasten";
+    const knopf = (text, titel, tat) => {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.textContent = text;
+      b.title = titel;
+      b.setAttribute("aria-label", titel);
+      b.addEventListener("click", tat);
+      knoepfe.appendChild(b);
+      return b;
+    };
+    this.kamera = new Kamera(this.svg, { x: -2, y: -3, b: 109, h: 67 }, (an) => {
+      this.verfolgenKnopf.classList.toggle("an", an);
+      this.verfolgenKnopf.setAttribute("aria-pressed", String(an));
+    });
+    knopf("+", "Karte vergrössern", () => this.kamera.zoomeUm(1.6));
+    knopf("−", "Karte verkleinern", () => this.kamera.zoomeUm(1 / 1.6));
+    knopf("⤢", "Ganze Karte zeigen", () => this.kamera.ganzeKarte());
+    this.verfolgenKnopf = knopf("◎", "Gewähltes Schiff verfolgen", () => {
+      const s = this.auswahl.schiff;
+      if (s) this.kamera.fokussiere(...this.schiffspunkt(s));
+    });
+    this.verfolgenKnopf.setAttribute("aria-pressed", "false");
+    this.svg.parentElement.appendChild(knoepfe);
+  }
+
+  // Ungefähre Lage eines Schiffs (im Hafen: die Stadt)
+  schiffspunkt(schiff) {
+    if (this.spiel.imHafen(schiff)) return schiff.ort.pos;
+    const { x, y } = this.spiel.position(schiff);
+    return [x, y];
   }
 
   baue() {
     const svg = this.svg;
     const D = this.D;
-    svg.setAttribute("viewBox", "-2 -3 109 67");
+    if (!this.kamera) svg.setAttribute("viewBox", "-2 -3 109 67");
     svg.innerHTML = "";
     if (!this.klickBereit) {
       // Klick auf die Karte (nicht auf Stadt oder Schiff): Ziel auf dem See
@@ -169,7 +207,11 @@ export class Karte {
   }
 
   waehle(auswahl) {
+    const vorher = this.auswahl.schiff;
     Object.assign(this.auswahl, auswahl);
+    // Neues Schiff gewählt: Kamera holt es heran und verfolgt es; ohne Schiff endet die Verfolgung
+    if (this.auswahl.schiff && this.auswahl.schiff !== vorher) this.kamera.fokussiere(...this.schiffspunkt(this.auswahl.schiff));
+    else if (!this.auswahl.schiff && vorher) this.kamera.setzeFolgen(false);
   }
 
   // Wird bei jedem Bild aufgerufen. anteil = Fortschritt im laufenden Tag (0..1).
@@ -245,6 +287,7 @@ export class Karte {
         y = schiff.ort.pos[1] + (unten ? -1.2 : 1.2);
       }
       boot.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+      if (schiff === this.auswahl.schiff) this.kamera.folge(x, y);
       const groesse = this.spiel.schiffstyp(schiff).groesse * BOOT_MASSSTAB;
       boot.querySelector(".boot-koerper").setAttribute("transform", `scale(${links ? -groesse : groesse},${groesse})`);
       const name = boot.querySelector(".bootname");

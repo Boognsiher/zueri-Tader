@@ -47,6 +47,7 @@ Protokoll aller Entscheidungen und offenen Fragen. Neue Entscheidungen oben bei 
 | 22.10.2026 | Standardwerte der Simulation: Zielbestand 30/20 Tage, 45 Schiffe, k = 0.7 | Erfüllt alle Balance-Checks, siehe `docs/wirtschaft.md` |
 | 22.10.2026 | Grafikansatz orientiert sich an Port Royale 3 (alter Look: 2D-Karte, später optional 3D-Stadtansicht), bewusst vereinfacht und poliert. Keine Übernahme von Originalbildern | Gleiche Grafik ist nicht erreichbar und nicht nötig. Ein stimmiger Stil reicht, und das Repo bleibt rechtlich sauber. Siehe `docs/optik.md` |
 | 22.10.2026 | Unreal Engine 5 geprüft, nicht empfohlen | Für ein oberflächenlastiges Verwaltungsspiel unnötig aufwändig, Projekte bestehen weitgehend aus Binärdateien (schlecht für Git und Claude Code). Siehe `game/README.md` |
+| 23.10.2026 | Kartenkamera für das Handy: Die Karte lässt sich verschieben (ein Finger oder Maus) und zoomen (zwei Finger, Mausrad, Knöpfe +/−). Wird ein Schiff gewählt, holt die Kamera es heran (auf schmalen Bildschirmen auf 2,6-fachen Zoom) und folgt ihm. Verschieben oder Zoomen mit zwei Fingern beendet die Verfolgung, der Knopf ◎ schaltet sie wieder ein, ⤢ zeigt die ganze Karte. Auf schmalen Bildschirmen ist das Kartenfeld höher (62 % der Bildschirmhöhe) | Wunsch des Projektinhabers: Auf dem Handy war die ganze Karte zu klein. Die Kamera ändert nur die viewBox des SVG, die Spiellogik bleibt unberührt (`game/src/kamera.js`) |
 
 ## Empfehlung, noch nicht bestätigt
 

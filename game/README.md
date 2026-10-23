@@ -14,6 +14,7 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - Seekarte des Zürichsees mit acht Seegemeinden von Zürich bis Schmerikon, Durchfahrt am Seedamm
 - Marktübersicht jeder Stadt in der Seitenleiste: Lager, Kauf- und Verkaufspreis, bestes Gebot in einer anderen Stadt. Grosse Mengen verschieben den Preis (Mengeneffekt).
 - **Steuerung mit der Maus:** Klick auf den See, und das gewählte Schiff segelt dorthin (auch Kurswechsel unterwegs). Klick auf eine Stadt, und es legt dort an. Der Weg führt automatisch über Wasser, zum Obersee durch den Seedamm.
+- **Kamera:** Ein Finger oder die Maus verschiebt die Karte, zwei Finger, Mausrad oder die Knöpfe +/− zoomen. Ein gewähltes Schiff wird zentriert und von der Kamera verfolgt (Knopf ◎), ⤢ zeigt die ganze Karte.
 - **Schiff abwählen** (nochmals anklicken, Esc oder Knopf «Abwählen»): Ein Klick auf eine Stadt hebt sie dann nur hervor und zeigt sie in der Marktübersicht, ohne dass ein Schiff losfährt. Der Knopf «Stadtfenster öffnen» zeigt Kontor, Betriebe und Werft. Liegt ein eigenes Schiff dort, lässt sich von hier aus mit ihm handeln.
 - **Handelsfenster:** öffnet sich bei der Ankunft im Hafen (oder per Klick auf die Stadt, in der das Schiff liegt) und hält die Zeit an. Darin auch die Option, direkt zu einem anderen Hafen zu segeln, und der Schiffskauf.
 - **Flotten:** Schiffe im selben Hafen zusammenlegen (Laderaum addiert, Tempo des langsamsten), im Hafen wieder auflösen
@@ -54,6 +55,7 @@ Noch nicht dabei: Spielziel, Verträge und Embargos, Folgen von Kriegen für die
 | `src/kampf.js` | Kriegsschiffe der Stände, Kampfhaltungen, Gefechte |
 | `src/bilanz.js` | Buchhaltung für die Bilanz |
 | `src/karte.js` | Seekarte als SVG |
+| `src/kamera.js` | Kamera der Karte: Verschieben, Zoomen, Schiff verfolgen |
 | `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Stände, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Werft, Rathaus, Gefechtsbericht, Meldungen |
 | `src/main.js` | Einstieg, Zeitsteuerung, Menü Spielstand |
 | `src/zufall.js` | reproduzierbarer Zufallsgenerator |
