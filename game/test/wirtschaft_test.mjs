@@ -14,6 +14,7 @@
 // 14.  Kapitäne: Anheuern, Lohn, Stufen, Bonus, Verschollen, Speichern.
 // 15.  Spielziel: Rang, Ratssitze, Preis, Wirkung, Speichern.
 // 16.  Risiko-Ereignisse und Versicherung.
+// 17.  Zoll und Handelsverträge.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -908,6 +909,49 @@ console.log("\nRisiko");
   r.versichern(schiff, true);
   const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
   pruefe("Versicherung und Risiko-Zufall überstehen Speichern und Laden", geladen.schiffe[0].versichert === true && JSON.stringify(geladen.risiko.zustand()) === JSON.stringify(r.zustand()));
+}
+
+// --- 17. Zoll und Handelsverträge ---------------------------------------------
+console.log("\nZoll");
+{
+  const spiel = ohneRisiko(new Spiel(D, 12));
+  const schiff = spiel.schiffe[0];
+  const zuerich = schiff.ort;
+  const zoll = spiel.zoll;
+  const grund = zoll.satz(zuerich, "Korn");
+  const luxus = zoll.satz(zuerich, "Gewürze");
+  pruefe(`Importwaren zahlen mehr Zoll als Grundwaren (${(grund * 100).toFixed(1)} % gegen ${(luxus * 100).toFixed(1)} %)`, luxus > grund && grund > 0);
+  pruefe("Schwyz verlangt mehr Zoll als Zürich", zoll.satz(spiel.welt.stadt["Lachen"], "Korn") > grund);
+  // Verkauf: Zoll wird abgezogen und gebucht
+  spiel.kaufen(schiff, "Korn", 40);
+  const geld0 = spiel.gulden;
+  const vorschau = spiel.verkaufen(schiff, "Korn", 40, false);
+  const r = spiel.verkaufen(schiff, "Korn", 40);
+  pruefe("Vorschau und Verkauf nennen denselben Zoll", Math.abs(vorschau.zoll - r.zoll) < 1e-9 && r.zoll > 0);
+  pruefe("Der Zoll wird vom Erlös abgezogen und gebucht", Math.abs(spiel.gulden - (geld0 + r.betrag - r.zoll)) < 1e-6 && Math.abs(spiel.konten.gesamt.zoll + r.zoll) < 1e-6);
+  // Krieg erhöht den Zoll
+  const d = spiel.diplomatie;
+  const ohneKrieg = zoll.satz(zuerich, "Korn");
+  d.kriege["schwyz|zuerich"] = { seit: 0 };
+  pruefe("Krieg des Stands erhöht den Zoll", zoll.satz(zuerich, "Korn") > ohneKrieg);
+  delete d.kriege["schwyz|zuerich"];
+  // Handelsvertrag
+  spiel.gulden = 10_000_000;
+  spiel.ziel.rangIndex = 1;
+  const ohneVertrag = zoll.satz(zuerich, "Korn");
+  const gebuehr = zoll.gebuehr(d.vonStadt(zuerich));
+  const geld1 = spiel.gulden;
+  pruefe("Handelsvertrag abschliessen kostet die Gebühr", zoll.schliesseVertrag(zuerich) && spiel.gulden === geld1 - gebuehr);
+  pruefe("Handelsvertrag senkt den Zoll", Math.abs(zoll.satz(zuerich, "Korn") - ohneVertrag * D.zoll.ermaessigung.vertrag) < 1e-9);
+  pruefe("Der Vertrag gilt nur für den Stand", zoll.satz(spiel.welt.stadt["Lachen"], "Korn") > zoll.satz(zuerich, "Korn"));
+  for (let t = 0; t < D.zoll.vertrag.dauer_tage + 1; t++) spiel.tagVoran();
+  pruefe("Der Vertrag läuft ab", zoll.vertragBis("zuerich") === null && zoll.satz(zuerich, "Korn") > 0);
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Verträge überstehen Speichern und Laden", JSON.stringify(geladen.zoll.zustand()) === JSON.stringify(zoll.zustand()));
+  // Ratssitz senkt den Zoll in der Stadt
+  const vorher = zoll.satz(zuerich, "Korn");
+  spiel.ziel.sitze.push(zuerich.name);
+  pruefe("Ratssitz senkt den Zoll", zoll.satz(zuerich, "Korn") < vorher);
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

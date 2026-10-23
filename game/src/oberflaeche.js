@@ -373,7 +373,9 @@ export class Oberflaeche {
     const stand = s.diplomatie.vonStadt(stadt);
     html += `<p class="profil"><span class="standfarbe" style="background:${stand.farbe}"></span><b>${esc(stand.name)}</b> (${esc(stand.konfession)})${
       s.diplomatie.hafenGesperrt(stadt) ? ` · <span class="minus">dir feindlich, Hafen gesperrt</span>` : ""}</p>`;
-    html += `<p class="profil"><b>Erzeugt:</b> ${esc(erzeugt || "nichts")}${werk ? `<br><b>Werkstätten:</b> ${esc(werk)}` : ""}${werft}</p>`;
+    const zollSaetze = Object.keys(D.waren).map((g) => s.zoll.satz(stadt, g));
+    const zollText = `<br><b>Zoll auf Verkäufe:</b> ${f(Math.min(...zollSaetze) * 100)} bis ${f(Math.max(...zollSaetze) * 100)} % (Grundwaren am wenigsten, Importwaren am meisten)`;
+    html += `<p class="profil"><b>Erzeugt:</b> ${esc(erzeugt || "nichts")}${werk ? `<br><b>Werkstätten:</b> ${esc(werk)}` : ""}${werft}${zollText}</p>`;
     return html;
   }
 
@@ -803,8 +805,22 @@ export class Oberflaeche {
       html += `<p class="hilfe">Mit einem Kaperbrief darfst du Kriegsschiffe von ${esc(feinde.join(", "))} angreifen und bekommst Prisengeld (${f(k.prisengeld_anteil * 100)} % des Schiffspreises). Dafür sind dir deren Häfen verschlossen, und ihre Kriegsschiffe jagen deine Schiffe. Der Brief erlischt mit dem Frieden.</p>
         <button class="haupt" data-kaperbrief ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">Kaperbrief kaufen: ${f(k.gebuehr)} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}`;
     }
+    html += this.vertragAbschnitt(stadt, stand);
     html += this.ratssitzAbschnitt(stadt);
     html += `<p class="hilfe">Ruf ab ${fr.ruf.vorzug}: ${f(fr.ruf.spanne_rabatt * 100)} Prozentpunkt weniger Handelsspanne in den Städten des Stands. Ruf bei ${fr.ruf.feindlich} oder tiefer: Der Stand ist dir feindlich gesinnt.</p>`;
+    return html;
+  }
+
+  // Handelsvertrag mit dem Stand: Zoll, Laufzeit, Gebühr
+  vertragAbschnitt(stadt, stand) {
+    const s = this.spiel;
+    const z = this.D.zoll;
+    const bis = s.zoll.vertragBis(stand.id);
+    const grund = s.zoll.pruefeVertrag(stadt);
+    let html = `<h3>Handelsvertrag</h3>`;
+    html += bis !== null ? `<p>Du hast einen Handelsvertrag mit dem ${esc(stand.name)} bis ${esc(s.datumWelt(bis))}: ${f((1 - z.ermaessigung.vertrag) * 100)} % weniger Zoll in allen seinen Städten.</p>` : "";
+    html += `<p class="hilfe">Ein Vertrag senkt den Zoll in allen Städten des Stands um ${f((1 - z.ermaessigung.vertrag) * 100)} % und gilt ${z.vertrag.dauer_tage} Tage. Er braucht mindestens den Rang «${esc(s.ziel.raenge[z.vertrag.rang_min - 1].name)}» und einen Stand, der dir nicht feindlich ist.</p>
+      <button class="${bis === null ? "haupt" : ""}" data-vertrag ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">${bis === null ? "Vertrag abschliessen" : "Vertrag erneuern"}: ${f(s.zoll.gebuehr(stand))} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}`;
     return html;
   }
 
@@ -1064,7 +1080,7 @@ export class Oberflaeche {
       const r = schiff ? s.verkaufen(schiff, knopf.dataset.verkauf, wunsch) : { menge: 0 };
       if (r.menge) {
         const ergebnis = r.gewinn >= 0 ? `Gewinn ${f(r.gewinn)}` : `Verlust ${f(-r.gewinn)}`;
-        s.melde(`${r.menge} ${knopf.dataset.verkauf} für ${f(r.betrag)} Gulden verkauft (${ergebnis}).`, "handel");
+        s.melde(`${r.menge} ${knopf.dataset.verkauf} für ${f(r.betrag)} Gulden verkauft${r.zoll > 0 ? `, Zoll ${f(r.zoll)}` : ""} (${ergebnis}).`, "handel");
       }
     } else if (knopf.dataset.ziel !== undefined) {
       this.segle({ stadt: s.welt.staedte[Number(knopf.dataset.ziel)] });
@@ -1073,6 +1089,8 @@ export class Oberflaeche {
       s.diplomatie.kaufeKaperbrief(stadt);
     } else if (d.kaperbriefZurueck) {
       s.diplomatie.gibZurueck(d.kaperbriefZurueck);
+    } else if (d.vertrag !== undefined) {
+      s.zoll.schliesseVertrag(stadt);
     } else if (d.ratssitz !== undefined) {
       s.ziel.kaufeRatssitz(stadt);
     } else if (d.kapAnheuern) {

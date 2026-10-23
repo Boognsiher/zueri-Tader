@@ -488,14 +488,15 @@ export class Ausbau {
       if (preisgrenze !== null && p < preisgrenze) break;
       betrag += p;
     }
-    const gewinn = betrag - posten.einstand * menge;
+    const zoll = this.spiel.zoll.erheben(stadt, g, betrag, ausfuehren && menge > 0);
+    const gewinn = betrag - zoll - posten.einstand * menge;
     if (ausfuehren && menge > 0) {
       stadt.bestand[g] += menge;
-      this.spiel.gulden += betrag;
+      this.spiel.gulden += betrag - zoll;
       this.spiel.buche("kontorVerkauf", betrag);
       entnimm(k.lager, g, menge);
     }
-    return { menge, betrag, gewinn };
+    return { menge, betrag, gewinn, zoll };
   }
 
   // Tagesbedarf der eigenen Werkstätten mit Kontor-Versorgung in dieser Stadt an einer Zutat

@@ -69,6 +69,7 @@ export function speichere(spiel) {
       kapitaene: spiel.kapitaene.zustand(),
       ziel: spiel.ziel.zustand(),
       risiko: spiel.risiko.zustand(),
+      zoll: spiel.zoll.zustand(),
       spielsekunden: spiel.spielsekunden,
     },
   };
@@ -135,6 +136,7 @@ export function lade(D, stand) {
   spiel.kapitaene.laden(sp.kapitaene);
   spiel.ziel.laden(sp.ziel);
   spiel.risiko.laden(sp.risiko);
+  spiel.zoll.laden(sp.zoll);
   spiel.spielsekunden = sp.spielsekunden ?? 0;
   return spiel;
 }

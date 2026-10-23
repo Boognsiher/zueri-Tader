@@ -1,0 +1,8 @@
+{
+  "_info": "Zoll und Handelsverträge. Wird nur vom Spiel gelesen (game/src/zoll.js), nicht von der Simulation: Zoll trifft nur den Spieler, die KI-Händler bleiben unverändert (wie Kriege und Kaperbriefe), damit die Balance-Checks gültig bleiben. Der Zoll ist ein Anteil des Verkaufserlöses (Schiff und Kontor) in einer Stadt: stand[Stand] * gruppe[Warengruppe]. Im Krieg zahlt man in den Städten eines Stands, der Krieg führt, zusätzlich kriegszuschlag (absolut, ohne Gruppenfaktor). Ermässigungen multiplizieren sich: Ratssitz in der Stadt, hoher Ruf (ab ruf_vorzug) und ein Handelsvertrag mit dem Stand. Ein Handelsvertrag kostet gebuehr_je_einwohner mal die Einwohner aller Städte des Stands (mindestens gebuehr_min), gilt dauer_tage Tage, braucht mindestens den Rang rang_min und einen Stand, der nicht feindlich ist, und lässt sich vorzeitig erneuern. verbindungszoll: Aufschlag beim Warentransport zwischen Zonen (siehe Verbindungen).",
+  "stand": {"zuerich": 0.02, "schwyz": 0.04, "rapperswil": 0.05, "glarus": 0.03},
+  "gruppe": {"Grundversorgung": 0.5, "Rohstoff": 1, "Veredelt": 1.4, "Import": 1.8},
+  "kriegszuschlag": 0.03,
+  "ermaessigung": {"ratssitz": 0.5, "ruf_vorzug": 0.8, "vertrag": 0.3},
+  "vertrag": {"gebuehr_je_einwohner": 2, "gebuehr_min": 3000, "dauer_tage": 360, "rang_min": 2, "ruf_min": 0}
+}

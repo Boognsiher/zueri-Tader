@@ -14,6 +14,7 @@ import { Kampf, neueKampfdaten } from "./kampf.js";
 import { Kapitaene } from "./kapitaene.js";
 import { Ziel } from "./ziel.js";
 import { Risiko } from "./risiko.js";
+import { Zoll } from "./zoll.js";
 import { Zufall } from "./zufall.js";
 
 const MELDUNGEN_JE_REIHE = 60;
@@ -44,6 +45,7 @@ export class Spiel {
     this.kapitaene = new Kapitaene(this, seed);
     this.ziel = new Ziel(this);
     this.risiko = new Risiko(this, seed);
+    this.zoll = new Zoll(this);
     this.spielsekunden = 0; // echte Spielzeit mit laufender Uhr, für die Abstimmung des Spieltempos
     if (!leer) this.kapitaene.starte();
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
@@ -304,16 +306,17 @@ export class Spiel {
       if (preisgrenze !== null && p < preisgrenze) break;
       betrag += p;
     }
-    const gewinn = betrag - posten.einstand * menge;
+    const zoll = this.zoll.erheben(stadt, g, betrag, ausfuehren && menge > 0);
+    const gewinn = betrag - zoll - posten.einstand * menge;
     if (ausfuehren && menge > 0) {
       stadt.bestand[g] += menge;
-      this.gulden += betrag;
+      this.gulden += betrag - zoll;
       this.buche("handelVerkauf", betrag);
       this.kapitaene.erfahre(schiff, "umsatz", betrag);
       posten.menge -= menge;
       if (posten.menge <= 1e-9) delete schiff.ladung[g];
     }
-    return { menge, betrag, gewinn };
+    return { menge, betrag, gewinn, zoll };
   }
 
   // Fahrt zu einer Stadt (ziel.stadt) oder zu einem Punkt auf dem See (ziel.punkt).
@@ -410,6 +413,7 @@ export class Spiel {
     this.kapitaene.tag();
     this.ziel.tag();
     this.risiko.tag();
+    this.zoll.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
     for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
