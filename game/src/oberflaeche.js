@@ -35,7 +35,8 @@ document.addEventListener("click", (ev) => {
 function setze(el, html) {
   if (el._html === html) return;
   const aktiv = document.activeElement;
-  if (aktiv && el.contains(aktiv) && /^(INPUT|TEXTAREA)$/.test(aktiv.tagName)) {
+  const tippt = aktiv?.tagName === "TEXTAREA" || (aktiv?.tagName === "INPUT" && !["checkbox", "radio", "button"].includes(aktiv.type));
+  if (tippt && el.contains(aktiv)) {
     if (el._wartet === undefined) aktiv.addEventListener("blur", () => setTimeout(() => setze(el, el._wartet ?? el._html), 0), { once: true });
     el._wartet = html;
     return;
@@ -112,6 +113,11 @@ export class Oberflaeche {
     });
     this.e.handel.addEventListener("click", (ev) => this.klickHandel(ev));
     this.e.handel.addEventListener("change", (ev) => {
+      if (ev.target.dataset.nurEinkauf !== undefined) {
+        this.spiel.ausbau.setzeNurEinkauf(this.fensterStadt, ev.target.checked);
+        this.aktualisiere();
+        return;
+      }
       const sperrWare = ev.target.dataset.sperre;
       if (sperrWare) {
         this.spiel.ausbau.setzeSperre(this.fensterStadt, sperrWare, ev.target.value === "" ? 0 : Number(ev.target.value));
@@ -631,7 +637,7 @@ export class Oberflaeche {
     }
     const wunsch = this.menge === "max" ? Infinity : Number(this.menge);
     const stufe = k.stufe ?? 1;
-    let html = `<p class="stadtkopf">Kontor Stufe ${stufe} von ${a.bau.stufen_max} · Lager ${f(a.lagerMenge(k))} / ${f(a.lagerKapazitaet(k))} · Unterhalt ${f(kb.unterhalt * stufe)} Gulden pro Tag</p>`;
+    let html = `${k.nurEinkauf ? `<p class="hilfe"><b>Einkaufslager:</b> Das Kontor kauft nach seinen Regeln und verkauft nichts. Schiffe mit Automatik laden hier zuerst aus dem Kontor.</p>` : ""}<p class="stadtkopf">Kontor Stufe ${stufe} von ${a.bau.stufen_max} · Lager ${f(a.lagerMenge(k))} / ${f(a.lagerKapazitaet(k))} · Unterhalt ${f(kb.unterhalt * stufe)} Gulden pro Tag</p>`;
     if (stufe < a.bau.stufen_max) {
       html += `<div class="betriebknoepfe">${this.knopf("data-kontorausbau", `Ausbauen auf Stufe ${stufe + 1} (+${f(kb.lager)} Plätze): ${esc(this.kostentext(kb.ausbau.gulden, kb.ausbau))}`, a.pruefeKontorAusbau(stadt))}</div>`;
     }
@@ -659,6 +665,7 @@ export class Oberflaeche {
     html += `</tbody></table>`;
 
     // Handelsregeln
+    html += `<label class="nureinkauf"><input type="checkbox" data-nur-einkauf ${k.nurEinkauf ? "checked" : ""}> <b>Nur einkaufen:</b> Das Kontor verkauft nichts (Verkaufsregeln ruhen). Die Ware bleibt für deine Schiffe, die Automatik lädt sie vor dem Markt.</label>`;
     html += `<details class="regeln" data-key="kontorregeln" ${Object.keys(k.regeln ?? {}).length ? "open" : ""}><summary>Handelsregeln: Das Kontor kauft und verkauft jeden Tag selbst</summary>
       <p class="hilfe">Pro Ware: kaufen, bis so viel im Kontor liegt (nur bis zum Höchstpreis), und verkaufen, was über einer Menge liegt (nur ab dem Mindestpreis). Leer lassen = aus bzw. egal. Höchstens ${kb.handel_pro_tag} Stück je Ware und Tag. Die Regeln wirken, sobald die Zeit läuft (Fenster schliessen); jeder Handel erscheint in den Meldungen.
       <b>Sperren:</b> So viele Tage Bedarf deiner Werkstätten (mit Kontor-Versorgung) bleiben im Kontor: Das Kontor verkauft sie nicht, Schiffe laden sie nicht weg.</p>

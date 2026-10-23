@@ -568,11 +568,18 @@ export class Ausbau {
         this.setzeSperre(stadt, g, v.werkstatt_tage);
       } else if (hier(g)) {
         this.setzeRegel(stadt, g, { kaufenBis: vorrat, kaufPreis: Math.round(basis * v.kauf_bis_preisfaktor) });
-      } else {
+      } else if (!k.nurEinkauf) {
         this.setzeRegel(stadt, g, { verkaufenUeber: 0, verkaufPreis: Math.round(basis * v.verkauf_ab_preisfaktor) });
       }
     }
     return Object.keys(k.regeln).length;
+  }
+
+  // Einkaufslager: Das Kontor kauft nach seinen Regeln, verkauft aber nichts. Die Ware bleibt für
+  // die eigenen Schiffe, die Automatik lädt sie vor dem Markt (automatik.js)
+  setzeNurEinkauf(stadt, an) {
+    const k = this.kontor(stadt);
+    if (k) k.nurEinkauf = !!an;
   }
 
   // Alle Regeln und Sperren eines Kontors löschen
@@ -592,7 +599,7 @@ export class Ausbau {
       const teile = [];
       for (const [g, r] of Object.entries(k.regeln ?? {})) {
         const vorhanden = k.lager[g]?.menge ?? 0;
-        if (r.verkaufenUeber != null && vorhanden > r.verkaufenUeber) {
+        if (!k.nurEinkauf && r.verkaufenUeber != null && vorhanden > r.verkaufenUeber) {
           // kontorVerkaufen achtet selbst auf gesperrte Ware
           const v = this.kontorVerkaufen(stadt, g, Math.min(proTag, Math.floor(vorhanden - r.verkaufenUeber)), true, r.verkaufPreis);
           if (v.menge) teile.push(`${v.menge} ${g} verkauft (${zahl.format(v.betrag)})`);

@@ -535,3 +535,4 @@ details.verbindung summary { cursor: pointer; }
 .menue[hidden] { display: none; }
 .cheatliste { min-width: 17rem; }
 .cheatknoepfe { display: flex; flex-wrap: wrap; gap: 0.25rem; }
+.nureinkauf { display: block; margin: 0.4rem 0; }

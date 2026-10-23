@@ -328,6 +328,35 @@ if (abschnitt("Automatischer Handel")) {
     if (s4.auto.reparatur && s4.ort) lagRepariert = true;
   }
   pruefe("Automatik bleibt zur Reparatur im Hafen und fährt danach weiter", lagRepariert && s4.kampf.schaden === 0 && !s4.auto.reparatur);
+
+  // Einkaufslager: Das Kontor kauft nur, die Automatik lädt zuerst aus dem Kontor
+  const ek = new Spiel(D, 4);
+  ek.gulden = 60000;
+  const horgen = ek.welt.stadt["Horgen"];
+  ek.ausbau.kontore["Horgen"] = { stufe: 1, lager: { Wein: { menge: 20, einstand: 50 } }, regeln: {}, sperren: {}, nurEinkauf: true };
+  ek.ausbau.schlageRegelnVor(horgen);
+  const regeln = Object.values(ek.ausbau.kontor(horgen).regeln);
+  pruefe("Mit «Nur einkaufen» schlägt das Kontor nur Einkaufsregeln vor", regeln.length > 0 && regeln.every((r) => r.verkaufenUeber == null));
+  ek.ausbau.setzeRegel(horgen, "Wein", { verkaufenUeber: 0 });
+  for (let t = 0; t < 10; t++) ek.tagVoran();
+  pruefe("Ein Einkaufslager verkauft nichts, auch mit Verkaufsregel", (ek.ausbau.kontor(horgen).lager.Wein?.menge ?? 0) === 20);
+  const s5 = ek.schiffe[0];
+  ek.anhalten(s5);
+  Object.assign(s5, { ort: horgen, pos: [...horgen.pos], fahrt: null });
+  const imKontor = Object.values(ek.ausbau.kontor(horgen).lager).reduce((x, p) => x + p.menge, 0);
+  starteFrei(ek, s5, 5000);
+  const nachher = Object.values(ek.ausbau.kontor(horgen).lager).reduce((x, p) => x + p.menge, 0);
+  pruefe(`Freier Handel lädt zuerst aus dem Kontor (${imKontor} -> ${nachher})`, nachher < imKontor && !!s5.auto.plan);
+
+  const rk = new Spiel(D, 4);
+  const h2 = rk.welt.stadt["Horgen"];
+  rk.ausbau.kontore["Horgen"] = { stufe: 1, lager: { Holz: { menge: 30, einstand: 20 } }, regeln: {}, sperren: {} };
+  const s6 = rk.schiffe[0];
+  rk.anhalten(s6);
+  Object.assign(s6, { ort: h2, pos: [...h2.pos], fahrt: null });
+  const gulden0 = rk.gulden;
+  starteRoute(rk, s6, [{ stadt: "Horgen", auftraege: [{ art: "kaufen", ware: "Holz", menge: 50, preis: null }] }, { stadt: "Zürich", auftraege: [] }]);
+  pruefe("Route: «kaufen» nimmt zuerst aus dem Kontor, den Rest am Markt", s6.ladung.Holz?.menge === 50 && !rk.ausbau.kontor(h2).lager.Holz && gulden0 - rk.gulden < 50 * 40);
 }
 
 // --- 6. Speichern und Laden ---------------------------------------------------
