@@ -994,9 +994,9 @@ console.log("\nZonen");
   pruefe("KI-Händler fahren nie in eine andere Zone", bleiben);
   // Kriege nur innerhalb einer Zone
   const d = spiel.diplomatie;
-  for (let t = 0; t < 400; t++) d.tag();
+  for (let t = 0; t < 4000; t++) d.tag();
   const kriegsparteien = Object.keys(d.kriege).map((k) => k.split("|").map((id) => d.zoneVon(d.fraktion(id))));
-  pruefe(`Kriege gibt es nur innerhalb einer Zone (${kriegsparteien.length} Kriege geprüft)`, kriegsparteien.every(([a, b]) => a === b));
+  pruefe(`Kriege gibt es nur innerhalb einer Zone (${kriegsparteien.length} Kriege geprüft)`, kriegsparteien.length > 0 && kriegsparteien.every(([a, b]) => a === b));
 
   // Erschliessen: Rang, Kontor am anderen Ende, Gebühr
   const schmerikon = welt.stadt["Schmerikon"];
