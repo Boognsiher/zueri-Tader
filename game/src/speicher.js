@@ -66,6 +66,8 @@ export function speichere(spiel) {
       kampf: spiel.kampf.zustand(),
       ausbau: spiel.ausbau.zustand(),
       kapitaene: spiel.kapitaene.zustand(),
+      ziel: spiel.ziel.zustand(),
+      spielsekunden: spiel.spielsekunden,
     },
   };
 }
@@ -128,5 +130,7 @@ export function lade(D, stand) {
   spiel.ausbau.laden(sp.ausbau);
   spiel.werft.laden(sp.werft);
   spiel.kapitaene.laden(sp.kapitaene);
+  spiel.ziel.laden(sp.ziel);
+  spiel.spielsekunden = sp.spielsekunden ?? 0;
   return spiel;
 }

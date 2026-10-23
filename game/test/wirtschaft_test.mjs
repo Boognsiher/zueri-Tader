@@ -12,6 +12,7 @@
 // 12.  Flotten.
 // 13.  Stände, Kriege, Kaperbriefe und Gefechte.
 // 14.  Kapitäne: Anheuern, Lohn, Stufen, Bonus, Verschollen, Speichern.
+// 15.  Spielziel: Rang, Ratssitze, Preis, Wirkung, Speichern.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -787,6 +788,43 @@ console.log("\nKapitäne");
   pruefe("Kapitän bleibt bei der Flotte", kk.von(a) === k);
   spiel.aufloesen(a);
   pruefe("Beim Auflösen behält das erste Schiff den Kapitän", spiel.schiffe.some((x) => kk.von(x) === k));
+}
+
+// --- 15. Spielziel: Rang und Ratssitze -----------------------------------------
+console.log("\nSpielziel");
+{
+  const spiel = new Spiel(D, 5);
+  const z = spiel.ziel;
+  const staedte = spiel.welt.staedte;
+  const klein = staedte.find((s) => s.name === "Küsnacht");
+  const zuerich = spiel.welt.stadt["Zürich"];
+  pruefe("Start: niedrigster Rang, keine Ratssitze", z.rangIndex === 0 && z.sitze.length === 0);
+  spiel.gulden = 10_000_000;
+  pruefe("Viel Geld allein bringt nur den Rang ohne Ratssitze", z.berechneRang() === 1);
+  pruefe("Ratssitz ohne Kontor nicht möglich", z.pruefeRatssitz(klein) !== null);
+  spiel.schiffe[0].ort = klein;
+  spiel.schiffe[0].pos = [...klein.pos];
+  spiel.ausbau.kontore[klein.name] = { lager: {}, stufe: 1, regeln: {} };
+  z.pruefeRang();
+  pruefe("Mit Kontor und Geld: Ratssitz im kleinen Ort möglich", z.pruefeRatssitz(klein) === null);
+  const preis1 = z.preis(klein);
+  const kauf0 = spiel.gulden;
+  pruefe("Ratssitz kaufen", z.kaufeRatssitz(klein) && z.hatSitz(klein) && spiel.gulden === kauf0 - preis1);
+  pruefe("Mit einem Ratssitz steigt der Rang", z.rang.id === "handelsherr");
+  pruefe("Jeder weitere Sitz wird teurer", z.preis(staedte.find((s) => s.name === "Meilen")) > staedte.find((s) => s.name === "Meilen").einwohner * D.ziel.ratssitz.preis_je_einwohner);
+  pruefe("Zürich verlangt einen hohen Rang", z.pruefeRatssitz(zuerich)?.includes("Rang") === true || z.pruefeRatssitz(zuerich)?.includes("Kontor") === true);
+  const rab = z.rabatt(klein);
+  pruefe("Ratssitz senkt die Handelsspanne in der Stadt", rab === D.ziel.ratssitz.spanne_rabatt && z.rabatt(zuerich) === 0);
+  const g0 = spiel.gulden;
+  z.tag();
+  pruefe("Ratsanteil wird täglich gezahlt", spiel.gulden > g0 && spiel.konten.gesamt.ratsanteil > 0);
+  // Speichern und Laden
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Rang und Ratssitze überstehen Speichern und Laden", JSON.stringify(geladen.ziel.zustand()) === JSON.stringify(z.zustand()));
+  // Ziel: alle Ratssitze
+  z.sitze = staedte.map((s) => s.name);
+  z.pruefeRang();
+  pruefe("Alle Ratssitze und genug Vermögen: Ziel erreicht", z.amZiel() && z.rang.id === "herr_des_sees");
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

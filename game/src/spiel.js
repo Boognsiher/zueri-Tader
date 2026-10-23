@@ -12,6 +12,7 @@ import { neueKonten, buche } from "./bilanz.js";
 import { Diplomatie } from "./diplomatie.js";
 import { Kampf, neueKampfdaten } from "./kampf.js";
 import { Kapitaene } from "./kapitaene.js";
+import { Ziel } from "./ziel.js";
 import { Zufall } from "./zufall.js";
 
 const MELDUNGEN_JE_REIHE = 60;
@@ -40,6 +41,8 @@ export class Spiel {
     this.diplomatie = new Diplomatie(this);
     this.kampf = new Kampf(this);
     this.kapitaene = new Kapitaene(this, seed);
+    this.ziel = new Ziel(this);
+    this.spielsekunden = 0; // echte Spielzeit mit laufender Uhr, für die Abstimmung des Spieltempos
     if (!leer) this.kapitaene.starte();
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
   }
@@ -401,6 +404,7 @@ export class Spiel {
     this.diplomatie.tag();
     this.kampf.tag();
     this.kapitaene.tag();
+    this.ziel.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
     for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);

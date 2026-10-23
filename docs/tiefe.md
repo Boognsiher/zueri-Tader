@@ -1,6 +1,6 @@
 # Spieltiefe und Erweiterung
 
-Stand: 23.10.2026, Entwurf nach Rückmeldung zur Demo. Umgesetzt sind bisher nur die Kapitäne (erste Fassung, `game/src/kapitaene.js`). Das Übrige ist Entwurf.
+Stand: 23.10.2026, Entwurf nach Rückmeldung zur Demo. Umgesetzt sind bisher die Kapitäne (`game/src/kapitaene.js`) und das Spielziel mit Rang und Ratssitzen (`game/src/ziel.js`), beides erste Fassungen. Das Übrige ist Entwurf.
 
 ## Befund
 
@@ -39,7 +39,7 @@ Idee des Projektinhabers: weitere Seen der Schweiz als eigene Karten, verbunden 
 ## Vorgeschlagene Reihenfolge
 
 1. **Kapitäne mit Stufen:** erste Fassung im Spiel. Dazu die ersten **Risiko-Ereignisse** für Schiffe.
-2. **Spielziel:** Rang und Ratssitz in Städten, rund 25 Stunden Spielzeit bis alles freigeschaltet ist. Dann hat alles Weitere ein Maß.
+2. **Spielziel:** Rang und Ratssitz in Städten, erste Fassung im Spiel. Offen: auf rund 25 Stunden Spielzeit abstimmen (Spielzeitzähler ist da), Freischaltungen (Städte, Seen, Schiffe, Gebäude) an Ränge und Ratssitze knüpfen. Dann hat alles Weitere ein Maß.
 3. **Zoll und Verträge** auf der bestehenden Karte (Zölle zwischen den Ständen), zuerst in der Simulation.
 4. **Walensee als zweite Karte** mit Flussstädten als Zoll- und Handelstor.
 

@@ -186,6 +186,7 @@ export class Oberflaeche {
     if (this.schiff && !this.spiel.schiffe.includes(this.schiff)) this.schiff = null; // gesunken
     if (this.handelOffen && this.fensterSchiff && !this.spiel.imHafen(this.fensterSchiff)) this.schliesseHandel();
     this.kopf();
+    this.ansehen();
     this.flotte();
     this.besitz();
     this.marktuebersicht();
@@ -687,6 +688,29 @@ export class Oberflaeche {
     return html;
   }
 
+  // Seitenleiste: Rang des Handelshauses, Fortschritt zum nächsten Rang, Ratssitze, Spielzeit
+  ansehen() {
+    const s = this.spiel;
+    const z = s.ziel;
+    const rang = z.rang;
+    const naechster = z.naechster;
+    const v = z.vermoegen();
+    const sitzeGesamt = s.welt.staedte.length;
+    const balken = (wert, ziel) => `<span class="balken" aria-hidden="true"><span style="display:block;height:100%;width:${Math.min(100, (100 * wert) / Math.max(ziel, 1))}%;background:var(--gruen)"></span></span>`;
+    let html = `<h2>Ansehen</h2><p class="rang"><b>${esc(rang.name)}</b> <small>${esc(rang.text)}</small></p>`;
+    if (naechster) {
+      html += `<p class="klein">Nächster Rang: <b>${esc(naechster.name)}</b></p>
+        <p class="klein">Vermögen ${f(v)} von ${f(naechster.vermoegen)} ${balken(v, naechster.vermoegen)}</p>
+        <p class="klein">Ratssitze ${z.sitze.length} von ${naechster.ratssitze}${naechster.ratssitze ? ` ${balken(z.sitze.length, naechster.ratssitze)}` : ""}</p>`;
+    } else {
+      html += `<p class="klein"><b>Ziel erreicht.</b> Du sitzt in jedem Rat am See.</p>`;
+    }
+    html += `<p class="klein">Ratssitze: ${z.sitze.length ? esc(z.sitze.join(", ")) : "noch keine"} (${z.sitze.length} von ${sitzeGesamt}). Kaufen im Handelsfenster unter «Rathaus», Kontor nötig.</p>`;
+    const sek = Math.floor(s.spielsekunden);
+    html += `<p class="klein">Spielzeit ${Math.floor(sek / 3600)} h ${String(Math.floor((sek % 3600) / 60)).padStart(2, "0")} min</p>`;
+    this.e.ansehen.innerHTML = html;
+  }
+
   // Zeile in der Flottenliste: Kapitän des Schiffs mit Stufe
   kapitaenzeile(schiff) {
     const kk = this.spiel.kapitaene;
@@ -773,7 +797,22 @@ export class Oberflaeche {
       html += `<p class="hilfe">Mit einem Kaperbrief darfst du Kriegsschiffe von ${esc(feinde.join(", "))} angreifen und bekommst Prisengeld (${f(k.prisengeld_anteil * 100)} % des Schiffspreises). Dafür sind dir deren Häfen verschlossen, und ihre Kriegsschiffe jagen deine Schiffe. Der Brief erlischt mit dem Frieden.</p>
         <button class="haupt" data-kaperbrief ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">Kaperbrief kaufen: ${f(k.gebuehr)} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}`;
     }
+    html += this.ratssitzAbschnitt(stadt);
     html += `<p class="hilfe">Ruf ab ${fr.ruf.vorzug}: ${f(fr.ruf.spanne_rabatt * 100)} Prozentpunkt weniger Handelsspanne in den Städten des Stands. Ruf bei ${fr.ruf.feindlich} oder tiefer: Der Stand ist dir feindlich gesinnt.</p>`;
+    return html;
+  }
+
+  // Ratssitz der Stadt kaufen: Voraussetzungen, Preis, Wirkung
+  ratssitzAbschnitt(stadt) {
+    const z = this.spiel.ziel;
+    const r = this.D.ziel.ratssitz;
+    let html = `<h3>Ratssitz in ${esc(stadt.name)}</h3>`;
+    if (z.hatSitz(stadt)) {
+      return html + `<p>Du sitzt hier im Rat. Handelsspanne ${f(r.spanne_rabatt * 100)} Prozentpunkt tiefer, Ratsanteil ${f(stadt.einwohner * r.ratsanteil_je_einwohner)} Gulden pro Tag.</p>`;
+    }
+    const grund = z.pruefeRatssitz(stadt);
+    html += `<p class="hilfe">Ein Ratssitz kostet ${f(z.preis(stadt))} Gulden (je gehaltenem Sitz ${f(r.teuerung_je_sitz * 100)} % mehr). Er braucht ein Kontor hier und mindestens den Rang «${esc(z.raenge[z.rangMin(stadt) - 1].name)}». Dafür sinkt die Handelsspanne in ${esc(stadt.name)} um ${f(r.spanne_rabatt * 100)} Prozentpunkt, und du bekommst ${f(stadt.einwohner * r.ratsanteil_je_einwohner)} Gulden pro Tag. Höhere Ränge brauchen mehr Ratssitze.</p>
+      <button class="haupt" data-ratssitz ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">Ratssitz kaufen: ${f(z.preis(stadt))} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}`;
     return html;
   }
 
@@ -1025,6 +1064,8 @@ export class Oberflaeche {
       s.diplomatie.kaufeKaperbrief(stadt);
     } else if (d.kaperbriefZurueck) {
       s.diplomatie.gibZurueck(d.kaperbriefZurueck);
+    } else if (d.ratssitz !== undefined) {
+      s.ziel.kaufeRatssitz(stadt);
     } else if (d.kapAnheuern) {
       s.kapitaene.anheuern(s.kapitaene.wirtshaus.find((b) => b.nr === Number(d.kapAnheuern)));
     } else if (d.kapZuweisen) {

@@ -145,7 +145,7 @@ export class Ausbau {
   // --- Preise für den Spieler (Markthalle senkt die Handelsspanne) ------------------
   spanne(stadt) {
     const name = stadt.name ?? stadt;
-    return Math.max(this.bau.spanne_min, this.D.p.SPREAD - this.gebaeudeWirkung(name, "spanne") - (this.spiel.diplomatie?.spanneRabatt(stadt) ?? 0));
+    return Math.max(this.bau.spanne_min, this.D.p.SPREAD - this.gebaeudeWirkung(name, "spanne") - (this.spiel.diplomatie?.spanneRabatt(stadt) ?? 0) - (this.spiel.ziel?.rabatt(stadt) ?? 0));
   }
 
   kaufpreis(stadt, g, bestand) {

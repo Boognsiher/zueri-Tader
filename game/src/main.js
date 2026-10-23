@@ -109,6 +109,7 @@ async function start() {
       datum: $("datum"),
       gulden: $("gulden"),
       warenwert: $("warenwert"),
+      ansehen: $("ansehen"),
       flotte: $("flotte"),
       besitz: $("besitz"),
       staende: $("staende"),
@@ -248,6 +249,7 @@ async function start() {
     const dauer = D.spiel.tageslaenge_ms[tempo || letzteStufe];
     if (tempo) {
       vorrat += dt;
+      spiel.spielsekunden += dt / 1000;
       let ankuenfte = [];
       let neuerTag = false;
       // Nur selbst gesteuerte Schiffe halten an, automatische fahren weiter
