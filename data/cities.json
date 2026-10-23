@@ -1,5 +1,5 @@
 {
-  "_info": "Städte. produktion = Rohproduktion/Import pro Tag, werkstaetten = Kapazität in Batches pro Tag (Rezepte in recipes.json). Faustregel: Gesamtproduktion pro Ware ca. 3-8 % über dem Gesamtbedarf; Rohstoff und Werkstatt nicht überall in derselben Stadt. Positionen sind Kartenkoordinaten des Zürichsees (siehe karte.json), Zürich im Nordwesten, Obersee im Osten.",
+  "_info": "Städte. produktion = Rohproduktion/Import pro Tag, werkstaetten = Kapazität in Batches pro Tag (Rezepte in recipes.json). Faustregel: Gesamtproduktion pro Ware ca. 3-8 % über dem Gesamtbedarf; Rohstoff und Werkstatt nicht überall in derselben Stadt. Positionen sind Kartenkoordinaten des Zürichsees (siehe karte.json), Zürich im Nordwesten, Obersee im Osten. Jede Stadt gehört zu einer Zone (zone, siehe zonen.json): KI-Händler handeln nur innerhalb ihrer Zone, die Balance (Faustregel oben) gilt je Zone (python3 tools/daten/bilanz.py prüft sie).",
   "staedte": [
     {
       "name": "Zürich",
@@ -8,6 +8,7 @@
         9.8,
         3.92
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Korn": 72,
         "Trauben": 35,
@@ -26,6 +27,7 @@
         19.88,
         23.1
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Korn": 25,
         "Fisch": 20,
@@ -41,6 +43,7 @@
         31.64,
         36.54
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Fisch": 22,
         "Baumwolle": 28
@@ -57,6 +60,7 @@
         23.66,
         39.34
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Korn": 30,
         "Holz": 25,
@@ -74,6 +78,7 @@
         42.0,
         47.18
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Korn": 15,
         "Fisch": 10,
@@ -93,6 +98,7 @@
         70.84,
         48.3
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Korn": 55,
         "Rohseide": 32,
@@ -108,6 +114,7 @@
         80.5,
         58.66
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Korn": 55,
         "Holz": 25,
@@ -126,11 +133,382 @@
         97.72,
         49.84
       ],
+      "zone": "zuerichsee",
       "produktion": {
         "Fisch": 30,
         "Gewürze": 10
       },
       "werkstaetten": {}
+    },
+    {
+      "name": "Weesen",
+      "einwohner": 700,
+      "position": [
+        117,
+        55
+      ],
+      "zone": "walensee",
+      "produktion": {
+        "Korn": 23,
+        "Fisch": 8,
+        "Holz": 6,
+        "Zucker": 7,
+        "Gewürze": 5,
+        "Rohseide": 13,
+        "Baumwolle": 12
+      },
+      "werkstaetten": {
+        "Wein": 15
+      }
+    },
+    {
+      "name": "Betlis",
+      "einwohner": 250,
+      "position": [
+        127,
+        52.3
+      ],
+      "zone": "walensee",
+      "produktion": {
+        "Korn": 6,
+        "Fisch": 3,
+        "Holz": 3,
+        "Käse": 2,
+        "Trauben": 22
+      },
+      "werkstaetten": {
+        "Werkzeug": 2
+      }
+    },
+    {
+      "name": "Murg",
+      "einwohner": 450,
+      "position": [
+        133,
+        55.8
+      ],
+      "zone": "walensee",
+      "produktion": {
+        "Korn": 17,
+        "Fisch": 5,
+        "Holz": 6,
+        "Trauben": 10,
+        "Baumwolle": 13,
+        "Eisenerz": 6
+      },
+      "werkstaetten": {
+        "Seide": 10
+      }
+    },
+    {
+      "name": "Walenstadt",
+      "einwohner": 900,
+      "position": [
+        150,
+        57.8
+      ],
+      "zone": "walensee",
+      "produktion": {
+        "Korn": 27,
+        "Fisch": 8,
+        "Holz": 10,
+        "Käse": 3,
+        "Rohseide": 8
+      },
+      "werkstaetten": {
+        "Tuch": 12,
+        "Werkzeug": 3
+      }
+    },
+    {
+      "name": "Schaffhausen",
+      "einwohner": 1000,
+      "position": [
+        52,
+        -34.2
+      ],
+      "zone": "hochrhein",
+      "produktion": {
+        "Korn": 40,
+        "Fisch": 10,
+        "Holz": 10,
+        "Gewürze": 4,
+        "Trauben": 29,
+        "Eisenerz": 4
+      },
+      "werkstaetten": {
+        "Wein": 11,
+        "Tuch": 14
+      }
+    },
+    {
+      "name": "Laufenburg",
+      "einwohner": 500,
+      "position": [
+        32,
+        -36.6
+      ],
+      "zone": "hochrhein",
+      "produktion": {
+        "Korn": 21,
+        "Fisch": 7,
+        "Holz": 7,
+        "Käse": 5,
+        "Rohseide": 20,
+        "Eisenerz": 6
+      },
+      "werkstaetten": {
+        "Tuch": 9,
+        "Werkzeug": 5
+      }
+    },
+    {
+      "name": "Rheinfelden",
+      "einwohner": 700,
+      "position": [
+        16,
+        -42.3
+      ],
+      "zone": "hochrhein",
+      "produktion": {
+        "Korn": 22,
+        "Fisch": 5,
+        "Holz": 9,
+        "Käse": 4,
+        "Zucker": 6,
+        "Trauben": 30,
+        "Rohseide": 20,
+        "Baumwolle": 24
+      },
+      "werkstaetten": {
+        "Seide": 6
+      }
+    },
+    {
+      "name": "Basel",
+      "einwohner": 2200,
+      "position": [
+        -3,
+        -46.6
+      ],
+      "zone": "hochrhein",
+      "produktion": {
+        "Korn": 56,
+        "Fisch": 24,
+        "Holz": 21,
+        "Zucker": 8,
+        "Gewürze": 5,
+        "Baumwolle": 25
+      },
+      "werkstaetten": {
+        "Wein": 17,
+        "Seide": 13,
+        "Werkzeug": 4
+      }
+    },
+    {
+      "name": "Konstanz",
+      "einwohner": 1600,
+      "position": [
+        105,
+        -30.5
+      ],
+      "zone": "bodensee",
+      "produktion": {
+        "Korn": 52,
+        "Fisch": 14,
+        "Holz": 19,
+        "Zucker": 8
+      },
+      "werkstaetten": {
+        "Wein": 16,
+        "Seide": 9
+      }
+    },
+    {
+      "name": "Meersburg",
+      "einwohner": 450,
+      "position": [
+        118,
+        -39.5
+      ],
+      "zone": "bodensee",
+      "produktion": {
+        "Korn": 14,
+        "Fisch": 4,
+        "Holz": 3,
+        "Trauben": 35,
+        "Baumwolle": 23
+      },
+      "werkstaetten": {
+        "Wein": 17
+      }
+    },
+    {
+      "name": "Arbon",
+      "einwohner": 600,
+      "position": [
+        117,
+        -18
+      ],
+      "zone": "bodensee",
+      "produktion": {
+        "Korn": 13,
+        "Fisch": 10,
+        "Holz": 6,
+        "Rohseide": 23,
+        "Eisenerz": 6
+      },
+      "werkstaetten": {
+        "Tuch": 14
+      }
+    },
+    {
+      "name": "Rorschach",
+      "einwohner": 800,
+      "position": [
+        127,
+        -15
+      ],
+      "zone": "bodensee",
+      "produktion": {
+        "Korn": 26,
+        "Fisch": 7,
+        "Holz": 9,
+        "Käse": 4,
+        "Rohseide": 23
+      },
+      "werkstaetten": {
+        "Tuch": 13,
+        "Werkzeug": 4
+      }
+    },
+    {
+      "name": "Bregenz",
+      "einwohner": 600,
+      "position": [
+        147,
+        -22
+      ],
+      "zone": "bodensee",
+      "produktion": {
+        "Korn": 21,
+        "Fisch": 9,
+        "Holz": 4,
+        "Käse": 7,
+        "Trauben": 14,
+        "Baumwolle": 17,
+        "Eisenerz": 6
+      },
+      "werkstaetten": {
+        "Werkzeug": 7
+      }
+    },
+    {
+      "name": "Lindau",
+      "einwohner": 1100,
+      "position": [
+        146,
+        -34
+      ],
+      "zone": "bodensee",
+      "produktion": {
+        "Korn": 37,
+        "Fisch": 10,
+        "Holz": 14,
+        "Zucker": 8,
+        "Gewürze": 11,
+        "Trauben": 21,
+        "Baumwolle": 17
+      },
+      "werkstaetten": {
+        "Seide": 13
+      }
+    },
+    {
+      "name": "Genf",
+      "einwohner": 2000,
+      "position": [
+        -117.8,
+        97.5
+      ],
+      "zone": "genfersee",
+      "produktion": {
+        "Korn": 49,
+        "Fisch": 20,
+        "Holz": 26,
+        "Zucker": 15,
+        "Gewürze": 10,
+        "Baumwolle": 25
+      },
+      "werkstaetten": {
+        "Wein": 12,
+        "Seide": 13,
+        "Werkzeug": 5
+      }
+    },
+    {
+      "name": "Nyon",
+      "einwohner": 600,
+      "position": [
+        -104,
+        90.5
+      ],
+      "zone": "genfersee",
+      "produktion": {
+        "Korn": 22,
+        "Fisch": 8,
+        "Holz": 6,
+        "Trauben": 18,
+        "Rohseide": 20,
+        "Eisenerz": 6
+      },
+      "werkstaetten": {
+        "Tuch": 12,
+        "Werkzeug": 5
+      }
+    },
+    {
+      "name": "Lausanne",
+      "einwohner": 1200,
+      "position": [
+        -87,
+        82
+      ],
+      "zone": "genfersee",
+      "produktion": {
+        "Korn": 42,
+        "Fisch": 14,
+        "Holz": 10,
+        "Käse": 3,
+        "Trauben": 15,
+        "Rohseide": 20,
+        "Baumwolle": 26
+      },
+      "werkstaetten": {
+        "Wein": 17
+      }
+    },
+    {
+      "name": "Vevey",
+      "einwohner": 800,
+      "position": [
+        -65,
+        80
+      ],
+      "zone": "genfersee",
+      "produktion": {
+        "Korn": 33,
+        "Fisch": 7,
+        "Holz": 7,
+        "Käse": 7,
+        "Trauben": 28,
+        "Eisenerz": 5
+      },
+      "werkstaetten": {
+        "Seide": 6,
+        "Tuch": 12
+      }
     }
   ]
 }

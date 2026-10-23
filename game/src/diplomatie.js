@@ -32,6 +32,11 @@ export class Diplomatie {
     return this.spiel.welt.stadt[this.fraktion(id).staedte[0]];
   }
 
+  // See, in dem der Hauptort des Stands liegt
+  zoneVon(f) {
+    return this.spiel.welt.stadt[f.staedte[0]].zone;
+  }
+
   imKrieg(a, b) {
     return a !== b && !!this.kriege[paar(a, b)];
   }
@@ -113,6 +118,7 @@ export class Diplomatie {
       for (let j = i + 1; j < this.liste.length; j++) {
         const a = this.liste[i];
         const b = this.liste[j];
+        if (this.zoneVon(a) !== this.zoneVon(b)) continue; // Stände verschiedener Seen führen keinen Krieg miteinander
         const schluessel = paar(a.id, b.id);
         const krieg = this.kriege[schluessel];
         if (krieg) {

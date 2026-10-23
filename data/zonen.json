@@ -1,0 +1,252 @@
+{
+ "_info": "Zonen: jeder See (und der Hochrhein) ist eine eigene Wirtschaftszone mit eigenen Städten, eigenen KI-Händlern und eigenem Wasser. Schiffe bleiben in ihrer Zone, zwischen den Zonen gehen Waren über Verbindungen von Kontor zu Kontor (game/src/verbindungen.js). welt = Ausdehnung der Karte in Karteneinheiten (die Seen sind schematisch angeordnet, nicht massstäblich). Je Zone: mitte, breite und hoehe = Ausschnitt, den die Kamera beim Wechsel zeigt; rang = Mindestrang (Index in ziel.json, 1 = Kaufmann) und ab_jahr = frühestes Kalenderjahr, ab dem die Zone erschlossen werden kann; erschliessung = Gulden für das erste Kontor dort. Die Zone Zürichsee ist von Anfang an offen. Verbindungen: art fluss (billig, langsam, wenig Kapazität), fuhrweg (teuer, Zoll hoch) oder bahn (schnell, viel Kapazität, einmaliger Bau bau_gulden, ab Rang und ab_jahr (Eisenbahn historisch ab 1847)). tage = Laufzeit, fracht = Gulden je Einheit, kapazitaet = Einheiten pro Tag in jede Richtung, zoll = Faktor auf den Zollsatz der Zielstadt (Durchfuhr).",
+ "welt": {
+  "x": -125,
+  "y": -55,
+  "b": 290,
+  "h": 170
+ },
+ "zonen": [
+  {
+   "id": "zuerichsee",
+   "name": "Zürichsee",
+   "mitte": [
+    55,
+    32
+   ],
+   "breite": 112,
+   "rang": 0,
+   "erschliessung": 0,
+   "text": "Das Heimatrevier: acht Gemeinden zwischen Zürich und Schmerikon.",
+   "hoehe": 66,
+   "ab_jahr": 1650
+  },
+  {
+   "id": "walensee",
+   "name": "Walensee",
+   "mitte": [
+    134,
+    56
+   ],
+   "breite": 46,
+   "rang": 2,
+   "erschliessung": 60000,
+   "text": "Der Fjord hinter der Linth: Eisen, Schiefer und Alpkäse.",
+   "preisfaktor": {
+    "Korn": 1.1,
+    "Fisch": 0.95,
+    "Holz": 0.9,
+    "Käse": 0.85,
+    "Eisenerz": 0.85,
+    "Trauben": 1.0,
+    "Wein": 1.15,
+    "Seide": 1.2,
+    "Tuch": 1.15,
+    "Werkzeug": 0.9,
+    "Zucker": 1.25,
+    "Gewürze": 1.25,
+    "Rohseide": 1.1,
+    "Baumwolle": 1.1
+   },
+   "hoehe": 16,
+   "ab_jahr": 1665
+  },
+  {
+   "id": "hochrhein",
+   "name": "Hochrhein",
+   "mitte": [
+    22,
+    -40
+   ],
+   "breite": 76,
+   "rang": 3,
+   "erschliessung": 120000,
+   "text": "Der Strom von Schaffhausen nach Basel: Tor zum Handel mit dem Norden.",
+   "preisfaktor": {
+    "Korn": 1.0,
+    "Fisch": 1.0,
+    "Holz": 0.95,
+    "Käse": 1.05,
+    "Eisenerz": 0.95,
+    "Wein": 1.0,
+    "Seide": 0.95,
+    "Tuch": 0.95,
+    "Werkzeug": 1.0,
+    "Zucker": 0.85,
+    "Gewürze": 0.85,
+    "Rohseide": 0.9,
+    "Baumwolle": 0.9,
+    "Trauben": 1.05
+   },
+   "hoehe": 24,
+   "ab_jahr": 1690
+  },
+  {
+   "id": "bodensee",
+   "name": "Bodensee",
+   "mitte": [
+    124,
+    -27
+   ],
+   "breite": 66,
+   "rang": 4,
+   "erschliessung": 250000,
+   "text": "Das schwäbische Meer: Korn, Leinen, Salz und Wein.",
+   "preisfaktor": {
+    "Korn": 0.85,
+    "Fisch": 0.9,
+    "Holz": 0.95,
+    "Käse": 0.9,
+    "Eisenerz": 1.05,
+    "Wein": 1.0,
+    "Seide": 1.1,
+    "Tuch": 0.9,
+    "Werkzeug": 1.1,
+    "Zucker": 1.1,
+    "Gewürze": 1.1,
+    "Rohseide": 1.1,
+    "Baumwolle": 0.9,
+    "Trauben": 0.95
+   },
+   "hoehe": 38,
+   "ab_jahr": 1720
+  },
+  {
+   "id": "genfersee",
+   "name": "Genfersee",
+   "mitte": [
+    -88,
+    90
+   ],
+   "breite": 66,
+   "rang": 5,
+   "erschliessung": 400000,
+   "text": "Der Lac Léman: Wein, Uhren und Seide aus dem Westen.",
+   "preisfaktor": {
+    "Korn": 1.05,
+    "Fisch": 1.0,
+    "Holz": 1.05,
+    "Käse": 1.1,
+    "Eisenerz": 1.15,
+    "Wein": 0.8,
+    "Seide": 1.0,
+    "Tuch": 1.1,
+    "Werkzeug": 1.05,
+    "Zucker": 1.0,
+    "Gewürze": 0.95,
+    "Rohseide": 1.0,
+    "Baumwolle": 1.1,
+    "Trauben": 0.8
+   },
+   "hoehe": 36,
+   "ab_jahr": 1755
+  }
+ ],
+ "verbindungen": [
+  {
+   "id": "linth",
+   "name": "Linth",
+   "art": "fluss",
+   "von": "Schmerikon",
+   "nach": "Weesen",
+   "tage": 2,
+   "fracht": 0.5,
+   "kapazitaet": 90,
+   "zoll": 0.5,
+   "text": "Auf der Linth flussaufwärts: Schmerikon bis Weesen."
+  },
+  {
+   "id": "limmat_aare",
+   "name": "Limmat und Aare",
+   "art": "fluss",
+   "von": "Zürich",
+   "nach": "Basel",
+   "tage": 4,
+   "fracht": 0.9,
+   "kapazitaet": 70,
+   "zoll": 0.6,
+   "text": "Die Wasserstrasse von Zürich über Aare und Rhein nach Basel."
+  },
+  {
+   "id": "rheinfall",
+   "name": "Rheinfall",
+   "art": "fluss",
+   "von": "Konstanz",
+   "nach": "Schaffhausen",
+   "tage": 3,
+   "fracht": 0.8,
+   "kapazitaet": 70,
+   "zoll": 0.7,
+   "text": "Vom Bodensee den Rhein hinab, am Rheinfall wird umgeladen."
+  },
+  {
+   "id": "sarganserland",
+   "name": "Sarganserland",
+   "art": "fuhrweg",
+   "von": "Walenstadt",
+   "nach": "Rorschach",
+   "tage": 5,
+   "fracht": 2.2,
+   "kapazitaet": 40,
+   "zoll": 1.0,
+   "text": "Fuhrwerke von Walenstadt durch das Rheintal nach Rorschach."
+  },
+  {
+   "id": "juraweg",
+   "name": "Jurafuss-Strasse",
+   "art": "fuhrweg",
+   "von": "Genf",
+   "nach": "Basel",
+   "tage": 9,
+   "fracht": 3.0,
+   "kapazitaet": 30,
+   "zoll": 1.2,
+   "text": "Der lange Weg von Genf über Bern und den Jura nach Basel."
+  },
+  {
+   "id": "bahn_zuerich_basel",
+   "name": "Bahn Zürich–Basel",
+   "art": "bahn",
+   "von": "Zürich",
+   "nach": "Basel",
+   "tage": 1,
+   "fracht": 0.8,
+   "kapazitaet": 250,
+   "zoll": 0.4,
+   "rang": 6,
+   "bau_gulden": 800000,
+   "text": "Die Eisenbahn: ein Tag statt vier.",
+   "ab_jahr": 1847
+  },
+  {
+   "id": "bahn_zuerich_konstanz",
+   "name": "Bahn Zürich–Konstanz",
+   "art": "bahn",
+   "von": "Zürich",
+   "nach": "Konstanz",
+   "tage": 1,
+   "fracht": 1.0,
+   "kapazitaet": 200,
+   "zoll": 0.4,
+   "rang": 6,
+   "bau_gulden": 900000,
+   "text": "Über Winterthur an den Bodensee.",
+   "ab_jahr": 1847
+  },
+  {
+   "id": "bahn_lausanne_basel",
+   "name": "Bahn Lausanne–Basel",
+   "art": "bahn",
+   "von": "Lausanne",
+   "nach": "Basel",
+   "tage": 1,
+   "fracht": 1.2,
+   "kapazitaet": 200,
+   "zoll": 0.4,
+   "rang": 6,
+   "bau_gulden": 1500000,
+   "text": "Durch den Jura vom Genfersee an den Rhein.",
+   "ab_jahr": 1847
+  }
+ ]
+}

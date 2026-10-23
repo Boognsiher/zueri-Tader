@@ -70,6 +70,7 @@ export function speichere(spiel) {
       ziel: spiel.ziel.zustand(),
       risiko: spiel.risiko.zustand(),
       zoll: spiel.zoll.zustand(),
+      zonen: spiel.zonen.zustand(),
       spielsekunden: spiel.spielsekunden,
     },
   };
@@ -137,6 +138,7 @@ export function lade(D, stand) {
   spiel.ziel.laden(sp.ziel);
   spiel.risiko.laden(sp.risiko);
   spiel.zoll.laden(sp.zoll);
+  spiel.zonen.laden(sp.zonen);
   spiel.spielsekunden = sp.spielsekunden ?? 0;
   return spiel;
 }

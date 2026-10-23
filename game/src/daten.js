@@ -1,7 +1,7 @@
 // Lädt alle Spielzahlen aus data/*.json, dieselben Dateien, die auch die Simulation liest.
 // Im Browser per fetch, unter Node (Tests) über eine eigene Lesefunktion.
 
-const DATEIEN = ["goods", "recipes", "consumption", "cities", "params", "events", "karte", "spiel", "buildings", "schiffe", "fraktionen", "kapitaene", "ziel", "risiko", "zoll"];
+const DATEIEN = ["goods", "recipes", "consumption", "cities", "params", "events", "karte", "spiel", "buildings", "schiffe", "fraktionen", "kapitaene", "ziel", "risiko", "zoll", "zonen"];
 
 export async function ladeDaten(lesen) {
   const roh = {};
@@ -37,6 +37,7 @@ function aufbereiten(roh) {
     name: s.name,
     einwohner: s.einwohner,
     pos: s.position,
+    zone: s.zone ?? "zuerichsee",
     prod: s.produktion,
     werk: s.werkstaetten,
   }));
@@ -60,6 +61,7 @@ function aufbereiten(roh) {
     ziel: roh.ziel,
     risiko: roh.risiko,
     zoll: roh.zoll,
+    zonen: roh.zonen,
     schiffe: { ...roh.schiffe, typ: Object.fromEntries(roh.schiffe.typen.map((t) => [t.id, t])) },
     fraktionen: {
       ...roh.fraktionen,

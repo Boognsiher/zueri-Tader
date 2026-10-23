@@ -96,6 +96,8 @@ async function start() {
     },
   };
 
+  // Zugang für Entwickler und Browser-Tests (Konsole: zueriTrade.spiel)
+  globalThis.zueriTrade = { get spiel() { return spiel; } };
   let ui;
   const karte = new Karte($("karte"), spiel, {
     stadt: (stadt) => ui.klickStadt(stadt),
@@ -110,6 +112,7 @@ async function start() {
       gulden: $("gulden"),
       warenwert: $("warenwert"),
       ansehen: $("ansehen"),
+      seen: $("seen"),
       flotte: $("flotte"),
       besitz: $("besitz"),
       staende: $("staende"),

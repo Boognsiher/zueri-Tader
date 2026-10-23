@@ -50,6 +50,7 @@ COMFORT = []      # gehobener Bedarf (Zufriedenheit)
 CITIES = []       # Staedte (intern: name, pop, pos, prod, work)
 EVENTS = []       # Zufallsereignisse (events.json)
 DISTANZEN = {}    # (Stadt, Stadt) -> Weglaenge ueber Wasser (karte.json, tools/karte/distanzen.mjs)
+ZONEN = {}        # Zone -> {Ware: Preisfaktor} (zonen.json)
 # Parameter (SPREAD, PRICE_MIN, ...) werden ebenfalls aus params.json als
 # Modulvariablen gesetzt.
 
@@ -61,7 +62,7 @@ def _read(data_dir, name):
 
 def load_data(data_dir=DEFAULT_DATA_DIR):
     """Liest data/*.json in die Modulvariablen."""
-    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN
+    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN, ZONEN
     GOODS = {n: v["basispreis"] for n, v in _read(data_dir, "goods.json")["waren"].items()}
     RECIPES = _read(data_dir, "recipes.json")["rezepte"]
     c = _read(data_dir, "consumption.json")
@@ -69,16 +70,19 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
     BASIC = c["grundbedarf"]
     COMFORT = c["gehobener_bedarf"]
     CITIES = [{"name": s["name"], "pop": s["einwohner"], "pos": tuple(s["position"]),
-               "prod": s["produktion"], "work": s["werkstaetten"]}
+               "prod": s["produktion"], "work": s["werkstaetten"],
+               "zone": s.get("zone", "zuerichsee")}
               for s in _read(data_dir, "cities.json")["staedte"]]
     EVENTS = _read(data_dir, "events.json")["ereignisse"]
+    ZONEN = {z["id"]: z.get("preisfaktor", {}) for z in _read(data_dir, "zonen.json")["zonen"]}   # Preisniveau je Zone und Ware
     DISTANZEN = {}
     for paar, d in _read(data_dir, "karte.json")["distanzen"].items():
         a, b = paar.split("|")
         DISTANZEN[(a, b)] = DISTANZEN[(b, a)] = d
     for a in CITIES:
         for b in CITIES:
-            if a is not b and (a["name"], b["name"]) not in DISTANZEN:
+            # Zwischen Zonen (eigene Seen) gibt es keinen Wasserweg und keine KI-Fahrten
+            if a is not b and a["zone"] == b["zone"] and (a["name"], b["name"]) not in DISTANZEN:
                 raise ValueError(f"Distanz {a['name']} - {b['name']} fehlt in karte.json (node tools/karte/distanzen.mjs)")
     for name, p in _read(data_dir, "params.json")["parameter"].items():
         globals()[name] = p["wert"]
@@ -97,6 +101,8 @@ def price(base, target, stock, k):
 class City:
     def __init__(self, cfg):
         self.name = cfg["name"]
+        self.zone = cfg["zone"]
+        self.pf = ZONEN.get(self.zone, {})   # Preisniveau der Zone je Ware
         self.pop = cfg["pop"]
         self.pop0 = cfg["pop"]               # Startbevoelkerung, Bezug fuer das Wachstum
         self.satisfaction_bonus = 0.0        # Versorgungsgebaeude des Spielers (nur im Spiel)
@@ -144,8 +150,12 @@ class City:
             self.cap[g] = self.cap0[g] * f
 
     # --- Preise -------------------------------------------------------
+    def base(self, g):
+        """Basispreis der Ware in dieser Stadt (Basispreis mal Preisniveau der Zone)."""
+        return GOODS[g] * self.pf.get(g, 1.0)
+
     def mid_price(self, g, k):
-        return price(GOODS[g], self.target[g], self.stock[g], k)
+        return price(self.base(g), self.target[g], self.stock[g], k)
 
     def buy_price(self, g, k):
         return self.mid_price(g, k) * (1 + SPREAD / 2)
@@ -156,7 +166,7 @@ class City:
     def planned_sell_price(self, g, k):
         """Erwarteter Verkaufspreis unter Beruecksichtigung anderer Schiffe unterwegs."""
         s = self.stock[g] + self.incoming[g]
-        return price(GOODS[g], self.target[g], s, k) * (1 - SPREAD / 2)
+        return price(self.base(g), self.target[g], s, k) * (1 - SPREAD / 2)
 
     @staticmethod
     def _mult(table, g, day):
@@ -227,12 +237,11 @@ def travel_days(a, b):
 def quote(src, dst, g, money, k):
     """Optimale Ladungsmenge, simuliert mit Preiswirkung auf beiden Seiten."""
     s_src, s_dst = src.stock[g], dst.stock[g] + dst.incoming[g]
-    base = GOODS[g]
     cost = rev = 0.0
     q = 0
     while q < SHIP_CAP and s_src - q >= 2:
-        mb = price(base, src.target[g], s_src - q, k) * (1 + SPREAD / 2)
-        ms = price(base, dst.target[g], s_dst + q, k) * (1 - SPREAD / 2)
+        mb = price(src.base(g), src.target[g], s_src - q, k) * (1 + SPREAD / 2)
+        ms = price(dst.base(g), dst.target[g], s_dst + q, k) * (1 - SPREAD / 2)
         if ms <= mb or cost + mb > money:
             break
         cost += mb
@@ -285,7 +294,7 @@ class Ship:
                 continue
             pb = src.buy_price(g, k)
             for d in cities:
-                if d is src or day < d.blockade_until or g not in d.stock:
+                if d is src or d.zone != src.zone or day < d.blockade_until or g not in d.stock:
                     continue
                 if d.planned_sell_price(g, k) < pb * (1 + MIN_ROI):
                     continue
@@ -318,7 +327,7 @@ class Ship:
         # Schiffe, die schon leer dorthin unterwegs sind, mindern die Attraktivitaet.
         best, best_rate = None, 0.0
         for c in cities:
-            if c is src or day < c.blockade_until:
+            if c is src or c.zone != src.zone or day < c.blockade_until:
                 continue
             opts = self._options(c, day, cities, k)
             if not opts:
@@ -389,7 +398,7 @@ def record(day, cities, k, stats, writer):
         for c in cities:
             if g in c.stock:
                 p = c.mid_price(g, k)
-                ratio = p / GOODS[g]
+                ratio = p / c.base(g)
                 stats.r_sum[g] += ratio
                 stats.r_sq[g] += ratio * ratio
                 stats.r_n[g] += 1
@@ -409,17 +418,20 @@ def record(day, cities, k, stats, writer):
         stats.sat_n[c.name] += 1
 
 
-def ai_target(cities, args):
-    """Anzahl KI-Haendler: fest (--ships) oder AI_SHIPS_PER_1000 je 1000 Einwohner."""
+def ai_target(cities, args, zone):
+    """Anzahl KI-Haendler einer Zone: AI_SHIPS_PER_1000 je 1000 Einwohner der Zone (--ships: feste
+    Gesamtzahl, nach Einwohnern verteilt). Die Haendler bleiben in ihrer Zone."""
+    pop = sum(c.pop for c in cities if c.zone == zone)
     if args.ships is not None:
-        return args.ships
-    return round(AI_SHIPS_PER_1000 * sum(c.pop for c in cities) / 1000)
+        return round(args.ships * pop / sum(c.pop for c in cities))
+    return round(AI_SHIPS_PER_1000 * pop / 1000)
 
 
 def run(args):
     rng = random.Random(args.seed)
     cities = [City(c) for c in CITIES]
-    ships = [Ship(rng.choice(cities)) for _ in range(ai_target(cities, args))]
+    zones = list(dict.fromkeys(c.zone for c in cities))
+    ships = [Ship(rng.choice([c for c in cities if c.zone == z])) for z in zones for _ in range(ai_target(cities, args, z))]
     stats = Stats()
     stats.ships_start = len(ships)
     writer = None
@@ -442,10 +454,11 @@ def run(args):
             if short and stats.on:
                 stats.short_days[c.name] += 1
         # Mit der Bevoelkerung kommen neue Haendler dazu (es verschwinden keine)
-        while len(ships) < ai_target(cities, args):
-            ships.append(Ship(rng.choice(cities)))
-            if stats.on:
-                stats.injected += START_MONEY
+        for z in zones:
+            while sum(1 for s in ships if s.city.zone == z) < ai_target(cities, args, z):
+                ships.append(Ship(rng.choice([c for c in cities if c.zone == z])))
+                if stats.on:
+                    stats.injected += START_MONEY
         if stats.on:
             stats.ship_days += len(ships)
         order = ships[:]

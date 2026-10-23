@@ -11,10 +11,10 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 
 ## Was die Demo kann
 
-- Seekarte des Zürichsees mit acht Seegemeinden von Zürich bis Schmerikon, Durchfahrt am Seedamm
+- Seekarte des Zürichsees mit acht Seegemeinden von Zürich bis Schmerikon, Durchfahrt am Seedamm. Daneben Walensee, Hochrhein (bis Basel), Bodensee und Genfersee als weitere Zonen (siehe unten)
 - Marktübersicht jeder Stadt in der Seitenleiste: Lager, Kauf- und Verkaufspreis, bestes Gebot in einer anderen Stadt. Grosse Mengen verschieben den Preis (Mengeneffekt).
 - **Steuerung mit der Maus:** Klick auf den See, und das gewählte Schiff segelt dorthin (auch Kurswechsel unterwegs). Klick auf eine Stadt, und es legt dort an. Der Weg führt automatisch über Wasser, zum Obersee durch den Seedamm.
-- **Kamera:** Ein Finger oder die Maus verschiebt die Karte, zwei Finger, Mausrad oder die Knöpfe +/− zoomen. Ein gewähltes Schiff wird zentriert und von der Kamera verfolgt (Knopf ◎), ⤢ zeigt die ganze Karte.
+- **Kamera:** Ein Finger oder die Maus verschiebt die Karte, zwei Finger, Mausrad oder die Knöpfe +/− zoomen. Ein gewähltes Schiff wird zentriert und von der Kamera verfolgt (Knopf ◎), ⤢ zeigt den ganzen See, die Auswahl oben links springt zu einem anderen See.
 - **Schiff abwählen** (nochmals anklicken, Esc oder Knopf «Abwählen»): Ein Klick auf eine Stadt hebt sie dann nur hervor und zeigt sie in der Marktübersicht, ohne dass ein Schiff losfährt. Der Knopf «Stadtfenster öffnen» zeigt Kontor, Betriebe und Werft. Liegt ein eigenes Schiff dort, lässt sich von hier aus mit ihm handeln.
 - **Handelsfenster:** öffnet sich bei der Ankunft im Hafen (oder per Klick auf die Stadt, in der das Schiff liegt) und hält die Zeit an. Darin auch die Option, direkt zu einem anderen Hafen zu segeln, und der Schiffskauf.
 - **Flotten:** Schiffe im selben Hafen zusammenlegen (Laderaum addiert, Tempo des langsamsten), im Hafen wieder auflösen
@@ -26,6 +26,11 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Kontor als Anwesenheit:** Mit einem Kontor geht in der Stadt alles wie mit einem Schiff im Hafen. Im Kontor lassen sich Tage Bedarf der eigenen Werkstätten sperren
 - **Bilanz:** Einnahmen und Ausgaben nach Konten pro Monat und gesamt, Vermögen, Monatsergebnis (Knopf «Bilanz» oben)
 - **Automatik pro Schiff:** Handelsroute mit Aufträgen (kaufen, verkaufen, Kontor laden und entladen, mit Preisgrenzen) oder freier Handel, bei dem der Kapitän selbst die besten Geschäfte sucht (auch mit gemischter Ladung), oder **Versorgen**: nur Städte wählen, das Schiff verteilt Kontor-Ware dorthin, wo deine Werkstätten sie brauchen. Lenkst du das Schiff von Hand, pausiert die Automatik, ▶ in der Flotte nimmt sie wieder auf. Laden und Löschen braucht Liegezeit (voller Laderaum rund 0,8 Tage).
+- **Kapitäne:** in den Wirtshäusern anheuern (Reiter «Wirtshaus»), Stufen 1 bis 10 durch Erfahrung, bessere Fahrt, schnelleres Laden und Kampf, Lohn pro Tag. Sinkt das Schiff, ist der Kapitän Monate verschollen. Ein Schiff geht auch ohne Kapitän
+- **Spielziel:** Rang des Handelshauses (Kleinhändler bis Herr des Sees) aus Vermögen und Ratssitzen. Ratssitze kauft man im Rathaus einer Stadt (Kontor nötig), sie senken Spanne und Zoll. Das Feld «Ansehen» zeigt Fortschritt und Spielzeit
+- **Risiko:** Sturm, Havarie, Überfall und Rückenwind treffen Schiffe auf See, mildern lassen sie sich durch Kapitäne, Wachtschiffe als Geleit und eine Versicherung
+- **Zoll und Verträge:** Verkäufe zahlen Zoll nach Stand und Ware, Handelsvertrag, Ratssitz und Ruf senken ihn, Krieg erhöht ihn
+- **Seen und Verbindungen:** Zonen werden gegen Rang und Gebühr erschlossen (Feld «Seen»). Waren reisen zwischen den Seen von Kontor zu Kontor über Fluss, Fuhrweg oder Bahn (im Reiter «Kontor», Abschnitt «Verbindungen»), mit Fracht, Zoll und Laufzeit
 - **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
 - KI-Händler handeln mit (40 am Anfang, mehr mit wachsender Bevölkerung), als graue Punkte auf dem See sichtbar, aber nur in Sichtweite eigener Schiffe und Städte (`sichtweite` in `data/spiel.json`)
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
@@ -55,6 +60,11 @@ Noch nicht dabei: Spielziel, Verträge und Embargos, Folgen von Kriegen für die
 | `src/kampf.js` | Kriegsschiffe der Stände, Kampfhaltungen, Gefechte |
 | `src/bilanz.js` | Buchhaltung für die Bilanz |
 | `src/karte.js` | Seekarte als SVG |
+| `src/kapitaene.js` | Kapitäne: Wirtshaus, Stufen, Lohn, verschollen |
+| `src/ziel.js` | Spielziel: Rang und Ratssitze |
+| `src/risiko.js` | Sturm, Havarie, Überfall, Rückenwind, Versicherung |
+| `src/zoll.js` | Zoll und Handelsverträge |
+| `src/zonen.js` | Zonen, Erschliessen, Verbindungen, Fracht, Bahn |
 | `src/kamera.js` | Kamera der Karte: Verschieben, Zoomen, Schiff verfolgen |
 | `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Stände, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Werft, Rathaus, Gefechtsbericht, Meldungen |
 | `src/main.js` | Einstieg, Zeitsteuerung, Menü Spielstand |

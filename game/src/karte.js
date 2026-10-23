@@ -110,19 +110,48 @@ export class Karte {
       knoepfe.appendChild(b);
       return b;
     };
-    this.kamera = new Kamera(this.svg, { x: -2, y: -3, b: 109, h: 67 }, (an) => {
+    this.kamera = new Kamera(this.svg, this.D.zonen.welt, (an) => {
       this.verfolgenKnopf.classList.toggle("an", an);
       this.verfolgenKnopf.setAttribute("aria-pressed", String(an));
     });
     knopf("+", "Karte vergrössern", () => this.kamera.zoomeUm(1.6));
     knopf("−", "Karte verkleinern", () => this.kamera.zoomeUm(1 / 1.6));
-    knopf("⤢", "Ganze Karte zeigen", () => this.kamera.ganzeKarte());
+    knopf("⤢", "Ganzen See zeigen", () => this.zeigeZone(this.sichtZone));
     this.verfolgenKnopf = knopf("◎", "Gewähltes Schiff verfolgen", () => {
       const s = this.auswahl.schiff;
       if (s) this.kamera.fokussiere(...this.schiffspunkt(s));
     });
     this.verfolgenKnopf.setAttribute("aria-pressed", "false");
     this.svg.parentElement.appendChild(knoepfe);
+
+    // Zonenwahl: springt zu einem See (die Seen liegen schematisch nebeneinander)
+    const wahl = document.createElement("select");
+    wahl.className = "zonenwahl";
+    wahl.setAttribute("aria-label", "See wählen");
+    wahl.addEventListener("change", () => this.zeigeZone(wahl.value));
+    this.zonenwahl = wahl;
+    this.svg.parentElement.appendChild(wahl);
+    this.fuelleZonenwahl();
+    const start = this.spiel.schiffe[0];
+    this.sichtZone = null;
+    this.zeigeZone((start.ort ?? this.spiel.naechsteStadt(start.pos)).zone);
+  }
+
+  // Alle Seen in der Auswahl; noch nicht erschlossene mit Schloss
+  fuelleZonenwahl() {
+    const z = this.spiel.zonen;
+    const bisher = this.zonenwahl.value;
+    this.zonenwahl.innerHTML = this.D.zonen.zonen
+      .map((zone) => `<option value="${zone.id}">${z.offen(zone.id) ? "" : "🔒 "}${zone.name}</option>`)
+      .join("");
+    if (bisher) this.zonenwahl.value = bisher;
+  }
+
+  zeigeZone(id) {
+    const zone = this.D.zonen.zonen.find((x) => x.id === id) ?? this.D.zonen.zonen[0];
+    this.sichtZone = zone.id;
+    this.zonenwahl.value = zone.id;
+    this.kamera.zeige(zone.mitte[0], zone.mitte[1], zone.breite, zone.hoehe);
   }
 
   // Ungefähre Lage eines Schiffs (im Hafen: die Stadt)
@@ -135,7 +164,8 @@ export class Karte {
   baue() {
     const svg = this.svg;
     const D = this.D;
-    if (!this.kamera) svg.setAttribute("viewBox", "-2 -3 109 67");
+    const W = D.zonen.welt;
+    if (!this.kamera) svg.setAttribute("viewBox", `${W.x} ${W.y} ${W.b} ${W.h}`);
     svg.innerHTML = "";
     if (!this.klickBereit) {
       // Klick auf die Karte (nicht auf Stadt oder Schiff): Ziel auf dem See
@@ -156,7 +186,7 @@ export class Karte {
     el("stop", { offset: "0%", class: "papier-hell" }, papier);
     el("stop", { offset: "100%", class: "papier-dunkel" }, papier);
 
-    el("rect", { x: -2, y: -3, width: 109, height: 67, fill: "url(#papier)" }, svg);
+    el("rect", { x: W.x, y: W.y, width: W.b, height: W.h, fill: "url(#papier)" }, svg);
 
     // Hügel als einfache Schraffur bei den Bergnamen
     const land = el("g", { class: "land" }, svg);
@@ -254,7 +284,12 @@ export class Karte {
     const vorher = this.auswahl.schiff;
     Object.assign(this.auswahl, auswahl);
     // Neues Schiff gewählt: Kamera holt es heran und verfolgt es; ohne Schiff endet die Verfolgung
-    if (this.auswahl.schiff && this.auswahl.schiff !== vorher) this.kamera.fokussiere(...this.schiffspunkt(this.auswahl.schiff));
+    if (this.auswahl.schiff && this.auswahl.schiff !== vorher) {
+      // Liegt das Schiff in einem anderen See, springt die Sicht dorthin
+      const ort = this.auswahl.schiff.ort ?? this.spiel.naechsteStadt(this.auswahl.schiff.pos);
+      if (ort.zone !== this.sichtZone) this.zeigeZone(ort.zone);
+      this.kamera.fokussiere(...this.schiffspunkt(this.auswahl.schiff));
+    }
     else if (!this.auswahl.schiff && vorher) this.kamera.setzeFolgen(false);
   }
 
@@ -392,6 +427,10 @@ export class Karte {
   // Wird nach jedem Tag und nach Aktionen aufgerufen: Auswahl, Fahrzeiten, Routen
   aktualisiere() {
     const spiel = this.spiel;
+    if (this.zonenAnzahl !== spiel.zonen.erschlossen.length) {
+      this.zonenAnzahl = spiel.zonen.erschlossen.length;
+      this.fuelleZonenwahl();
+    }
     const welt = spiel.welt;
     const schiff = this.auswahl.schiff;
     const p = schiff ? spiel.position(schiff) : null;

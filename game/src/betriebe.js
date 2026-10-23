@@ -94,9 +94,9 @@ export class Ausbau {
 
   // Möglicher Tagesgewinn einer Stufe bei Eigenversorgung: Zutaten in der günstigsten Stadt
   // gekauft, Erzeugnisse in der teuersten verkauft, ohne Fahrtkosten. Richtwert für die Anzeige.
-  potenzial(typId) {
+  potenzial(typId, stadt = null) {
     const t = this.typen[typId];
-    const staedte = this.spiel.welt.staedte;
+    const staedte = this.spiel.welt.staedte.filter((x) => !stadt || x.zone === stadt.zone);
     const bester = (g) => Math.max(...staedte.filter((x) => x.handelt(g)).map((x) => x.verkaufspreis(g)));
     const billigster = (g) => Math.min(...staedte.filter((x) => x.handelt(g)).map((x) => x.kaufpreis(g)));
     let brutto = bester(t.ware);

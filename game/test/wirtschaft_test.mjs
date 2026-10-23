@@ -15,6 +15,7 @@
 // 15.  Spielziel: Rang, Ratssitze, Preis, Wirkung, Speichern.
 // 16.  Risiko-Ereignisse und Versicherung.
 // 17.  Zoll und Handelsverträge.
+// 18.  Zonen (weitere Seen), Erschliessen, Verbindungen, Fracht, Bahn.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -32,6 +33,13 @@ const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..",
 const D = await ladeDaten(async (datei) => JSON.parse(await readFile(path.join(DATA, datei), "utf-8")));
 
 let fehler = 0;
+
+// Springt im Kalender auf den 1. Januar des Jahres (Freischaltungen hängen am Jahr)
+function insJahr(spiel, jahr) {
+  const [j, m, t] = spiel.D.spiel.start.datum;
+  spiel.starttag = spiel.welt.tag - Math.round((Date.UTC(jahr, 0, 1) - Date.UTC(j, m - 1, t)) / 86400000);
+  return spiel;
+}
 
 // Für Tests von Fahrzeiten und Lieferketten: ohne Risiko-Ereignisse (Sturm, Überfall ...), die
 // Ankunft und Ladung bewusst verändern. Die Ereignisse selbst prüft Abschnitt 16.
@@ -141,7 +149,7 @@ console.log("\nWegsuche");
   const nav = spiel.nav;
   // Städte, die Durchfahrt am Seedamm und Punkte mitten im See (zwischen gegenüberliegenden Ufern)
   const mitte = (a, b) => [(spiel.welt.stadt[a].pos[0] + spiel.welt.stadt[b].pos[0]) / 2, (spiel.welt.stadt[a].pos[1] + spiel.welt.stadt[b].pos[1]) / 2];
-  const ziele = [...spiel.welt.staedte.map((s) => s.pos), D.karte.durchfahrten[0].position, mitte("Meilen", "Horgen"), mitte("Zürich", "Küsnacht"), mitte("Lachen", "Schmerikon"), mitte("Rapperswil", "Lachen")];
+  const ziele = [...spiel.welt.staedte.filter((s) => s.zone === "zuerichsee").map((s) => s.pos), D.karte.durchfahrten[0].position, mitte("Meilen", "Horgen"), mitte("Zürich", "Küsnacht"), mitte("Lachen", "Schmerikon"), mitte("Rapperswil", "Lachen")];
   let fehlt = 0;
   let ueberLand = 0;
   for (const a of ziele) {
@@ -173,6 +181,14 @@ console.log("\nKarte");
     for (const b of D.staedte) {
       if (a === b) continue;
       const w = nav.route(a.pos, b.pos);
+      if (a.zone !== b.zone) {
+        // zwischen Seen gibt es keinen Wasserweg (Waren reisen über Verbindungen)
+        if (w) {
+          console.log(`   Wasserweg zwischen den Zonen ${a.name} -> ${b.name}`);
+          ueberLand++;
+        }
+        continue;
+      }
       if (!w) {
         ueberLand++;
         continue;
@@ -185,7 +201,7 @@ console.log("\nKarte");
       }
     }
   }
-  pruefe("Alle Städte liegen am Wasser, alle Wege zwischen ihnen führen über Wasser", ueberLand === 0);
+  pruefe("Alle Städte liegen am Wasser, alle Wege innerhalb einer Zone führen über Wasser, zwischen den Zonen gibt es keinen", ueberLand === 0);
   pruefe("Distanzen in karte.json passen zur Karte (sonst: node tools/karte/distanzen.mjs)", abweichung === 0);
 }
 
@@ -256,7 +272,8 @@ console.log("\nAutomatischer Handel");
     { stadt: "Lachen", auftraege: [{ art: "verkaufen", ware: "Seide", menge: null, preis: null }] },
   ]);
   pruefe("Route Zürich - Lachen startet, das Schiff lädt zuerst (Liegezeit)", fehler === null && !schiff.fahrt && schiff.auto.abfahrt > spiel.zeit);
-  spiel.tagVoran();
+  // Ein Föhnsturm am Ziel kann das Ablegen um Tage verzögern (der Zufall hängt von der Städteliste ab)
+  for (let t = 0; t < 20 && !schiff.fahrt; t++) spiel.tagVoran();
   pruefe("Nach dem Laden legt das Schiff ab", !!schiff.fahrt);
   let besuche = 0;
   for (let t = 0; t < 120; t++) {
@@ -811,6 +828,8 @@ console.log("\nSpielziel");
   const zuerich = spiel.welt.stadt["Zürich"];
   pruefe("Start: niedrigster Rang, keine Ratssitze", z.rangIndex === 0 && z.sitze.length === 0);
   spiel.gulden = 10_000_000;
+  pruefe("Im Gründungsjahr hält das Jahr den Aufstieg zurück, trotz viel Geld", z.berechneRang() === 0);
+  insJahr(spiel, 1700);
   pruefe("Viel Geld allein bringt nur den Rang ohne Ratssitze", z.berechneRang() === 1);
   pruefe("Ratssitz ohne Kontor nicht möglich", z.pruefeRatssitz(klein) !== null);
   spiel.schiffe[0].ort = klein;
@@ -834,8 +853,13 @@ console.log("\nSpielziel");
   pruefe("Rang und Ratssitze überstehen Speichern und Laden", JSON.stringify(geladen.ziel.zustand()) === JSON.stringify(z.zustand()));
   // Ziel: alle Ratssitze
   z.sitze = staedte.map((s) => s.name);
+  spiel.gulden = 200_000_000;
+  insJahr(spiel, 1820);
   z.pruefeRang();
-  pruefe("Alle Ratssitze und genug Vermögen: Ziel erreicht", z.amZiel() && z.rang.id === "herr_des_sees");
+  pruefe("Alle Ratssitze und genug Vermögen, aber vor 1830: noch nicht am Ziel", !z.amZiel());
+  insJahr(spiel, 1850);
+  z.pruefeRang();
+  pruefe("Alle Ratssitze, genug Vermögen und das Jahr: Ziel erreicht", z.amZiel() && z.rang.id === "herr_des_sees");
 }
 
 // --- 16. Risiko-Ereignisse ---------------------------------------------------
@@ -952,6 +976,84 @@ console.log("\nZoll");
   const vorher = zoll.satz(zuerich, "Korn");
   spiel.ziel.sitze.push(zuerich.name);
   pruefe("Ratssitz senkt den Zoll", zoll.satz(zuerich, "Korn") < vorher);
+}
+
+// --- 18. Zonen und Verbindungen -------------------------------------------------
+console.log("\nZonen");
+{
+  const spiel = ohneRisiko(new Spiel(D, 14));
+  insJahr(spiel, 1700);
+  const zo = spiel.zonen;
+  const welt = spiel.welt;
+  pruefe(`Alle ${welt.staedte.length} Städte gehören zu einer Zone`, welt.staedte.every((s) => D.zonen.zonen.some((z) => z.id === s.zone)));
+  pruefe("Nur der Zürichsee ist am Anfang offen", zo.erschlossen.length === 1 && zo.offen("zuerichsee") && !zo.offen("walensee"));
+  // KI-Händler bleiben in ihrer Zone
+  const zoneVorher = welt.haendler.map((h) => h.ort.zone);
+  for (let t = 0; t < 40; t++) spiel.tagVoran();
+  const bleiben = welt.haendler.every((h, i) => i >= zoneVorher.length || (h.ziel ? h.ziel.zone : h.ort.zone) === zoneVorher[i]);
+  pruefe("KI-Händler fahren nie in eine andere Zone", bleiben);
+  // Kriege nur innerhalb einer Zone
+  const d = spiel.diplomatie;
+  for (let t = 0; t < 400; t++) d.tag();
+  const kriegsparteien = Object.keys(d.kriege).map((k) => k.split("|").map((id) => d.zoneVon(d.fraktion(id))));
+  pruefe(`Kriege gibt es nur innerhalb einer Zone (${kriegsparteien.length} Kriege geprüft)`, kriegsparteien.every(([a, b]) => a === b));
+
+  // Erschliessen: Rang, Kontor am anderen Ende, Gebühr
+  const schmerikon = welt.stadt["Schmerikon"];
+  const weesen = welt.stadt["Weesen"];
+  spiel.gulden = 1_000_000;
+  pruefe("Erschliessen braucht den Rang", zo.pruefeErschliessen("walensee")?.includes("Rang") === true);
+  insJahr(spiel, 1660);
+  pruefe("Erschliessen braucht auch das Jahr (Walensee ab 1665)", (spiel.ziel.rangIndex = 9, zo.pruefeErschliessen("walensee")?.includes("1665") === true));
+  insJahr(spiel, 1700);
+  spiel.ziel.rangIndex = D.zonen.zonen.find((z) => z.id === "walensee").rang;
+  pruefe("Erschliessen braucht ein Kontor am anderen Ende der Verbindung", zo.pruefeErschliessen("walensee")?.includes("Kontor") === true);
+  spiel.ausbau.kontore[schmerikon.name] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
+  const geld0 = spiel.gulden;
+  pruefe("Mit Rang und Kontor ist Erschliessen möglich", zo.pruefeErschliessen("walensee") === null);
+  pruefe("Der See wird erschlossen: Gebühr gezahlt, Kontor in Weesen", zo.erschliesse("walensee") && zo.offen("walensee") && !!spiel.ausbau.kontor(weesen) && spiel.gulden === geld0 - D.zonen.zonen.find((z) => z.id === "walensee").erschliessung);
+
+  // Fracht: Kontor Schmerikon -> Weesen
+  const v = zo.verbindung("linth");
+  const k = spiel.ausbau.kontor(schmerikon);
+  k.lager.Korn = { menge: 200, einstand: 20 };
+  const vorschau = zo.schicken(v, schmerikon, "Korn", 150, false);
+  pruefe(`Kapazität begrenzt die Sendung (${vorschau} von 150, höchstens ${v.kapazitaet} am Tag)`, vorschau === v.kapazitaet);
+  const g1 = spiel.gulden;
+  const kosten = zo.kosten(v, schmerikon, "Korn", 50);
+  const gesendet = zo.schicken(v, schmerikon, "Korn", 50);
+  pruefe("Fracht und Zoll werden gezahlt und gebucht", gesendet === 50 && Math.abs(spiel.gulden - (g1 - kosten.fracht - kosten.zoll)) < 1e-6 && kosten.fracht > 0 && kosten.zoll > 0 && spiel.konten.gesamt.fracht < 0);
+  pruefe("Die Ware verlässt das Kontor und ist unterwegs", Math.abs(k.lager.Korn.menge - 150) < 1e-9 && zo.unterwegs.length === 1);
+  const kontorWeesen = spiel.ausbau.kontor(weesen);
+  for (let t = 0; t < v.tage - 1; t++) spiel.tagVoran();
+  pruefe("Vor Ablauf der Laufzeit ist nichts angekommen", !kontorWeesen.lager.Korn);
+  spiel.tagVoran();
+  const einstand = 20 + (kosten.fracht + kosten.zoll) / 50;
+  pruefe(`Nach ${v.tage} Tagen liegt die Ware im Kontor Weesen, der Einstand enthält Fracht und Zoll (Ø ${kontorWeesen.lager.Korn?.einstand.toFixed(2)})`, kontorWeesen.lager.Korn?.menge === 50 && Math.abs(kontorWeesen.lager.Korn.einstand - einstand) < 1e-6);
+  // Weiterleiten per Regel
+  zo.setzeWeiter(schmerikon, "Korn", "linth", 100);
+  spiel.tagVoran();
+  pruefe("Regel «weiterleiten» schickt alles über der Reserve", Math.abs(k.lager.Korn.menge - 100) < 1e-6);
+  // Voller Zielspeicher: Ware wartet
+  const voll = spiel.ausbau.lagerFrei(kontorWeesen);
+  kontorWeesen.lager.Holz = { menge: voll, einstand: 1 };
+  spiel.tagVoran();
+  for (let t = 0; t < 4; t++) spiel.tagVoran();
+  pruefe("Bei vollem Lager im Ziel wartet die Lieferung auf der Verbindung", zo.unterwegs.length > 0);
+  // Speichern und Laden
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Zonen und Lieferungen überstehen Speichern und Laden", JSON.stringify(geladen.zonen.zustand()) === JSON.stringify(zo.zustand()) && !!geladen.ausbau.kontor(geladen.welt.stadt["Weesen"]));
+
+  // Bahn: Rang und beide Seen nötig
+  const bahn = zo.verbindung("bahn_zuerich_basel");
+  pruefe("Die Bahn braucht Rang und erschlossene Seen", zo.pruefeBahn(bahn) !== null);
+  spiel.ziel.rangIndex = 7;
+  zo.erschlossen.push("hochrhein");
+  pruefe("Die Eisenbahn gibt es erst ab 1847", zo.pruefeBahn(bahn)?.includes("1847") === true);
+  insJahr(spiel, 1850);
+  const g2 = spiel.gulden;
+  pruefe("Bahn bauen kostet den Einmalpreis", zo.baueBahn(bahn) && spiel.gulden === g2 - bahn.bau_gulden && zo.gebaut(bahn));
+  pruefe("Vor dem Bau ist eine Bahn nicht benutzbar", !zo.gebaut(zo.verbindung("bahn_lausanne_basel")));
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

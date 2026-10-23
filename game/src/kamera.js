@@ -3,8 +3,9 @@
 // Ein Finger oder die Maus verschiebt, zwei Finger oder das Mausrad zoomen. Ein kurzes Tippen
 // ohne Bewegung geht weiter an die Karte (Stadt, Schiff, Ziel auf dem See).
 
-const ZOOM_MAX = 8; // mal der Stufe, bei der die ganze Karte sichtbar ist
-const ZOOM_SCHIFF = 2.6; // Stufe, auf die ein gewähltes Schiff herangeholt wird
+const MIN_BREITE = 8; // schmalster Ausschnitt in Karteneinheiten (stärkster Zoom)
+const SCHIFF_BREITE = 42; // Ausschnitt in Karteneinheiten, auf den ein gewähltes Schiff herangeholt wird
+const FOLGE_BREITE = 70; // nur wenn der Ausschnitt schmaler ist, folgt die Kamera dem Schiff
 const SCHWELLE = 6; // Pixel, ab denen eine Berührung als Verschieben gilt
 const FOLGE_TEMPO = 0.2; // Anteil des Wegs zum Schiff, der pro Bild zurückgelegt wird
 
@@ -22,6 +23,7 @@ export class Kamera {
     this.ziehen = null;
     this.klickUnterdruecken = false;
     this.viewBox = "";
+    this.wunsch = null; // gewünschter Ausschnitt, solange das Kartenfeld noch keine Grösse hat
     this.messe();
     new ResizeObserver(() => this.messe()).observe(svg);
     this.verdrahte();
@@ -33,6 +35,35 @@ export class Kamera {
     this.B = r.width;
     this.H = r.height;
     this.sMin = this.B > 0 && this.H > 0 ? Math.min(this.B / this.g.b, this.H / this.g.h) : 0;
+    if (this.sMin && this.wunsch) {
+      const w = this.wunsch;
+      this.wunsch = null;
+      this.zeige(w.x, w.y, w.breite, w.hoehe);
+      return;
+    }
+    this.anwenden();
+  }
+
+  get zoomMax() {
+    return this.sMin ? this.B / MIN_BREITE / this.sMin : 1;
+  }
+
+  // Breite des sichtbaren Ausschnitts in Karteneinheiten
+  get breite() {
+    return this.massstab ? this.B / this.massstab : this.g.b;
+  }
+
+  // Ausschnitt um (x, y) zeigen, in dem ein Rechteck breite mal hoehe (Karteneinheiten) ganz sichtbar ist
+  zeige(x, y, breite, hoehe = 0) {
+    this.setzeFolgen(false);
+    if (!this.sMin) {
+      this.wunsch = { x, y, breite, hoehe };
+      return;
+    }
+    const s = Math.min(this.B / breite, hoehe ? this.H / hoehe : Infinity);
+    this.zoom = Math.min(this.zoomMax, Math.max(1, s / this.sMin));
+    this.cx = x;
+    this.cy = y;
     this.anwenden();
   }
 
@@ -72,7 +103,7 @@ export class Kamera {
     if (!s0) return;
     const wx = this.cx + (px - this.B / 2) / s0;
     const wy = this.cy + (py - this.H / 2) / s0;
-    this.zoom = Math.min(ZOOM_MAX, Math.max(1, this.zoom * faktor));
+    this.zoom = Math.min(this.zoomMax, Math.max(1, this.zoom * faktor));
     const s1 = this.massstab;
     this.cx = wx - (px - this.B / 2) / s1;
     this.cy = wy - (py - this.H / 2) / s1;
@@ -96,7 +127,7 @@ export class Kamera {
   // Ein Schiff wurde gewählt: heranholen und verfolgen (am Computer nur verfolgen, wenn schon gezoomt)
   fokussiere(x, y) {
     this.setzeFolgen(true);
-    if (this.schmal() && this.zoom < ZOOM_SCHIFF) this.zoom = ZOOM_SCHIFF;
+    if (this.schmal() && this.sMin && this.breite > SCHIFF_BREITE) this.zoom = Math.min(this.zoomMax, this.B / SCHIFF_BREITE / this.sMin);
     if (x !== undefined) {
       this.cx = x;
       this.cy = y;
@@ -106,7 +137,7 @@ export class Kamera {
 
   // Bei jedem Bild: Kamera zieht dem Schiff nach
   folge(x, y) {
-    if (!this.folgen || this.ziehen) return;
+    if (!this.folgen || this.ziehen || this.breite > FOLGE_BREITE) return;
     const ferne = Math.hypot(x - this.cx, y - this.cy);
     const f = ferne < 0.05 ? 1 : FOLGE_TEMPO;
     this.cx += (x - this.cx) * f;

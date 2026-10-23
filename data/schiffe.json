@@ -17,7 +17,7 @@
   ],
   "kampf": {"gefechtsweite": 1.5, "jagdweite": 10, "sammelweite": 4, "runden": 8, "schaden_faktor": 1.5, "flucht_chance": 0.45, "ruhe_tage": 1,
             "reparatur_anteil_pro_tag": 0.15, "reparatur_kosten_je_punkt": 30, "patrouille_tage": 4},
-  "werften": ["Zürich", "Wädenswil", "Rapperswil"],
+  "werften": ["Zürich", "Wädenswil", "Rapperswil", "Walenstadt", "Basel", "Konstanz", "Lindau", "Genf", "Lausanne"],
   "verkaufsanteil": 0.5,
   "gebraucht": {"chance_pro_tag": 0.04, "dauer_tage": 30, "max_angebote": 3, "rabatt_min": 0.2, "rabatt_max": 0.4, "unterhalt_faktor": 1.3}
 }

@@ -1,20 +1,81 @@
 {
-  "_info": "Spielziel: Aufstieg im Rang des Handelshauses und Ratssitze in den Städten. Wird nur vom Spiel gelesen (game/src/ziel.js), nicht von der Simulation. Der Rang hängt vom Vermögen (Bargeld, Waren, Schiffe, Betriebe) und von der Zahl der Ratssitze ab: Es zählt der höchste Rang, dessen Vermögen und Ratssitze beide erreicht sind. Ein Ratssitz kostet je Einwohner der Stadt preis_je_einwohner Gulden, jeder bereits gehaltene Sitz macht den nächsten um teuerung_je_sitz teurer. Voraussetzungen: ein Kontor in der Stadt, der Stand ist dir nicht feindlich gesinnt und der Rang ist mindestens rang_min (je Stadt, sonst standard). Wirkung eines Sitzes: spanne_rabatt weniger Handelsspanne in der Stadt und ratsanteil_je_einwohner Gulden pro Tag (dein Anteil an Marktgebühren, später Zoll). Am Ziel ist, wer den höchsten Rang hat. Die Zahlen sind Startwerte, die Spielzeit bis zum Ziel (angestrebt etwa 25 Stunden) wird mit dem Spielzeitzähler gemessen und dann abgestimmt.",
-  "raenge": [
-    {"id": "kleinhaendler", "name": "Kleinhändler", "vermoegen": 0, "ratssitze": 0, "text": "Ein Nauen, ein paar Gulden und viel Mut."},
-    {"id": "kaufmann", "name": "Kaufmann", "vermoegen": 25000, "ratssitze": 0, "text": "Die Seegemeinden kennen dein Zeichen."},
-    {"id": "handelsherr", "name": "Handelsherr", "vermoegen": 60000, "ratssitze": 1, "text": "Dein Wort gilt in einem Rat."},
-    {"id": "grosskaufmann", "name": "Grosskaufmann", "vermoegen": 150000, "ratssitze": 2, "text": "Eine Flotte, Kontore und zwei Ratsstimmen."},
-    {"id": "zunftmeister", "name": "Zunftmeister", "vermoegen": 350000, "ratssitze": 3, "text": "Die Zünfte hören auf dich."},
-    {"id": "ratsherr", "name": "Ratsherr", "vermoegen": 800000, "ratssitze": 4, "text": "Die halbe Küste sitzt mit dir am Tisch."},
-    {"id": "handelsfuerst", "name": "Handelsfürst", "vermoegen": 1800000, "ratssitze": 6, "text": "Ohne dich bewegt sich am See kaum noch eine Ladung."},
-    {"id": "herr_des_sees", "name": "Herr des Sees", "vermoegen": 4000000, "ratssitze": 8, "text": "Du sitzt in jedem Rat am See. Mehr Ansehen gibt es nicht."}
-  ],
-  "ratssitz": {
-    "preis_je_einwohner": 40,
-    "teuerung_je_sitz": 0.25,
-    "spanne_rabatt": 0.01,
-    "ratsanteil_je_einwohner": 0.01,
-    "rang_min": {"standard": 2, "Wädenswil": 3, "Rapperswil": 3, "Zürich": 4}
+ "_info": "Spielziel: Aufstieg im Rang des Handelshauses und Ratssitze in den Städten. Wird nur vom Spiel gelesen (game/src/ziel.js), nicht von der Simulation. Der Rang hängt vom Vermögen (Bargeld, Waren, Schiffe, Betriebe), von der Zahl der Ratssitze und vom Kalenderjahr ab: Es zählt der höchste Rang, dessen Vermögen, Ratssitze und ab_jahr alle erreicht sind. Das Jahr bremst den Aufstieg, weil Vermögen im Spiel schnell wächst (Bot-Messung, tools/sim/spieler_bot.mjs): ein tüchtiger Spieler hat Millionen nach rund drei Spieljahren. Die Jahre sind so gewählt, dass bei mittlerem Tempo (rund 3000 Spieltage pro Stunde) nach etwa 23 bis 25 Stunden alles frei ist: Rang Herr des Sees 1830, die Eisenbahn 1847 (historisch erst ab 1847). Wie viele Spieltage pro Stunde wirklich vergehen, zeigt das Feld «Ansehen». Ein Ratssitz kostet je Einwohner der Stadt preis_je_einwohner Gulden, jeder bereits gehaltene Sitz macht den nächsten um teuerung_je_sitz teurer. Voraussetzungen: ein Kontor in der Stadt, der Stand ist dir nicht feindlich gesinnt und der Rang ist mindestens rang_min (je Stadt, sonst standard). Wirkung eines Sitzes: spanne_rabatt weniger Handelsspanne in der Stadt und ratsanteil_je_einwohner Gulden pro Tag (dein Anteil an Marktgebühren, später Zoll). Am Ziel ist, wer den höchsten Rang hat. Preise und Gebühren sind auf das Einkommen eines ausgebauten Handelshauses abgestimmt (Bot: rund 3 Mio. Gulden pro Spieljahr), damit sie auch spät noch ins Gewicht fallen. Die Zahlen sind Startwerte, die Spielzeit bis zum Ziel (angestrebt etwa 25 Stunden) wird mit dem Spielzeitzähler gemessen und dann über ab_jahr abgestimmt.",
+ "raenge": [
+  {
+   "id": "kleinhaendler",
+   "name": "Kleinhändler",
+   "vermoegen": 0,
+   "ratssitze": 0,
+   "text": "Ein Nauen, ein paar Gulden und viel Mut.",
+   "ab_jahr": 1650
+  },
+  {
+   "id": "kaufmann",
+   "name": "Kaufmann",
+   "vermoegen": 25000,
+   "ratssitze": 0,
+   "text": "Die Seegemeinden kennen dein Zeichen.",
+   "ab_jahr": 1652
+  },
+  {
+   "id": "handelsherr",
+   "name": "Handelsherr",
+   "vermoegen": 100000,
+   "ratssitze": 1,
+   "text": "Dein Wort gilt in einem Rat.",
+   "ab_jahr": 1665
+  },
+  {
+   "id": "grosskaufmann",
+   "name": "Grosskaufmann",
+   "vermoegen": 400000,
+   "ratssitze": 2,
+   "text": "Eine Flotte, Kontore und zwei Ratsstimmen.",
+   "ab_jahr": 1690
+  },
+  {
+   "id": "zunftmeister",
+   "name": "Zunftmeister",
+   "vermoegen": 1500000,
+   "ratssitze": 3,
+   "text": "Die Zünfte hören auf dich.",
+   "ab_jahr": 1720
+  },
+  {
+   "id": "ratsherr",
+   "name": "Ratsherr",
+   "vermoegen": 6000000,
+   "ratssitze": 4,
+   "text": "Die halbe Küste sitzt mit dir am Tisch.",
+   "ab_jahr": 1755
+  },
+  {
+   "id": "handelsfuerst",
+   "name": "Handelsfürst",
+   "vermoegen": 25000000,
+   "ratssitze": 6,
+   "text": "Ohne dich bewegt sich am See kaum noch eine Ladung.",
+   "ab_jahr": 1795
+  },
+  {
+   "id": "herr_des_sees",
+   "name": "Herr des Sees",
+   "vermoegen": 100000000,
+   "ratssitze": 8,
+   "text": "Du sitzt in jedem Rat am See. Mehr Ansehen gibt es nicht.",
+   "ab_jahr": 1830
   }
+ ],
+ "ratssitz": {
+  "preis_je_einwohner": 400,
+  "teuerung_je_sitz": 0.25,
+  "spanne_rabatt": 0.01,
+  "ratsanteil_je_einwohner": 0.01,
+  "rang_min": {
+   "standard": 2,
+   "Wädenswil": 3,
+   "Rapperswil": 3,
+   "Zürich": 4
+  }
+ }
 }

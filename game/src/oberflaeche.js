@@ -48,6 +48,7 @@ export class Oberflaeche {
     this.fensterStadt = null;
     this.routenfenster = null; // wird von main.js gesetzt
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
+    this.e.seen.addEventListener("click", (ev) => this.klickSeen(ev));
     this.e.gefecht.addEventListener("click", (ev) => {
       if (ev.target.closest("[data-gefecht-zu]")) this.schliesseGefecht();
     });
@@ -72,6 +73,12 @@ export class Oberflaeche {
       const sperrWare = ev.target.dataset.sperre;
       if (sperrWare) {
         this.spiel.ausbau.setzeSperre(this.fensterStadt, sperrWare, ev.target.value === "" ? 0 : Number(ev.target.value));
+        this.aktualisiere();
+        return;
+      }
+      const weiterWare = ev.target.dataset.weiter;
+      if (weiterWare) {
+        this.spiel.zonen.setzeWeiter(this.fensterStadt, weiterWare, ev.target.dataset.verbindung, ev.target.value === "" ? null : Math.max(0, Number(ev.target.value)));
         this.aktualisiere();
         return;
       }
@@ -187,6 +194,7 @@ export class Oberflaeche {
     if (this.handelOffen && this.fensterSchiff && !this.spiel.imHafen(this.fensterSchiff)) this.schliesseHandel();
     this.kopf();
     this.ansehen();
+    this.seen();
     this.flotte();
     this.besitz();
     this.marktuebersicht();
@@ -333,8 +341,10 @@ export class Oberflaeche {
     const stadt = this.stadt;
     const zufr = Math.round(stadt.zufriedenheit);
     let html = `<h2>Marktübersicht</h2>
-      <label class="stadtwahl">Stadt <select name="stadtwahl">${welt.staedte
-        .map((x, i) => `<option value="${i}" ${x === stadt ? "selected" : ""}>${esc(x.name)}</option>`)
+      <label class="stadtwahl">Stadt <select name="stadtwahl">${this.D.zonen.zonen
+        .map((z) => `<optgroup label="${esc(z.name)}">${welt.staedte
+          .map((x, i) => (x.zone === z.id ? `<option value="${i}" ${x === stadt ? "selected" : ""}>${esc(x.name)}</option>` : ""))
+          .join("")}</optgroup>`)
         .join("")}</select></label>
       ${this.stadtzahlen(stadt)}
       <button data-stadtfenster>Stadtfenster öffnen: Kontor, Betriebe${this.spiel.werft.istWerft(stadt) || this.spiel.werft.angeboteIn(stadt).length ? ", Werft" : ""}</button>`;
@@ -401,11 +411,11 @@ export class Oberflaeche {
         ohneMarkt.push(g);
         continue;
       }
-      const verhaeltnis = stadt.mittelpreis(g) / D.waren[g];
+      const verhaeltnis = stadt.mittelpreis(g) / stadt.basispreis(g);
       const klasse = verhaeltnis <= farbe.guenstig ? "guenstig" : verhaeltnis >= farbe.teuer ? "teuer" : "";
       let beste = null;
       for (const andere of welt.staedte) {
-        if (andere === stadt || !andere.handelt(g)) continue;
+        if (andere === stadt || andere.zone !== stadt.zone || !andere.handelt(g)) continue;
         const p = s.verkaufspreis(andere, g);
         if (!beste || p > beste.p) beste = { stadt: andere, p };
       }
@@ -507,7 +517,7 @@ export class Oberflaeche {
 
     html += `<details class="direktfahrt"><summary>Direkt zu einem Hafen segeln</summary><div class="ziele">`;
     for (const ziel of welt.staedte) {
-      if (ziel === stadt) continue;
+      if (ziel === stadt || ziel.zone !== stadt.zone) continue;
       const feindlich = s.diplomatie.hafenGesperrt(ziel);
       const gesperrt = ziel.gesperrt(welt.tag) || feindlich;
       const tage = this.tage(stadt.pos, ziel.pos, s.tempo(schiff));
@@ -582,6 +592,47 @@ export class Oberflaeche {
       html += `<tr><td>${esc(g)}${bedarf ? `<small>Bedarf ${f(bedarf)}/Tag</small>` : ""}</td><td>${feld("kaufenBis", "aus")}</td><td>${feld("kaufPreis", "egal")}</td><td>${feld("verkaufenUeber", "aus")}</td><td>${feld("verkaufPreis", "egal")}</td><td>${sperre}</td></tr>`;
     }
     html += `</tbody></table></details>`;
+    html += this.verbindungsAbschnitt(stadt, k, wunsch);
+    return html;
+  }
+
+  // Verbindungen zu anderen Seen: Waren aus dem Kontor schicken, Regeln zum Weiterleiten
+  verbindungsAbschnitt(stadt, k, wunsch) {
+    const s = this.spiel;
+    const zo = s.zonen;
+    const liste = zo.verbindungenVon(stadt);
+    if (!liste.length) return "";
+    const art = { fluss: "Fluss", fuhrweg: "Fuhrweg", bahn: "Bahn" };
+    let html = `<h3>Verbindungen</h3><p class="hilfe">Zwischen den Seen reisen Waren von Kontor zu Kontor, nicht mit dem Schiff. Am anderen Ende handeln deine Schiffe und das Kontor weiter. Fracht und Zoll der Zielstadt zahlst du beim Absenden, der Zoll hängt vom Stand, der Ware und deinen Verträgen ab.</p>`;
+    for (const { v, ziel } of liste) {
+      const grund = zo.pruefeFracht(v, stadt);
+      const frei = zo.freieKapazitaet(v, stadt);
+      const unterwegs = zo.unterwegs.filter((l) => l.v === v.id && l.nach === ziel.name).reduce((x, l) => x + l.menge, 0);
+      html += `<details class="regeln verbindung" ${!grund ? "open" : ""}><summary><b>${art[v.art]} ${esc(v.name)}</b> nach ${esc(ziel.name)} (${esc(ziel.zone === stadt.zone ? "" : s.zonen.zone(ziel.zone).name)}) · ${v.tage} ${v.tage === 1 ? "Tag" : "Tage"} · Fracht ${f(v.fracht)} Gulden je Stück · heute noch ${f(frei)} von ${f(v.kapazitaet)}${unterwegs ? ` · ${f(unterwegs)} unterwegs` : ""}</summary>
+        <p class="hilfe">${esc(v.text)}</p>`;
+      if (v.art === "bahn" && !zo.gebaut(v)) {
+        const g = zo.pruefeBahn(v);
+        html += `<button class="haupt" data-bahnbau="${v.id}" ${g ? "disabled" : ""} title="${esc(g ?? "")}">Bahn bauen: ${f(v.bau_gulden)} Gulden</button>${g ? ` <span class="hinweis">${esc(g)}</span>` : ""}</details>`;
+        continue;
+      }
+      if (grund) {
+        html += `<p class="hinweis">${esc(grund)}</p></details>`;
+        continue;
+      }
+      html += `<table class="markt"><thead><tr><th>Ware</th><th>Kontor</th><th>Kosten (Menge ${this.menge === "max" ? "alles" : this.menge})</th><th></th><th>automatisch über</th></tr></thead><tbody>`;
+      const waren = Object.keys(this.D.waren).filter((g) => k.lager[g] || k.weiter?.[g]?.v === v.id);
+      if (!waren.length) html += `<tr><td colspan="5" class="hilfe">Nichts im Kontor zum Verschicken.</td></tr>`;
+      for (const g of waren) {
+        const m = zo.schicken(v, stadt, g, wunsch, false);
+        const kosten = m ? zo.kosten(v, stadt, g, m) : null;
+        const regel = k.weiter?.[g];
+        html += `<tr><td class="ware">${esc(g)}</td><td class="zahl">${k.lager[g] ? f(k.lager[g].menge) : "–"}</td>
+          <td class="zahl">${kosten ? `${f(m)} Stück: Fracht ${f(kosten.fracht)}, Zoll ${f(kosten.zoll)}` : "–"}</td>
+          <td class="aktionen"><button data-fracht="${v.id}" data-ware="${esc(g)}" ${m ? "" : "disabled"}>senden</button></td>
+          <td><input type="number" min="0" placeholder="aus" value="${regel?.v === v.id ? regel.ueber : ""}" data-weiter="${esc(g)}" data-verbindung="${v.id}" aria-label="${esc(g)} automatisch über">${regel && regel.v !== v.id ? `<small>läuft über ${esc(regel.v)}</small>` : ""}</td></tr>`;
+      }
+      html += `</tbody></table></details>`;
+    }
     return html;
   }
 
@@ -611,7 +662,7 @@ export class Oberflaeche {
             ${stufe < max ? this.knopf(`data-betrieb-ausbau="${b.nr}"`, `ausbauen auf Stufe ${stufe + 1}: ${esc(this.kostentext(a.baukosten(b.typ, stadt).gulden, a.baukosten(b.typ, stadt).material))}`, a.pruefeBetriebsausbau(b)) : ""}
             <button data-betrieb-verkauf="${b.nr}">an die Stadt verkaufen: ${f(a.verkaufserloes(b))} Gulden</button></div>`;
       } else {
-        const pot = a.potenzial(b.typ) * stufe;
+        const pot = a.potenzial(b.typ, stadt) * stufe;
         html += `<div class="betriebinfo">gehört der Stadt · am Markt ${erwartet >= 0 ? "+" : "−"}${f(Math.abs(erwartet))} Gulden pro Tag${t.art === "werkstatt" ? ` · mit Eigenversorgung bis ${pot >= 0 ? "+" : "−"}${f(Math.abs(pot))} (Zutaten günstig gekauft, Ware teuer verkauft, ohne Fahrtkosten)` : ""}</div>
           <div class="betriebknoepfe">${this.knopf(`data-betrieb-kauf="${b.nr}"`, `kaufen: ${f(a.kaufpreisBetrieb(b))} Gulden`, a.pruefeKauf(b), true)}</div>`;
       }
@@ -707,7 +758,7 @@ export class Oberflaeche {
     const balken = (wert, ziel) => `<span class="balken" aria-hidden="true"><span style="display:block;height:100%;width:${Math.min(100, (100 * wert) / Math.max(ziel, 1))}%;background:var(--gruen)"></span></span>`;
     let html = `<h2>Ansehen</h2><p class="rang"><b>${esc(rang.name)}</b> <small>${esc(rang.text)}</small></p>`;
     if (naechster) {
-      html += `<p class="klein">Nächster Rang: <b>${esc(naechster.name)}</b></p>
+      html += `<p class="klein">Nächster Rang: <b>${esc(naechster.name)}</b> <small>frühestens ${naechster.ab_jahr}${s.jahr() >= naechster.ab_jahr ? " (erreicht)" : ""}</small></p>
         <p class="klein">Vermögen ${f(v)} von ${f(naechster.vermoegen)} ${balken(v, naechster.vermoegen)}</p>
         <p class="klein">Ratssitze ${z.sitze.length} von ${naechster.ratssitze}${naechster.ratssitze ? ` ${balken(z.sitze.length, naechster.ratssitze)}` : ""}</p>`;
     } else {
@@ -715,8 +766,38 @@ export class Oberflaeche {
     }
     html += `<p class="klein">Ratssitze: ${z.sitze.length ? esc(z.sitze.join(", ")) : "noch keine"} (${z.sitze.length} von ${sitzeGesamt}). Kaufen im Handelsfenster unter «Rathaus», Kontor nötig.</p>`;
     const sek = Math.floor(s.spielsekunden);
-    html += `<p class="klein">Spielzeit ${Math.floor(sek / 3600)} h ${String(Math.floor((sek % 3600) / 60)).padStart(2, "0")} min</p>`;
+    const tageProStunde = sek >= 300 ? Math.round((s.tag / sek) * 3600) : null;
+    html += `<p class="klein">Spielzeit ${Math.floor(sek / 3600)} h ${String(Math.floor((sek % 3600) / 60)).padStart(2, "0")} min · ${f(s.tag)} Spieltage${tageProStunde ? ` (rund ${f(tageProStunde)} pro Stunde)` : ""}</p>`;
     this.e.ansehen.innerHTML = html;
+  }
+
+  // Seitenleiste: die Seen mit Stand der Erschliessung
+  seen() {
+    const s = this.spiel;
+    const zo = s.zonen;
+    let html = `<h2>Seen</h2><ul class="seeliste">`;
+    for (const zone of this.D.zonen.zonen) {
+      const offen = zo.offen(zone.id);
+      const grund = offen ? null : zo.pruefeErschliessen(zone.id);
+      const kontore = s.welt.staedte.filter((x) => x.zone === zone.id && s.ausbau.kontor(x)).length;
+      const schiffe = s.schiffe.filter((x) => (x.ort ?? s.naechsteStadt(x.pos)).zone === zone.id).length;
+      html += `<li class="${offen ? "" : "gesperrt"}"><div><b>${offen ? "" : "🔒 "}${esc(zone.name)}</b> <small>${esc(zone.text)}</small></div>
+        <div class="klein">${offen ? `${kontore} Kontor${kontore === 1 ? "" : "e"} · ${schiffe} Schiff${schiffe === 1 ? "" : "e"}` : `Rang «${esc(s.ziel.raenge[zone.rang].name)}», ab ${zone.ab_jahr}, ${f(zone.erschliessung)} Gulden`}
+          <button data-zone-zeige="${zone.id}" title="Karte zu diesem See bewegen">anzeigen</button>
+          ${offen ? "" : `<button class="haupt" data-zone-erschliessen="${zone.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">erschliessen</button>`}</div>${!offen && grund ? `<div class="hinweis">${esc(grund)}</div>` : ""}</li>`;
+    }
+    html += `</ul>`;
+    this.e.seen.innerHTML = html;
+  }
+
+  klickSeen(ev) {
+    const knopf = ev.target.closest("button");
+    if (!knopf) return;
+    if (knopf.dataset.zoneZeige) this.karte.zeigeZone(knopf.dataset.zoneZeige);
+    else if (knopf.dataset.zoneErschliessen) {
+      this.spiel.zonen.erschliesse(knopf.dataset.zoneErschliessen);
+      this.aktualisiere();
+    }
   }
 
   // Zeile in der Flottenliste: Kapitän des Schiffs mit Stufe
@@ -1089,6 +1170,12 @@ export class Oberflaeche {
       s.diplomatie.kaufeKaperbrief(stadt);
     } else if (d.kaperbriefZurueck) {
       s.diplomatie.gibZurueck(d.kaperbriefZurueck);
+    } else if (d.fracht) {
+      const v = s.zonen.verbindung(d.fracht);
+      const m = s.zonen.schicken(v, stadt, d.ware, wunsch);
+      if (m) s.melde(`${m} ${d.ware} aus dem Kontor ${stadt.name} auf die Verbindung ${v.name} geschickt.`, "handel");
+    } else if (d.bahnbau) {
+      s.zonen.baueBahn(s.zonen.verbindung(d.bahnbau));
     } else if (d.vertrag !== undefined) {
       s.zoll.schliesseVertrag(stadt);
     } else if (d.ratssitz !== undefined) {

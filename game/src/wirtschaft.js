@@ -42,6 +42,8 @@ export class Stadt {
     this.zufriedenheitBonus = 0; // Versorgungsgebäude des Spielers (betriebe.js)
     this.wohnraumBonus = 0; // zusätzlicher Wohnraum als Anteil der Startbevölkerung
     this.pos = cfg.pos;
+    this.zone = cfg.zone; // Wirtschaftszone (zonen.json): KI-Händler handeln nur innerhalb einer Zone
+    this.preisfaktor = D.zonen?.zonen.find((z) => z.id === cfg.zone)?.preisfaktor ?? {}; // Preisniveau der Zone je Ware
     // Kopien: Betriebe des Spielers verschieben Leistung zwischen Stadt und Spieler (betriebe.js)
     this.prod = { ...cfg.prod };
     this.werk = { ...cfg.werk };
@@ -110,8 +112,13 @@ export class Stadt {
   }
 
   // Preise, wahlweise für einen angenommenen Lagerbestand (Mengeneffekt)
+  // Basispreis der Ware in dieser Stadt (Basispreis mal Preisniveau der Zone)
+  basispreis(g) {
+    return this.D.waren[g] * (this.preisfaktor[g] ?? 1);
+  }
+
   mittelpreis(g, bestand = this.bestand[g]) {
-    return preis(this.D, this.D.waren[g], this.ziel[g], bestand);
+    return preis(this.D, this.basispreis(g), this.ziel[g], bestand);
   }
 
   kaufpreis(g, bestand) {
@@ -264,7 +271,7 @@ export class Haendler {
       if (von.bestand[g] < 5) continue;
       const kauf = von.kaufpreis(g);
       for (const nach of welt.staedte) {
-        if (nach === von || nach.gesperrt(tag) || !nach.handelt(g)) continue;
+        if (nach === von || nach.zone !== von.zone || nach.gesperrt(tag) || !nach.handelt(g)) continue;
         if (nach.geplanterVerkaufspreis(g) < kauf * (1 + p.MIN_ROI)) continue;
         // laderaum: nur gesetzt, wenn der freie Handel des Spielers diese Bewertung nutzt
         const { menge, kosten, erloes } = angebot(this.D, von, nach, g, this.geld, this.laderaum ?? p.SHIP_CAP);
@@ -302,7 +309,7 @@ export class Haendler {
     let beste = null;
     let besteRate = 0;
     for (const stadt of welt.staedte) {
-      if (stadt === von || stadt.gesperrt(tag)) continue;
+      if (stadt === von || stadt.zone !== von.zone || stadt.gesperrt(tag)) continue;
       const dort = this.optionen(stadt, tag, welt);
       if (!dort.length) continue;
       const anfahrt = welt.fahrtage(von, stadt);
@@ -334,17 +341,21 @@ export class Welt {
     this.tag = 0; // nächster zu rechnender Tag
     this.staedte = D.staedte.map((c) => new Stadt(c, D));
     this.stadt = Object.fromEntries(this.staedte.map((s) => [s.name, s]));
+    this.zonen = [...new Set(this.staedte.map((s) => s.zone))]; // Zonen in der Reihenfolge der Städte
     this.haendler = [];
-    for (let i = 0; i < this.kiZiel(); i++) this.haendler.push(new Haendler(this.zufall.wahl(this.staedte), D));
+    for (const zone of this.zonen) {
+      for (let i = 0; i < this.kiZiel(zone); i++) this.haendler.push(new Haendler(this.zufall.wahl(this.staedte.filter((s) => s.zone === zone)), D));
+    }
     this.st = null; // Statistik, nur in Tests
     this.tageCache = {};
     this.wegCache = {};
     this.nav = null; // Wegsuche für die Darstellung der KI-Fahrten, erst bei Bedarf
   }
 
-  // Anzahl KI-Händler: AI_SHIPS_PER_1000 je 1000 Einwohner aller Städte
-  kiZiel() {
-    return Math.round((this.D.p.AI_SHIPS_PER_1000 * this.staedte.reduce((a, s) => a + s.einwohner, 0)) / 1000);
+  // Anzahl KI-Händler einer Zone: AI_SHIPS_PER_1000 je 1000 Einwohner der Zone. Die Händler bleiben
+  // in ihrer Zone, darum wird je Zone gerechnet (sonst könnte ein See zufällig zu wenige bekommen).
+  kiZiel(zone) {
+    return Math.round((this.D.p.AI_SHIPS_PER_1000 * this.staedte.filter((s) => s.zone === zone).reduce((a, s) => a + s.einwohner, 0)) / 1000);
   }
 
   fahrtage(a, b) {
@@ -374,9 +385,12 @@ export class Welt {
     }
     for (const stadt of this.staedte) stadt.schritt(tag, this.st);
     // Mit der Bevölkerung kommen neue Händler dazu (es verschwinden keine)
-    while (this.haendler.length < this.kiZiel()) {
-      this.haendler.push(new Haendler(this.zufall.wahl(this.staedte), this.D));
-      if (this.st && this.st.an) this.st.eingeschossen += this.D.p.START_MONEY;
+    for (const zone of this.zonen) {
+      let anzahl = this.haendler.filter((h) => h.ort.zone === zone).length;
+      for (; anzahl < this.kiZiel(zone); anzahl++) {
+        this.haendler.push(new Haendler(this.zufall.wahl(this.staedte.filter((s) => s.zone === zone)), this.D));
+        if (this.st && this.st.an) this.st.eingeschossen += this.D.p.START_MONEY;
+      }
     }
     if (this.st && this.st.an) this.st.schiffstage += this.haendler.length;
     for (const h of this.zufall.mischen(this.haendler.slice())) h.handle(tag, this, this.st);

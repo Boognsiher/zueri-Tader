@@ -29,7 +29,7 @@ export class Ziel {
     const v = this.vermoegen();
     let i = 0;
     this.raenge.forEach((r, k) => {
-      if (v >= r.vermoegen && this.sitze.length >= r.ratssitze) i = k;
+      if (v >= r.vermoegen && this.sitze.length >= r.ratssitze && this.spiel.jahr() >= r.ab_jahr) i = k;
     });
     return i;
   }

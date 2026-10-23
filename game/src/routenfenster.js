@@ -35,7 +35,7 @@ export class Routenfenster {
       einsatz: a?.art === "frei" ? a.einsatz : Math.max(1000, Math.round(this.spiel.gulden / 2 / 100) * 100),
       halte: a?.art === "route" ? JSON.parse(JSON.stringify(a.halte)) : standard,
       // Versorgen: vorausgewählt alle Städte mit Kontor
-      versorgen: a?.art === "versorgen" ? [...a.staedte] : this.spiel.welt.staedte.filter((s) => this.spiel.ausbau.kontor(s)).map((s) => s.name),
+      versorgen: a?.art === "versorgen" ? [...a.staedte] : this.zonenStaedte().filter((s) => this.spiel.ausbau.kontor(s)).map((s) => s.name),
     };
     this.fehler = "";
     this.zeichne();
@@ -49,9 +49,15 @@ export class Routenfenster {
     this.rueckrufe.geschlossen();
   }
 
+  // Städte im See des Schiffs: nur dort kann es fahren
+  zonenStaedte() {
+    const hier = this.schiff.ort ?? this.spiel.naechsteStadt(this.schiff.pos);
+    return this.spiel.welt.staedte.filter((s) => s.zone === hier.zone);
+  }
+
   standardRoute(schiff) {
     const start = schiff.ort ?? this.spiel.naechsteStadt(schiff.pos);
-    const ziel = this.spiel.welt.staedte.find((s) => s !== start);
+    const ziel = this.spiel.welt.staedte.find((s) => s !== start && s.zone === start.zone) ?? start;
     return [
       { stadt: start.name, auftraege: [] },
       { stadt: ziel.name, auftraege: [] },
@@ -60,7 +66,7 @@ export class Routenfenster {
 
   zeichne() {
     const e = this.entwurf;
-    const staedte = this.spiel.welt.staedte.map((s) => s.name);
+    const staedte = this.zonenStaedte().map((s) => s.name);
     const waren = Object.keys(this.D.waren);
     const option = (wert, text, aktiv) => `<option value="${esc(wert)}" ${aktiv ? "selected" : ""}>${esc(text)}</option>`;
     let html = `<header><div><h2>Automatik</h2><span class="untertitel">${esc(this.spiel.schiffstyp(this.schiff).name)} «${esc(this.schiff.name)}»</span></div>
@@ -75,7 +81,7 @@ export class Routenfenster {
     } else if (e.art === "versorgen") {
       const tage = this.spiel.ausbau.bau.versorgung.vorrat_tage;
       html += `<p class="hilfe">Wähle nur die Städte, der Rest geht von selbst: Das Schiff lädt in deinen Kontoren, was in einer anderen gewählten Stadt gebraucht wird, und lädt es dort aus. Gebraucht wird, was deine Werkstätten mit Kontor-Versorgung für ${tage} Tage plus die Zeit bis zur nächsten Lieferung brauchen. Gesperrte Ware und der eigene Vorrat bleiben im Kontor.</p>
-        <div class="versorgstaedte">${this.spiel.welt.staedte
+        <div class="versorgstaedte">${this.zonenStaedte()
           .map((s) => {
             const k = !!this.spiel.ausbau.kontor(s);
             return `<label class="${k ? "" : "ohne"}"><input type="checkbox" data-versorgen="${esc(s.name)}" ${e.versorgen.includes(s.name) ? "checked" : ""} ${k ? "" : "disabled"}> ${esc(s.name)}${k ? "" : " <small>kein Kontor</small>"}</label>`;
@@ -157,7 +163,7 @@ export class Routenfenster {
     if (d.uebernehmen !== undefined) return this.uebernimm();
     if (d.haltNeu !== undefined) {
       const letzte = e.halte[e.halte.length - 1]?.stadt;
-      const naechste = this.spiel.welt.staedte.find((s) => s.name !== letzte);
+      const naechste = this.zonenStaedte().find((s) => s.name !== letzte) ?? this.zonenStaedte()[0];
       e.halte.push({ stadt: naechste.name, auftraege: [] });
     } else if (d.haltWeg !== undefined) {
       e.halte.splice(Number(d.haltWeg), 1);
@@ -186,7 +192,7 @@ export class Routenfenster {
     if (e.art === "selbst") {
       beende(spiel, this.schiff);
     } else if (e.art === "versorgen") {
-      const reihenfolge = spiel.welt.staedte.map((s) => s.name).filter((n) => e.versorgen.includes(n));
+      const reihenfolge = this.zonenStaedte().map((s) => s.name).filter((n) => e.versorgen.includes(n));
       const fehler = starteVersorgung(spiel, this.schiff, reihenfolge);
       if (fehler) {
         this.fehler = fehler;

@@ -24,6 +24,7 @@ for (const [i, a] of D.staedte.entries()) {
     fehler++;
   }
   for (const b of D.staedte.slice(i + 1)) {
+    if (b.zone !== a.zone) continue; // zwischen Zonen gibt es keinen Wasserweg
     const w = nav.route(a.pos, b.pos);
     if (!w) {
       console.log(`!! kein Weg ${a.name} -> ${b.name}`);

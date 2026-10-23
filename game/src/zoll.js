@@ -21,7 +21,7 @@ export class Zoll {
     const d = this.spiel.diplomatie;
     const stand = d.vonStadt(stadt);
     const gruppe = this.D.gruppen[ware];
-    let satz = (this.z.stand[stand.id] ?? 0) * (this.z.gruppe[gruppe] ?? 1);
+    let satz = (this.z.stand[stand.id] ?? this.z.standard ?? 0) * (this.z.gruppe[gruppe] ?? 1);
     if (d.feinde(stand.id).length) satz += this.z.kriegszuschlag;
     const e = this.z.ermaessigung;
     if (this.spiel.ziel.hatSitz(stadt)) satz *= e.ratssitz;

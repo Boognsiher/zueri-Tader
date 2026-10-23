@@ -1,9 +1,9 @@
 {
   "_info": "Risiko-Ereignisse für die Schiffe des Spielers auf See. Wird nur vom Spiel gelesen (game/src/risiko.js), nicht von der Simulation: Die KI-Händler sind nicht betroffen. Pro Seetag und Schiff wird je Ereignis gewürfelt (chance). Sturm: Fahrt dauert verzögerung_tage länger, Rumpfschaden schaden_anteil (Anteil des Rumpfs, Spannweite von bis). Überfall: nur mit Ladung, verloren geht verlust_anteil der Ladung (von bis); kriegsfaktor = Chance mal so viel, wenn ein Stand dem Spieler feindlich ist. Havarie (Untiefe, Leck): wie Sturm, aber seltener und mit mehr Schaden. Rückenwind: Fahrt dauert gewinn_tage kürzer. Schutz: Überfälle werden unwahrscheinlicher um den Faktor 1 + Kampfkraft des Schiffs (inklusive Kapitän) * schutz_je_kampfkraft, ein Wachtschiff in der Flotte ist also ein Geleit. Sturmschaden und Havarie sinken je Kapitänsstufe um schaden_minus_je_stufe. Versicherung: pro Tag praemie_je_tag mal Neupreis der Schiffe, ersetzt erstattung (Anteil) von Ladungsverlust (Einstandswert) und von Reparaturkosten nach Sturm und Havarie. Ereignisse haben einen eigenen Zufallsgenerator, damit sie die Wirtschaft nicht verschieben.",
   "ereignisse": {
-    "sturm": {"chance": 0.02, "verzoegerung_tage": [0.5, 1.5], "schaden_anteil": [0.04, 0.12]},
-    "ueberfall": {"chance": 0.015, "verlust_anteil": [0.15, 0.4], "kriegsfaktor": 2.5},
-    "havarie": {"chance": 0.006, "verzoegerung_tage": [1, 2.5], "schaden_anteil": [0.12, 0.3]},
+    "sturm": {"chance": 0.012, "verzoegerung_tage": [0.5, 1.5], "schaden_anteil": [0.04, 0.12]},
+    "ueberfall": {"chance": 0.006, "verlust_anteil": [0.1, 0.3], "kriegsfaktor": 2.5},
+    "havarie": {"chance": 0.004, "verzoegerung_tage": [1, 2.5], "schaden_anteil": [0.12, 0.3]},
     "rueckenwind": {"chance": 0.025, "gewinn_tage": [0.3, 0.8]}
   },
   "schutz_je_kampfkraft": 0.05,

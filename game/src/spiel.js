@@ -15,6 +15,7 @@ import { Kapitaene } from "./kapitaene.js";
 import { Ziel } from "./ziel.js";
 import { Risiko } from "./risiko.js";
 import { Zoll } from "./zoll.js";
+import { Zonen } from "./zonen.js";
 import { Zufall } from "./zufall.js";
 
 const MELDUNGEN_JE_REIHE = 60;
@@ -46,6 +47,7 @@ export class Spiel {
     this.ziel = new Ziel(this);
     this.risiko = new Risiko(this, seed);
     this.zoll = new Zoll(this);
+    this.zonen = new Zonen(this);
     this.spielsekunden = 0; // echte Spielzeit mit laufender Uhr, für die Abstimmung des Spieltempos
     if (!leer) this.kapitaene.starte();
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
@@ -54,6 +56,12 @@ export class Spiel {
   // Spieltag ab Spielbeginn (0 = Starttag)
   get tag() {
     return this.welt.tag - this.starttag;
+  }
+
+  // Kalenderjahr (für Freischaltungen nach Jahren)
+  jahr(tag = this.tag) {
+    const [j, m, t] = this.D.spiel.start.datum;
+    return new Date(Date.UTC(j, m - 1, t + tag)).getUTCFullYear();
   }
 
   datum(tag = this.tag) {
@@ -414,6 +422,7 @@ export class Spiel {
     this.ziel.tag();
     this.risiko.tag();
     this.zoll.tag();
+    this.zonen.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
     for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);

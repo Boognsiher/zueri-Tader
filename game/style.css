@@ -498,3 +498,12 @@ button.autosymbol.pausiert { color: #fff6e8; background: linear-gradient(#4f8a55
 .meldreiter button { font-size: 0.82rem; padding: 0 0.6em; border-bottom: none; border-radius: 4px 4px 0 0; background: var(--papier); margin-bottom: -1px; }
 .meldreiter button[aria-selected="true"] { background: var(--papier-hell); border-color: var(--holz); font-weight: 600; }
 .meldreiter .neu { color: var(--rot); font-size: 0.7rem; vertical-align: 0.1em; }
+
+/* Seen (Zonen) und Verbindungen */
+.seeliste { list-style: none; margin: 0; padding: 0; display: grid; gap: 0.5rem; }
+.seeliste li { border-bottom: 1px solid var(--rand); padding-bottom: 0.4rem; }
+.seeliste li.gesperrt { opacity: 0.85; }
+.seeliste small { color: var(--tinte-blass); }
+.seeliste button { margin: 0.2rem 0.3rem 0 0; font-size: 0.9rem; padding: 0.1em 0.6em; }
+.zonenwahl { position: absolute; left: 0.5rem; top: 0.5rem; z-index: 3; font: inherit; font-size: 0.95rem; padding: 0.35rem 0.5rem; min-height: 2.5rem; background: var(--papier-hell); color: var(--tinte); border: 2px solid var(--holz); border-radius: 6px; box-shadow: var(--schatten); }
+details.verbindung summary { cursor: pointer; }
