@@ -40,22 +40,35 @@ Jeder See ist eine **Zone** mit eigenen Städten, eigenem Wasser, eigenen KI-Hä
 
 Offen: Historische Machbarkeit (Flussläufe und Schiffbarkeit im 17. Jahrhundert, die Bahn gab es erst ab 1847), Karten mit mehr Städten je See, Ereignisse an den Zonengrenzen (Schmuggler, Zollkontrolle), Preisunterschiede zwischen den Zonen nachmessen.
 
-## Idee: Epochenwandel vom Schiff zu Schiene und Strasse (Entwurf, nicht umgesetzt)
+## Epochenwandel vom Schiff zu Schiene und Strasse (Entscheide vom 23.10.2026, noch nicht umgesetzt)
 
-Idee des Projektinhabers: Mit der industriellen Revolution verliert der Schiffsverkehr auf den Seen an Bedeutung. Danach zählt der Schiffstransport nur noch auf den grossen Strömen, ab Basel Richtung Holland und Deutschland, und von Genf aus Richtung Frankreich. Im Endgame baut man Gleise, später Autobahnen, plant und verwaltet Logistikwege und verschafft sich damit Vorteile. Der Wandel soll langsam gehen, das Spielprinzip mit dem Handel bleibt.
+Der Projektinhaber will, dass sich das Spiel mit den Epochen wandelt, das Handelsprinzip aber bleibt.
 
-Wie das zum Bestehenden passt:
-- Die **Verbindungen** (`data/zonen.json`) sind schon die Grundlage: Fluss, Fuhrweg und Bahn sind Verkehrsarten mit Laufzeit, Fracht, Kapazität und Zoll. Neu wären Strasse (LKW) und Autobahn, dazu Ausbaustufen einer Verbindung (mehr Kapazität, kürzere Laufzeit, tiefere Fracht) gegen Investition.
-- Der Seeverkehr der **KI-Händler** und der Schiffe des Spielers würde über die Epochen langsam an Gewicht verlieren, etwa durch sinkende Margen auf den Seen (mehr Konkurrenz der Schiene, tiefere Preisunterschiede) und steigende Margen auf den neuen Wegen. Das lässt sich über die Preisniveaus je Zone und Jahr steuern (`preisfaktor` je Epoche), ohne das Handelsmodell zu ändern.
-- **Terminals** (Basel, Genf) wären die Knoten: Dort endet der Flussverkehr Richtung Holland, Deutschland und Frankreich. Neue Zonen «Niederlande/Rheinmündung» und «Rhône/Frankreich» wären weitere Ziele.
-- Das **Spielziel** wandelt sich mit: Rang und Ratssitze bleiben, dazu kommen Verkehrsnetz und Konzessionen (Bahn, später Strasse), die man erwerben und ausbauen kann.
-- **Zeitplan:** Passt zu den Jahren in `data/ziel.json`. Schiene ab 1847 (steht schon), Strasse und LKW im 20. Jahrhundert. Dafür müsste das Endspiel länger sein als bis 1850, oder die Zeit ab 1850 läuft schneller (mehr Tage pro Stunde).
+**Entschieden**
+- **Zeit:** läuft unverändert weiter, kein Tempowechsel nach 1850. Ob das Endgame so lang genug ist, wird beim Spielen geprüft.
+- **Seeverkehr:** Die Seen werden mit der Zeit unrentabel, Bahn und später LKW übernehmen. Als Nische bleiben grosse Mengen schwerer Güter (Kies, Steine). Der Schiffsverkehr über **Basel** (Rhein Richtung Holland und Deutschland) und ab **Genf** Richtung Frankreich wird wichtiger.
+- **Strassen:** Zuerst werden sie selbst gebaut, später können **Autobahnen** finanziert oder gekauft werden, mit **Mautsystem**.
+- **Karte:** Die **Schweiz** wird, wenn die Engine es trägt, eine Zone, sonst vier Teile (Zonen). Später kommen **Deutschland** und **Holland** dazu.
+- **Grossprojekte:** Man kann **Kanäle zwischen den Seen** bauen. Das braucht riesige Mengen Baumaterial, viel Geld und viel Zeit, bietet danach aber auch im Endgame einen lohnenden Schiffsverkehr.
+- **Schiffe entwickeln sich:** bis zu **Dampfschiffen** und weiter. Die Flotte muss mit der Zeit erneuert werden (veraltete Schiffe verlieren an Wert und Tempo oder lohnen sich nicht mehr).
 
-Offene Fragen:
-- Wie lang soll das Endgame sein (Jahre, Stunden), und läuft die Zeit ab der Eisenbahn schneller?
-- Wird der Seeverkehr wirklich unrentabel (man steigt um), oder bleibt er eine günstige Nische?
-- Plant der Spieler Linien auf einer Karte (Gleise zeichnen) oder baut er Verbindungen über Menüs aus wie heute?
-- Welche Zonen kommen dazu (Rheinmündung, Frankreich), und wie viele Städte brauchen sie?
+**Was «Linien auf der Karte» hiess:** Zwei Möglichkeiten, Verkehrswege zu bauen. (a) Der Spieler **zeichnet** die Strecke selbst auf der Karte (Punkte und Linien setzen, Länge und Gelände bestimmen den Preis), wie ein Gleis- oder Strassenplaner. (b) Er **wählt aus vorgegebenen Verbindungen** und baut sie über ein Menü aus, wie die Verbindungen heute. Für die Schweiz als Zone empfehle ich (b) mit einem Netz aus vorgegebenen Knoten (Städte, Pässe, Tunnel), das der Spieler nach und nach ausbaut: Das ist ein Planungs- und Verwaltungsspiel ohne Zeichentool, mit Kosten je Strecke, Kapazität und Maut. Zeichnen (a) wäre ein eigener, grosser Aufwand und würde den Handel in den Hintergrund drängen.
+
+**Machbarkeit (Engine)**
+- **Zone Schweiz:** Technisch kein Problem für die Daten und die Wirtschaft, die Zonen sind schon so gebaut. Heute hat jede Zone aber Wasser, auf dem Schiffe fahren. Eine Landzone braucht ein anderes Netz: Städte als Knoten, Strassen und Gleise als Kanten mit Laufzeit, Kapazität, Zustand und Maut, Transport in Fuhrwerk, Bahn oder LKW. Das ist ein neues Verkehrsmodell und der eigentliche Aufwand, die Karte selbst ist leicht (SVG, Kamera).
+- **Grösse:** Eine Zone mit 60 bis 100 Städten würde die Wirtschaft verlangsamen (die KI-Händler rechnen pro Zone alle Städte durch). Besser sind **vier bis sechs Landzonen** (zum Beispiel Mittelland, Nordostschweiz, Westschweiz, Alpen und Tessin) mit je 8 bis 15 Städten, verbunden durch Kantenverbindungen wie die heutigen Verbindungen.
+- **Dampfschiffe und Erneuerung:** gut machbar über `data/schiffe.json` (Epoche und Baujahr je Typ, Wertverlust nach Alter), die Kapitäne bleiben.
+- **Kanal:** gut machbar als Grossprojekt: neue Verbindung mit Materialliste, Geldkosten und Bauzeit in Tagen, dazu Schiffsverkehr zwischen zwei Zonen (heute fahren Schiffe nicht zwischen Zonen).
+
+**Vorgeschlagene Schritte** (jeder für sich spielbar und prüfbar)
+1. **Schiffsentwicklung:** neue Schiffstypen je Epoche (zum Beispiel Ruderschiff, Segelschiff, Dampfschiff, Motorschiff), Alter und Wertverlust, Erneuerung. Berührt nur Daten und die Werft.
+2. **Epochen in der Wirtschaft:** Preisniveau und Nachfrage je Epoche, Seeverkehr wird unrentabel, Rheinverkehr ab Basel wichtiger (neue Zone Rheinmündung mit Holland und Deutschland).
+3. **Verkehrsmodell:** Strasse, Gleis, Autobahn als Ausbaustufen einer Verbindung (Kapazität, Laufzeit, Fracht, Maut), erst auf den bestehenden Verbindungen.
+4. **Landzonen Schweiz** (vier bis sechs) mit dem Verkehrsmodell.
+5. **Konzessionen und Maut:** Strassen selbst bauen, Autobahnen finanzieren oder kaufen, Maut einnehmen.
+6. **Kanäle** als Grossprojekt zwischen Seen.
+
+Offen: Wie lange das Endgame sein soll (Jahre bis 2000?), und ob es ein klares Ziel gibt (zum Beispiel Konzern oder Verkehrsimperium).
 
 ## Vorgeschlagene Reihenfolge
 
