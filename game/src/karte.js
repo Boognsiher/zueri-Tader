@@ -7,6 +7,7 @@ import { Kamera } from "./kamera.js";
 
 const NS = "http://www.w3.org/2000/svg";
 const BOOT_MASSSTAB = 0.6; // Symbolgrösse der eigenen Schiffe, mal der Grösse des Schiffstyps
+const HAENDLER_MASSSTAB = 0.5; // Symbolgrösse der KI-Händler (alle fahren als Nauen)
 
 function el(name, attrs = {}, eltern = null) {
   const e = document.createElementNS(NS, name);
@@ -30,14 +31,57 @@ function glatt(punkte, geschlossen = true) {
   return geschlossen ? d + "Z" : d;
 }
 
-// Eigenes, schlichtes Symbol eines Lastseglers mit Rahsegel
-function bootSymbol(eltern, klasse) {
+// Eigene, schlichte Schiffssymbole, nach Schiffstyp verschieden (Bug rechts, Wasserlinie bei y = 0).
+// Jeder Typ ist an Umriss und Takelage erkennbar, auch wenn er nur wenige Pixel gross ist.
+const SYMBOLE = {
+  // Kleiner, flacher Kahn mit einem Dreieckssegel
+  weidling: (g) => {
+    el("path", { d: "M-1.4,-0.2 Q0,0.15 1.4,-0.2 L0.9,0.6 L-0.9,0.6 Z", class: "rumpf" }, g);
+    el("path", { d: "M-0.06,0 L-0.06,-1.9 L0.06,-1.9 L0.06,0 Z", class: "mast" }, g);
+    el("path", { d: "M0.1,-1.85 L1.15,-0.3 L0.1,-0.3 Z", class: "segel" }, g);
+  },
+  // Das übliche Lastschiff mit Rahsegel
+  nauen: (g) => {
+    el("path", { d: "M-1.5,0 L1.5,0 L1.1,0.75 L-1.1,0.75 Z", class: "rumpf" }, g);
+    el("path", { d: "M-0.08,0 L-0.08,-2.3 L0.08,-2.3 L0.08,0 Z", class: "mast" }, g);
+    el("path", { d: "M-0.95,-2.0 Q0,-1.75 0.95,-2.0 L0.85,-0.45 Q0,-0.25 -0.85,-0.45 Z", class: "segel" }, g);
+    el("path", { d: "M0.08,-2.3 L0.9,-2.55 L0.08,-2.75 Z", class: "wimpel" }, g);
+  },
+  // Langes, flaches Lastschiff mit Ladung an Deck und zwei kleineren Rahsegeln
+  ledischiff: (g) => {
+    el("path", { d: "M-2.1,0 L2.1,0 L1.7,0.8 L-1.7,0.8 Z", class: "rumpf" }, g);
+    el("rect", { x: -0.6, y: -0.55, width: 1.2, height: 0.55, class: "kiste" }, g);
+    el("rect", { x: -1.9, y: -0.7, width: 0.9, height: 0.7, class: "kajuete" }, g);
+    el("path", { d: "M-0.05,0 L-0.05,-1.9 L0.05,-1.9 L0.05,0 Z M1.1,0 L1.1,-1.6 L1.2,-1.6 L1.2,0 Z", class: "mast" }, g);
+    el("path", { d: "M-0.7,-1.7 Q0.05,-1.5 0.8,-1.7 L0.7,-0.75 Q0.05,-0.6 -0.7,-0.75 Z", class: "segel" }, g);
+    el("path", { d: "M0.65,-1.4 Q1.15,-1.25 1.65,-1.4 L1.6,-0.75 Q1.15,-0.65 0.7,-0.75 Z", class: "segel" }, g);
+  },
+  // Schlankes Ruder- und Segelboot mit Schilden an der Bordwand und Dreieckssegel
+  wachtschiff: (g) => {
+    el("path", { d: "M-1.9,-0.25 L-1.5,0 L1.5,0 L2.0,-0.3 L1.3,0.65 L-1.3,0.65 Z", class: "rumpf" }, g);
+    el("path", { d: "M-1.2,0.3 L-1.7,1.2 M-0.4,0.35 L-0.8,1.3 M0.4,0.35 L0.1,1.3 M1.1,0.3 L0.8,1.2", class: "ruder" }, g);
+    for (const x of [-0.9, -0.3, 0.3, 0.9]) el("circle", { cx: x, cy: 0.18, r: 0.2, class: "schild" }, g);
+    el("path", { d: "M-0.06,-0.2 L-0.06,-2.1 L0.06,-2.1 L0.06,-0.2 Z", class: "mast" }, g);
+    el("path", { d: "M0.1,-2.05 L1.5,-0.4 L0.1,-0.4 Z", class: "segel" }, g);
+    el("path", { d: "M0.06,-2.1 L0.8,-2.3 L0.06,-2.5 Z", class: "wimpel" }, g);
+  },
+  // Nauen mit Brustwehr, Geschützpforten und zwei Masten
+  kriegsnauen: (g) => {
+    el("path", { d: "M-1.7,-0.45 L1.8,-0.45 L1.2,0.85 L-1.3,0.85 Z", class: "rumpf" }, g);
+    el("path", { d: "M-1.7,-0.45 L-1.7,-0.75 L-1.35,-0.75 L-1.35,-0.45 M-0.9,-0.45 L-0.9,-0.75 L-0.55,-0.75 L-0.55,-0.45 M-0.1,-0.45 L-0.1,-0.75 L0.25,-0.75 L0.25,-0.45 M0.7,-0.45 L0.7,-0.75 L1.05,-0.75 L1.05,-0.45", class: "brustwehr" }, g);
+    for (const x of [-0.8, -0.1, 0.6]) el("rect", { x: x - 0.17, y: 0.1, width: 0.34, height: 0.28, class: "pforte" }, g);
+    el("path", { d: "M-0.5,-0.45 L-0.5,-2.6 L-0.38,-2.6 L-0.38,-0.45 Z M0.85,-0.45 L0.85,-2.0 L0.97,-2.0 L0.97,-0.45 Z", class: "mast" }, g);
+    el("path", { d: "M-1.15,-2.35 Q-0.44,-2.1 0.27,-2.35 L0.2,-0.95 Q-0.44,-0.8 -1.08,-0.95 Z", class: "segel" }, g);
+    el("path", { d: "M0.4,-1.85 Q0.91,-1.7 1.42,-1.85 L1.37,-0.95 Q0.91,-0.85 0.45,-0.95 Z", class: "segel" }, g);
+    el("path", { d: "M-0.38,-2.6 L0.4,-2.85 L-0.38,-3.05 Z", class: "wimpel" }, g);
+  },
+};
+
+// Schiffssymbol des Typs typ (Standard: Nauen) in einer eigenen Gruppe
+export function bootSymbol(eltern, klasse, typ = "nauen") {
   const g = el("g", { class: klasse }, eltern);
   const inhalt = el("g", { class: "boot-koerper" }, g);
-  el("path", { d: "M-1.5,0 L1.5,0 L1.1,0.75 L-1.1,0.75 Z", class: "rumpf" }, inhalt);
-  el("path", { d: "M-0.08,0 L-0.08,-2.3 L0.08,-2.3 L0.08,0 Z", class: "mast" }, inhalt);
-  el("path", { d: "M-0.95,-2.0 Q0,-1.75 0.95,-2.0 L0.85,-0.45 Q0,-0.25 -0.85,-0.45 Z", class: "segel" }, inhalt);
-  el("path", { d: "M0.08,-2.3 L0.9,-2.55 L0.08,-2.75 Z", class: "wimpel" }, inhalt);
+  (SYMBOLE[typ] ?? SYMBOLE.nauen)(inhalt);
   return g;
 }
 
@@ -184,7 +228,7 @@ export class Karte {
       this.stadtElemente.set(stadt, { g, info });
     }
 
-    this.haendlerPunkte = this.spiel.welt.haendler.map(() => el("circle", { r: 0.5, class: "haendler-punkt" }, this.ebeneHaendler));
+    this.haendlerBoote = [];
     this.haendlerWege = new Map();
     this.spielerBoote = new Map();
     this.kriegsBoote = new Map();
@@ -219,16 +263,17 @@ export class Karte {
     const welt = this.spiel.welt;
     const jetzt = welt.tag + anteil;
 
-    // KI-Händler; mit der Bevölkerung kommen neue dazu, die bekommen hier ihren Punkt
-    while (this.haendlerPunkte.length < welt.haendler.length) {
-      this.haendlerPunkte.push(el("circle", { r: 0.5, class: "haendler-punkt" }, this.ebeneHaendler));
+    // KI-Händler; mit der Bevölkerung kommen neue dazu, die bekommen hier ihr Schiff
+    while (this.haendlerBoote.length < welt.haendler.length) {
+      this.haendlerBoote.push(bootSymbol(this.ebeneHaendler, "haendlerboot"));
     }
     // Fremde Schiffe erscheinen nur in Sichtweite eigener Schiffe und Städte
     const sicht = this.spiel.sichtpunkte();
     welt.haendler.forEach((h, i) => {
-      const punkt = this.haendlerPunkte[i];
+      const boot = this.haendlerBoote[i];
       let x;
       let y;
+      let links = i % 2 === 1; // im Hafen schauen die Schiffe abwechselnd nach links und rechts
       if (h.ziel) {
         let w = this.haendlerWege.get(h);
         if (!w || w.von !== h.ort || w.ziel !== h.ziel) {
@@ -236,7 +281,7 @@ export class Karte {
           this.haendlerWege.set(h, w);
         }
         const t = (jetzt - h.abfahrt) / Math.max(1, h.ankunft - h.abfahrt);
-        ({ x, y } = punktAufWeg(w.punkte, t));
+        ({ x, y, links } = punktAufWeg(w.punkte, t));
       } else {
         // im Hafen: leicht verteilt um die Stadt
         const w = (i * 2.399) % (2 * Math.PI);
@@ -244,10 +289,10 @@ export class Karte {
         y = h.ort.pos[1] + Math.sin(w) * 1.1;
       }
       const zeigen = this.spiel.sichtbar(x, y, sicht);
-      punkt.style.display = zeigen ? "" : "none";
+      boot.style.display = zeigen ? "" : "none";
       if (!zeigen) return;
-      punkt.setAttribute("cx", x.toFixed(2));
-      punkt.setAttribute("cy", y.toFixed(2));
+      boot.setAttribute("transform", `translate(${x.toFixed(2)},${y.toFixed(2)})`);
+      boot.querySelector(".boot-koerper").setAttribute("transform", `scale(${links ? -HAENDLER_MASSSTAB : HAENDLER_MASSSTAB},${HAENDLER_MASSSTAB})`);
     });
 
     this.zeichneKriegsschiffe(sicht);
@@ -264,7 +309,7 @@ export class Karte {
     for (const schiff of this.spiel.schiffe) {
       let boot = this.spielerBoote.get(schiff);
       if (!boot) {
-        boot = bootSymbol(this.ebeneSpieler, "spielerboot");
+        boot = bootSymbol(this.ebeneSpieler, "spielerboot", this.spiel.schiffstyp(schiff).id);
         el("circle", { r: 1.6, cy: -0.5, class: "klickflaeche" }, boot); // das kleine Symbol bleibt gut klickbar
         el("text", { y: 2.3, class: "bootname" }, boot);
         boot.addEventListener("click", (e) => {
@@ -312,7 +357,7 @@ export class Karte {
       let boot = this.kriegsBoote.get(s);
       const stand = this.D.fraktionen.nach[s.fraktion];
       if (!boot) {
-        boot = bootSymbol(this.ebeneKrieg, "kriegsschiff");
+        boot = bootSymbol(this.ebeneKrieg, "kriegsschiff", s.typ);
         boot.style.setProperty("--stand", stand.farbe);
         el("title", {}, boot);
         this.kriegsBoote.set(s, boot);

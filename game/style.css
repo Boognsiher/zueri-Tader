@@ -250,7 +250,11 @@ main {
 .stadtinfo { font-size: 1.5px; text-anchor: middle; fill: var(--rot); font-weight: 600; paint-order: stroke; stroke: var(--papier-hell); stroke-width: 0.4px; }
 .stadt:hover .stadtname { fill: var(--rot); }
 
-.haendler-punkt { fill: #5f5546; opacity: 0.55; }
+.haendlerboot { opacity: 0.8; pointer-events: none; }
+.haendlerboot .rumpf { fill: #6d5d49; stroke: #2b1d10; stroke-width: 0.14; }
+.haendlerboot .mast { fill: #3a2d20; }
+.haendlerboot .segel { fill: #d9ceb4; stroke: #6b5a40; stroke-width: 0.12; }
+.haendlerboot .wimpel { fill: #8a7d66; }
 
 .route { fill: none; stroke: var(--rot); stroke-width: 0.3; stroke-dasharray: 0.9 0.6; opacity: 0.8; }
 
@@ -260,11 +264,17 @@ main {
 .spielerboot .mast { fill: #2b1d10; }
 .spielerboot .segel { fill: #fbf4e2; stroke: #6b5a40; stroke-width: 0.1; }
 .spielerboot .wimpel { fill: var(--rot); }
+.spielerboot .kiste, .spielerboot .kajuete, .kriegsschiff .kiste, .kriegsschiff .kajuete { fill: #a07a4c; stroke: #2b1d10; stroke-width: 0.1; }
+.spielerboot .ruder, .kriegsschiff .ruder { fill: none; stroke: #2b1d10; stroke-width: 0.14; stroke-linecap: round; }
+.spielerboot .schild, .kriegsschiff .schild { fill: var(--rot); stroke: #2b1d10; stroke-width: 0.08; }
+.spielerboot .brustwehr, .kriegsschiff .brustwehr { fill: none; stroke: #2b1d10; stroke-width: 0.16; }
+.spielerboot .pforte, .kriegsschiff .pforte { fill: #1d140c; }
 .spielerboot.gewaehlt .segel { fill: #fff; stroke: var(--rot); stroke-width: 0.2; }
 .kriegsschiff .rumpf { fill: #4a3320; stroke: #2b1d10; stroke-width: 0.12; }
 .kriegsschiff .mast { fill: #2b1d10; }
 .kriegsschiff .segel { fill: var(--stand); stroke: #2b1d10; stroke-width: 0.12; }
 .kriegsschiff .wimpel { fill: var(--stand); }
+.kriegsschiff .schild { fill: var(--stand); }
 .kriegsschiff.feind .rumpf { stroke: #e0402a; stroke-width: 0.3; }
 .bootname { font-size: 1.1px; text-anchor: middle; fill: var(--holz); font-style: italic; paint-order: stroke; stroke: var(--papier-hell); stroke-width: 0.3px; }
 .spielerboot.gewaehlt .bootname { fill: var(--rot); font-weight: 600; }
