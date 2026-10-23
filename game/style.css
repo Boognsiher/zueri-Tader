@@ -270,6 +270,9 @@ main {
 .spielerboot .schild, .kriegsschiff .schild { fill: var(--rot); stroke: #2b1d10; stroke-width: 0.08; }
 .spielerboot .brustwehr, .kriegsschiff .brustwehr { fill: none; stroke: #2b1d10; stroke-width: 0.16; }
 .spielerboot .pforte, .kriegsschiff .pforte { fill: #1d140c; }
+.spielerboot .schlot, .kriegsschiff .schlot, .haendlerboot .schlot { fill: #2b1d10; stroke: #2b1d10; stroke-width: 0.08; }
+.spielerboot .rauch, .kriegsschiff .rauch { fill: none; stroke: #8a8070; stroke-width: 0.22; stroke-linecap: round; opacity: 0.8; }
+.spielerboot .rad, .kriegsschiff .rad { fill: #a07a4c; stroke: #2b1d10; stroke-width: 0.12; }
 .spielerboot.gewaehlt .segel { fill: #fff; stroke: var(--rot); stroke-width: 0.2; }
 .kriegsschiff .rumpf { fill: #4a3320; stroke: #2b1d10; stroke-width: 0.12; }
 .kriegsschiff .mast { fill: #2b1d10; }

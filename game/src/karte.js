@@ -77,6 +77,59 @@ const SYMBOLE = {
   },
 };
 
+// Dampf- und Motorschiffe: Rumpf, Aufbauten und Schlot (Bug rechts)
+Object.assign(SYMBOLE, {
+  // Raddampfer: hoher Schlot mit Rauch, Radkasten an der Seite
+  raddampfer: (g) => {
+    el("path", { d: "M-2.0,0 L2.0,0 L1.6,0.8 L-1.6,0.8 Z", class: "rumpf" }, g);
+    el("rect", { x: -1.0, y: -0.9, width: 1.8, height: 0.9, class: "kajuete" }, g);
+    el("path", { d: "M-0.35,-0.9 L-0.35,-2.4 L0.15,-2.4 L0.15,-0.9 Z", class: "schlot" }, g);
+    el("path", { d: "M-0.1,-2.5 q0.5,-0.6 1.2,-0.3 q0.6,0.2 1.1,-0.4", class: "rauch" }, g);
+    el("circle", { cx: -0.2, cy: 0.35, r: 0.55, class: "rad" }, g);
+  },
+  schraubendampfer: (g) => {
+    el("path", { d: "M-2.3,0 L2.3,0 L1.9,0.85 L-1.9,0.85 Z", class: "rumpf" }, g);
+    el("rect", { x: -0.2, y: -0.85, width: 1.6, height: 0.85, class: "kajuete" }, g);
+    el("path", { d: "M0.1,-0.85 L0.1,-2.2 L0.6,-2.2 L0.6,-0.85 Z", class: "schlot" }, g);
+    el("path", { d: "M0.35,-2.3 q0.5,-0.6 1.2,-0.3", class: "rauch" }, g);
+    el("rect", { x: -1.7, y: -0.5, width: 1.1, height: 0.5, class: "kiste" }, g);
+  },
+  motorschiff: (g) => {
+    el("path", { d: "M-2.4,0 L2.5,0 L2.0,0.85 L-2.0,0.85 Z", class: "rumpf" }, g);
+    el("rect", { x: -2.0, y: -1.15, width: 1.1, height: 1.15, class: "kajuete" }, g);
+    el("rect", { x: -1.8, y: -1.7, width: 0.7, height: 0.55, class: "kajuete" }, g);
+    el("rect", { x: -0.6, y: -0.6, width: 2.4, height: 0.6, class: "kiste" }, g);
+    el("path", { d: "M-1.55,-1.7 L-1.55,-2.3", class: "mast" }, g);
+  },
+  containerschiff: (g) => {
+    el("path", { d: "M-2.6,0 L2.7,0 L2.2,0.85 L-2.2,0.85 Z", class: "rumpf" }, g);
+    el("rect", { x: -2.2, y: -1.3, width: 0.9, height: 1.3, class: "kajuete" }, g);
+    for (const [x, y, w] of [[-0.9, -0.55, 0.8], [0, -0.55, 0.8], [0.9, -0.55, 0.8], [1.8, -0.55, 0.5], [-0.45, -1.1, 0.8], [0.45, -1.1, 0.8]]) el("rect", { x, y, width: w, height: 0.55, class: "kiste" }, g);
+  },
+  dampfwachboot: (g) => {
+    el("path", { d: "M-1.8,0 L1.9,-0.1 L1.4,0.65 L-1.4,0.65 Z", class: "rumpf" }, g);
+    el("rect", { x: -0.6, y: -0.7, width: 1.0, height: 0.7, class: "kajuete" }, g);
+    el("path", { d: "M-0.1,-0.7 L-0.1,-1.7 L0.3,-1.7 L0.3,-0.7 Z", class: "schlot" }, g);
+    el("path", { d: "M0.1,-1.8 q0.4,-0.5 1.0,-0.2", class: "rauch" }, g);
+    el("path", { d: "M0.9,-0.1 L1.5,-0.5", class: "ruder" }, g);
+  },
+  patrouillenboot: (g) => {
+    el("path", { d: "M-1.7,0 L2.1,-0.15 L1.6,0.6 L-1.3,0.6 Z", class: "rumpf" }, g);
+    el("rect", { x: -0.7, y: -0.65, width: 1.1, height: 0.65, class: "kajuete" }, g);
+    el("path", { d: "M-0.2,-0.65 L-0.2,-1.5", class: "mast" }, g);
+    el("path", { d: "M1.0,-0.1 L1.7,-0.55", class: "ruder" }, g);
+  },
+  kanonenboot: (g) => {
+    el("path", { d: "M-2.2,-0.1 L2.3,-0.1 L1.8,0.85 L-1.8,0.85 Z", class: "rumpf" }, g);
+    el("path", { d: "M-1.5,-0.1 L-1.5,-0.6 L1.5,-0.6 L1.5,-0.1", class: "brustwehr" }, g);
+    el("path", { d: "M-0.3,-0.6 L-0.3,-1.9 L0.2,-1.9 L0.2,-0.6 Z", class: "schlot" }, g);
+    el("path", { d: "M0.0,-2.0 q0.5,-0.6 1.2,-0.3", class: "rauch" }, g);
+    el("path", { d: "M1.0,-0.6 L2.0,-0.9", class: "ruder" }, g);
+    el("rect", { x: -1.1, y: 0.15, width: 0.34, height: 0.28, class: "pforte" }, g);
+    el("rect", { x: 0.7, y: 0.15, width: 0.34, height: 0.28, class: "pforte" }, g);
+  },
+});
+
 // Schiffssymbol des Typs typ (Standard: Nauen) in einer eigenen Gruppe
 export function bootSymbol(eltern, klasse, typ = "nauen") {
   const g = el("g", { class: klasse }, eltern);

@@ -1,5 +1,6 @@
 // Prüft das Wirtschaftsmodell des Spiels ohne Browser.
 // Aufruf aus dem Repo-Hauptordner:  node game/test/wirtschaft_test.mjs
+// Nur ein Abschnitt (Teil des Titels):  NUR=zonen node game/test/wirtschaft_test.mjs
 //
 // 1. Die Wirtschaft des Spiels (ohne Spieler) besteht dieselben Balance-Checks wie
 //    tools/sim/wirtschaft_sim.py. So fällt auf, wenn Spiel und Simulation auseinanderlaufen.
@@ -16,6 +17,7 @@
 // 16.  Risiko-Ereignisse und Versicherung.
 // 17.  Zoll und Handelsverträge.
 // 18.  Zonen (weitere Seen), Erschliessen, Verbindungen, Fracht, Bahn.
+// 19.  Schiffsentwicklung: Epochen, Alter, Erneuerung, Nachfolger der Kriegsschiffe.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -33,6 +35,14 @@ const DATA = path.join(path.dirname(fileURLToPath(import.meta.url)), "..", "..",
 const D = await ladeDaten(async (datei) => JSON.parse(await readFile(path.join(DATA, datei), "utf-8")));
 
 let fehler = 0;
+
+// Nur einen Abschnitt prüfen:  NUR=zonen node game/test/wirtschaft_test.mjs
+const NUR = (process.env.NUR ?? "").toLowerCase();
+function abschnitt(name) {
+  if (NUR && !name.toLowerCase().includes(NUR)) return false;
+  console.log(`\n${name}`);
+  return true;
+}
 
 // Springt im Kalender auf den 1. Januar des Jahres (Freischaltungen hängen am Jahr)
 function insJahr(spiel, jahr) {
@@ -56,7 +66,7 @@ function pruefe(text, ok) {
 
 // --- 1. Balance wie in der Simulation ------------------------------------
 const TAGE = 720;
-for (const seed of [1, 2, 3]) {
+for (const seed of NUR ? [] : [1, 2, 3]) {
   const welt = new Welt(D, seed);
   const st = neueStatistik();
   welt.st = st;
@@ -99,8 +109,7 @@ for (const seed of [1, 2, 3]) {
 }
 
 // --- 2. Handel des Spielers -----------------------------------------------
-console.log("\nHandel des Spielers");
-{
+if (abschnitt("Handel des Spielers")) {
   const spiel = ohneRisiko(new Spiel(D, 7));
   const schiff = spiel.schiffe[0];
   const g = Object.keys(schiff.ort.bestand)[0];
@@ -143,8 +152,7 @@ console.log("\nHandel des Spielers");
 }
 
 // --- Wegsuche: von jedem Hafen zu jedem Hafen und zu Punkten auf dem See ---
-console.log("\nWegsuche");
-{
+if (abschnitt("Wegsuche")) {
   const spiel = new Spiel(D, 3);
   const nav = spiel.nav;
   // Städte, die Durchfahrt am Seedamm und Punkte mitten im See (zwischen gegenüberliegenden Ufern)
@@ -168,8 +176,7 @@ console.log("\nWegsuche");
 }
 
 // --- 3. Karte: Seewege über Wasser, Distanzen aktuell ---------------------------
-console.log("\nKarte");
-{
+if (abschnitt("Karte")) {
   const nav = new Navigation(D);
   let ueberLand = 0;
   let abweichung = 0;
@@ -206,8 +213,7 @@ console.log("\nKarte");
 }
 
 // --- 4. Betriebe und Kontor -------------------------------------------------
-console.log("\nBetriebe und Kontor");
-{
+if (abschnitt("Betriebe und Kontor")) {
   const spiel = new Spiel(D, 11);
   const a = spiel.ausbau;
   const schiff = spiel.schiffe[0];
@@ -262,8 +268,7 @@ console.log("\nBetriebe und Kontor");
 }
 
 // --- 5. Automatischer Handel --------------------------------------------------
-console.log("\nAutomatischer Handel");
-{
+if (abschnitt("Automatischer Handel")) {
   const spiel = new Spiel(D, 21);
   const schiff = spiel.schiffe[0];
   pruefe("Route mit nur einem Hafen wird abgelehnt", starteRoute(spiel, schiff, [{ stadt: "Zürich", auftraege: [] }]) !== null);
@@ -296,8 +301,7 @@ console.log("\nAutomatischer Handel");
 }
 
 // --- 6. Speichern und Laden ---------------------------------------------------
-console.log("\nSpeichern und Laden");
-{
+if (abschnitt("Speichern und Laden")) {
   const spiel = new Spiel(D, 31);
   spiel.gulden = 80000;
   const s = spiel.schiffe[0];
@@ -328,8 +332,7 @@ console.log("\nSpeichern und Laden");
 }
 
 // --- 7. Bootshandel -----------------------------------------------------------
-console.log("\nBootshandel");
-{
+if (abschnitt("Bootshandel")) {
   const nauen = D.schiffe.typ.nauen;
   pruefe("Nauen entspricht dem Schiff der KI (Laderaum, Preis, Unterhalt, Tempo)",
     nauen.laderaum === D.p.SHIP_CAP && nauen.preis === D.p.SHIP_COST && nauen.unterhalt === D.p.UPKEEP && nauen.tempo === 1);
@@ -384,7 +387,7 @@ console.log("\nBootshandel");
   // Wirtschaftlichkeit: je ein Handelsschiff jedes Typs handelt ein Jahr frei
   // (Kriegsschiffe verdienen ihr Geld mit Prisen, nicht mit Handel)
   const rendite = {};
-  for (const t of D.schiffe.typen.filter((x) => !x.kampfschiff)) {
+  for (const t of D.schiffe.typen.filter((x) => !x.kampfschiff && x.ab_jahr <= 1650)) {
     let summe = 0;
     for (const seed of [51, 52, 53]) {
       const sp = new Spiel(D, seed, { leer: false });
@@ -406,8 +409,7 @@ console.log("\nBootshandel");
 // --- 8. Eigenversorgung -------------------------------------------------------
 // Eigene Werkstatt über das Kontor beliefern und die Ware anderswo verkaufen soll mehr bringen
 // als dieselbe Werkstatt am Markt plus dasselbe Schiff im freien Handel.
-console.log("\nEigenversorgung");
-{
+if (abschnitt("Eigenversorgung")) {
   function aufbau(seed) {
     const sp = new Spiel(D, seed);
     sp.gulden = 100000;
@@ -453,8 +455,7 @@ console.log("\nEigenversorgung");
 }
 
 // --- 9. Stufen, Stadtgebäude, Kontorhandel ---------------------------------------
-console.log("\nStufen, Stadtgebäude, Kontorhandel");
-{
+if (abschnitt("Stufen, Stadtgebäude, Kontorhandel")) {
   const spiel = new Spiel(D, 71);
   const a = spiel.ausbau;
   const schiff = spiel.schiffe[0];
@@ -531,8 +532,7 @@ console.log("\nStufen, Stadtgebäude, Kontorhandel");
 }
 
 // --- 10. Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz -------
-console.log("\nBevölkerung, Versorgung, Kontor, Bilanz");
-{
+if (abschnitt("Bevölkerung, Versorgung, Kontor, Bilanz")) {
   const spiel = new Spiel(D, 81);
   const a = spiel.ausbau;
   const schiff = spiel.schiffe[0];
@@ -584,8 +584,7 @@ console.log("\nBevölkerung, Versorgung, Kontor, Bilanz");
 }
 
 // --- 11. Automatik «Versorgen» -----------------------------------------------------
-console.log("\nVersorgen");
-{
+if (abschnitt("Versorgen")) {
   const spiel = ohneRisiko(new Spiel(D, 91));
   const a = spiel.ausbau;
   // Ledischiff: Für die weite Strecke Zürich - Rapperswil reicht ein Nauen nicht (Laderaum)
@@ -621,8 +620,7 @@ console.log("\nVersorgen");
 }
 
 // --- 12. Flotten ----------------------------------------------------------------------
-console.log("\nFlotten");
-{
+if (abschnitt("Flotten")) {
   const spiel = new Spiel(D, 95);
   spiel.gulden = 200000;
   const zuerich = spiel.welt.stadt["Zürich"];
@@ -653,8 +651,7 @@ console.log("\nFlotten");
 }
 
 // --- 13. Stände, Kriege, Kaperbriefe und Gefechte ---------------------------------
-console.log("\nStände und Kampf");
-{
+if (abschnitt("Stände und Kampf")) {
   const F = D.fraktionen;
   const zuordnung = D.staedte.map((s) => F.fraktionen.filter((f) => f.staedte.includes(s.name)).length);
   pruefe("Jede Stadt gehört genau einem Stand", zuordnung.every((n) => n === 1) && F.fraktionen.every((f) => f.staedte.length > 0));
@@ -752,8 +749,7 @@ console.log("\nStände und Kampf");
 }
 
 // --- 14. Kapitäne -----------------------------------------------------------
-console.log("\nKapitäne");
-{
+if (abschnitt("Kapitäne")) {
   const spiel = new Spiel(D, 1);
   const kk = spiel.kapitaene;
   const schiff = spiel.schiffe[0];
@@ -819,8 +815,7 @@ console.log("\nKapitäne");
 }
 
 // --- 15. Spielziel: Rang und Ratssitze -----------------------------------------
-console.log("\nSpielziel");
-{
+if (abschnitt("Spielziel")) {
   const spiel = new Spiel(D, 5);
   const z = spiel.ziel;
   const staedte = spiel.welt.staedte;
@@ -863,8 +858,7 @@ console.log("\nSpielziel");
 }
 
 // --- 16. Risiko-Ereignisse ---------------------------------------------------
-console.log("\nRisiko");
-{
+if (abschnitt("Risiko")) {
   // Eigene Kopie der Daten, damit die Chancen für den Test auf 1 gesetzt werden können
   const D2 = structuredClone(D);
   const spiel = new Spiel(D2, 9);
@@ -936,8 +930,7 @@ console.log("\nRisiko");
 }
 
 // --- 17. Zoll und Handelsverträge ---------------------------------------------
-console.log("\nZoll");
-{
+if (abschnitt("Zoll")) {
   const spiel = ohneRisiko(new Spiel(D, 12));
   const schiff = spiel.schiffe[0];
   const zuerich = schiff.ort;
@@ -979,8 +972,7 @@ console.log("\nZoll");
 }
 
 // --- 18. Zonen und Verbindungen -------------------------------------------------
-console.log("\nZonen");
-{
+if (abschnitt("Zonen")) {
   const spiel = ohneRisiko(new Spiel(D, 14));
   insJahr(spiel, 1700);
   const zo = spiel.zonen;
@@ -1054,6 +1046,52 @@ console.log("\nZonen");
   const g2 = spiel.gulden;
   pruefe("Bahn bauen kostet den Einmalpreis", zo.baueBahn(bahn) && spiel.gulden === g2 - bahn.bau_gulden && zo.gebaut(bahn));
   pruefe("Vor dem Bau ist eine Bahn nicht benutzbar", !zo.gebaut(zo.verbindung("bahn_lausanne_basel")));
+}
+
+// --- 19. Schiffsentwicklung ---------------------------------------------------
+if (abschnitt("Schiffsentwicklung")) {
+  const spiel = ohneRisiko(new Spiel(D, 17));
+  const w = spiel.werft;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  spiel.gulden = 5_000_000;
+  pruefe("1650 gibt es nur die alten Typen neu", w.neueTypen().every((t) => t.ab_jahr <= 1650) && !w.neueTypen().some((t) => t.id === "raddampfer"));
+  pruefe("Der Raddampfer ist 1650 nicht zu kaufen", w.pruefeNeukauf(zuerich, "raddampfer")?.includes("1835") === true);
+  insJahr(spiel, 1840);
+  pruefe("1840 gibt es den Raddampfer neu, den Nauen auch noch", w.neueTypen().some((t) => t.id === "raddampfer") && w.neueTypen().some((t) => t.id === "nauen"));
+  const geld0 = spiel.gulden;
+  const dampfer = w.kaufeNeu(zuerich, "raddampfer");
+  pruefe("Raddampfer kaufen: Baujahr und Preis", !!dampfer && dampfer.baujahr === 1840 && spiel.gulden === geld0 - D.schiffe.typ.raddampfer.preis);
+  insJahr(spiel, 1880);
+  pruefe("1880 baut keine Werft mehr einen Nauen (bis 1870)", w.pruefeNeukauf(zuerich, "nauen")?.includes("1870") === true && w.neueTypen().every((t) => t.id !== "nauen"));
+  // Alter: Wert, Unterhalt, Havarie
+  const neu = w.verkaufserloes(dampfer);
+  const unterhaltNeu = spiel.unterhalt(dampfer);
+  insJahr(spiel, 1900);
+  pruefe(`Mit dem Alter sinken Verkaufserlös (${neu} -> ${w.verkaufserloes(dampfer)}) und steigt der Unterhalt (${unterhaltNeu.toFixed(1)} -> ${spiel.unterhalt(dampfer).toFixed(1)})`, w.verkaufserloes(dampfer) < neu && spiel.unterhalt(dampfer) > unterhaltNeu);
+  insJahr(spiel, 1840 + D.schiffe.alter.alt_ab_jahre);
+  pruefe("Ein altes Schiff hat öfter Havarien", spiel.istAlt(dampfer) && spiel.risiko.altHavarie(dampfer) === D.schiffe.alter.havarie_faktor_alt);
+  insJahr(spiel, 1650 + 400);
+  pruefe("Wert und Unterhalt haben Grenzen", spiel.alterswert(dampfer) === D.schiffe.alter.wert_min && spiel.altersfaktorUnterhalt(dampfer) === D.schiffe.alter.unterhalt_max);
+  // Gebrauchtmarkt: nur Typen der Zeit
+  insJahr(spiel, 1650);
+  w.angebote = [];
+  for (let t = 0; t < 3000 && w.angebote.length < 3; t++) w.tag();
+  pruefe("Gebrauchtangebote nennen ein Alter und nur Typen, die es schon gab", w.angebote.length > 0 && w.angebote.every((a) => a.alter >= D.schiffe.alter.gebraucht_alter_min && D.schiffe.typ[a.typ].ab_jahr <= 1650));
+  // Speichern und Laden: Baujahr bleibt
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Das Baujahr übersteht Speichern und Laden", geladen.schiffe.some((x) => x.typ === "raddampfer" && x.baujahr === 1840));
+  // Nachfolger der Kriegsschiffe
+  insJahr(spiel, 1900);
+  const k = spiel.kampf;
+  pruefe("Neue Kriegsschiffe der Stände sind ab 1900 die Nachfolger (Dampfwachboot, Kanonenboot)", k.neuesterTyp("wachtschiff") === "dampfwachboot" && k.neuesterTyp("kriegsnauen") === "kanonenboot");
+  insJahr(spiel, 1950);
+  pruefe("Ab 1950 ist das Dampfwachboot durch das Patrouillenboot ersetzt", k.neuesterTyp("wachtschiff") === "patrouillenboot");
+  const vor = k.schiffe.filter((s) => s.typ === "wachtschiff").length;
+  for (let t = 0; t < 1500; t++) {
+    spiel.diplomatie.ruhe = {};
+    k.tag();
+  }
+  pruefe(`Die Stände rüsten um (${vor} Wachtschiffe -> ${k.schiffe.filter((s) => s.typ === "wachtschiff").length})`, vor > 0 && k.schiffe.filter((s) => s.typ === "wachtschiff").length === 0);
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

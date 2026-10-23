@@ -48,8 +48,17 @@ export class Kampf {
     return this.spiel.diplomatie;
   }
 
+  // Neuester Typ der Nachfolgereihe, der im laufenden Jahr gebaut wird
+  neuesterTyp(typ, vorlauf = 0) {
+    const jahr = this.spiel.jahr();
+    let t = this.D.schiffe.typ[typ];
+    while (t.nachfolger && this.D.schiffe.typ[t.nachfolger].ab_jahr + vorlauf <= jahr) t = this.D.schiffe.typ[t.nachfolger];
+    return t.id;
+  }
+
   // Neues Kriegsschiff eines Stands im Hauptort
   stelle(fraktion, typ) {
+    typ = this.neuesterTyp(typ);
     const heim = this.diplomatie.hauptort(fraktion);
     const basis = `${this.D.fraktionen.nach[fraktion].adjektiv} ${this.D.schiffe.typ[typ].name}`;
     let name = basis;
@@ -373,6 +382,17 @@ export class Kampf {
     const anteil = this.k.reparatur_anteil_pro_tag;
     for (const s of this.schiffe) {
       if (s.ort === this.diplomatie.hauptort(s.fraktion) && !s.fahrt) s.schaden = Math.max(0, s.schaden - this.typ(s).rumpf * anteil);
+    }
+    // Die Stände rüsten ihre Flotten um: Ein Schiff im Heimathafen wird durch den Nachfolgetyp ersetzt
+    for (const s of this.schiffe) {
+      const neu = this.neuesterTyp(s.typ, 3);
+      if (neu === s.typ || s.fahrt || s.ort !== this.diplomatie.hauptort(s.fraktion) || spiel.kriegszufall.zahl() >= 0.01) continue;
+      s.typ = neu;
+      s.schaden = 0;
+      const basis = `${this.D.fraktionen.nach[s.fraktion].adjektiv} ${this.D.schiffe.typ[neu].name}`;
+      let name = basis;
+      for (let n = 2; this.schiffe.some((x) => x !== s && x.name === name); n++) name = `${basis} ${n}`;
+      s.name = name;
     }
     for (const schiff of spiel.schiffe) {
       const kd = this.daten(schiff);

@@ -106,7 +106,7 @@ export class Spiel {
     this.meldungen = this.meldungen.filter((m) => m.reihe !== reihe || ++zaehler <= MELDUNGEN_JE_REIHE);
   }
 
-  neuesSchiff(stadt, typId = this.D.schiffe.startschiff, gebraucht = false) {
+  neuesSchiff(stadt, typId = this.D.schiffe.startschiff, gebraucht = false, alter = 0) {
     const t = this.D.schiffe.typ[typId];
     let name = this.namen.shift();
     for (let n = this.schiffe.length + 1; !name || this.schiffe.some((s) => s.name === name); n++) name = `${t.name} ${n}`;
@@ -114,7 +114,7 @@ export class Spiel {
     // ort = Hafen, in dem das Schiff liegt (null auf See), fahrt = laufende Fahrt oder null
     // auto = automatischer Handel (automatik.js) oder null
     // kampf = Kampfhaltung, Schaden und Jagd (kampf.js)
-    const schiff = { name, typ: typId, gebraucht, pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null, kampf: neueKampfdaten(t.kampfschiff) };
+    const schiff = { name, typ: typId, gebraucht, baujahr: this.jahr() - (alter ?? 0), pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null, kampf: neueKampfdaten(t.kampfschiff) };
     this.schiffe.push(schiff);
     return schiff;
   }
@@ -142,10 +142,31 @@ export class Spiel {
     return this.schiffstyp(schiff).laderaum;
   }
 
+  // Alter eines Schiffs (oder Flottenmitglieds) in Jahren
+  alter(schiff) {
+    return Math.max(0, this.jahr() - (schiff.baujahr ?? this.jahr()));
+  }
+
+  // Wert eines Schiffs als Anteil des Neuwerts: verliert mit dem Alter, aber nicht unter wert_min
+  alterswert(schiff) {
+    const a = this.D.schiffe.alter;
+    return Math.max(a.wert_min, 1 - a.wertverlust_je_jahr * this.alter(schiff));
+  }
+
+  // Altes Schiff: höherer Unterhalt und mehr Havarien
+  altersfaktorUnterhalt(schiff) {
+    const a = this.D.schiffe.alter;
+    return Math.min(a.unterhalt_max, 1 + a.unterhalt_je_jahr * this.alter(schiff));
+  }
+
+  istAlt(schiff) {
+    return this.alter(schiff) >= this.D.schiffe.alter.alt_ab_jahre;
+  }
+
   unterhalt(schiff) {
     if (schiff.mitglieder) return schiff.mitglieder.reduce((a, m) => a + this.unterhalt(m), 0);
     const t = this.schiffstyp(schiff);
-    return t.unterhalt * (schiff.gebraucht ? this.D.schiffe.gebraucht.unterhalt_faktor : 1);
+    return t.unterhalt * (schiff.gebraucht ? this.D.schiffe.gebraucht.unterhalt_faktor : 1) * this.altersfaktorUnterhalt(schiff);
   }
 
   // --- Flotten -----------------------------------------------------------------
@@ -159,7 +180,7 @@ export class Spiel {
   // b schliesst sich a an; Ladung wird zusammengelegt, Automatik endet
   zusammenlegen(a, b) {
     if (this.pruefeZusammenlegen(a, b)) return false;
-    const mitglied = (s) => (s.mitglieder ? s.mitglieder : [{ name: s.name, typ: s.typ, gebraucht: s.gebraucht }]);
+    const mitglied = (s) => (s.mitglieder ? s.mitglieder : [{ name: s.name, typ: s.typ, gebraucht: s.gebraucht, baujahr: s.baujahr }]);
     a.mitglieder = [...mitglied(a), ...mitglied(b)];
     a.typ = "flotte";
     a.gebraucht = false;
@@ -189,7 +210,7 @@ export class Spiel {
     if (this.pruefeAufloesen(flotte)) return null;
     const ladung = Object.entries(flotte.ladung).map(([g, p]) => ({ g, ...p }));
     const neu = flotte.mitglieder.map((m) => ({
-      name: m.name, typ: m.typ, gebraucht: m.gebraucht, pos: [...flotte.pos], ort: flotte.ort, fahrt: null, ladung: {}, auto: null,
+      name: m.name, typ: m.typ, gebraucht: m.gebraucht, baujahr: m.baujahr, pos: [...flotte.pos], ort: flotte.ort, fahrt: null, ladung: {}, auto: null,
       kampf: neueKampfdaten(this.D.schiffe.typ[m.typ].kampfschiff),
     }));
     // Schaden nach Rumpf verteilen

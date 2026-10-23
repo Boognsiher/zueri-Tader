@@ -18,6 +18,13 @@ export class Risiko {
     return von + (bis - von) * this.zufall.zahl();
   }
 
+  // Alte Schiffe haben öfter Havarien (bei Flotten zählt das älteste Mitglied)
+  altHavarie(schiff) {
+    const s = this.spiel;
+    const glieder = schiff.mitglieder ?? [schiff];
+    return glieder.some((m) => s.istAlt(m)) ? this.D.schiffe.alter.havarie_faktor_alt : 1;
+  }
+
   // Neupreis der Schiffe (bei Flotten die Summe)
   neupreis(schiff) {
     const typen = schiff.mitglieder ? schiff.mitglieder.map((m) => m.typ) : [schiff.typ];
@@ -140,7 +147,7 @@ export class Risiko {
       // Reihenfolge fest, damit der Zufall reproduzierbar bleibt
       if (this.zufall.zahl() < e.sturm.chance) this.sturm(schiff);
       if (!schiff.fahrt) continue;
-      if (this.zufall.zahl() < e.havarie.chance) this.havarie(schiff);
+      if (this.zufall.zahl() < e.havarie.chance * (this.altHavarie(schiff))) this.havarie(schiff);
       if (Object.keys(schiff.ladung).length) {
         const chance = (e.ueberfall.chance * (krieg ? e.ueberfall.kriegsfaktor : 1)) / this.schutz(schiff);
         if (this.zufall.zahl() < chance) this.ueberfall(schiff);

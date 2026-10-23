@@ -247,7 +247,7 @@ export class Oberflaeche {
           : `<span class="autosymbol" title="Automatik läuft" aria-label="Automatik läuft">⟳</span>`
         : "";
       html += `<li class="schiffzeile">${auto}<button class="schiff ${schiff === this.schiff ? "gewaehlt" : ""}" data-schiff="${nr}">
-        <span class="schiffsname">${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}»${schiff.gebraucht ? " <small>gebraucht</small>" : ""}${schiff.versichert ? ' <small title="versichert">🛡</small>' : ""}</span>
+        <span class="schiffsname">${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}»${schiff.gebraucht ? " <small>gebraucht</small>" : ""}${s.alter(schiff) >= 5 ? ` <small title="Baujahr ${schiff.baujahr}${s.istAlt(schiff) ? ": alt, hoher Unterhalt, öfter Havarie" : ""}">${s.alter(schiff)} J.${s.istAlt(schiff) ? " alt" : ""}</small>` : ""}${schiff.versichert ? ' <small title="versichert">🛡</small>' : ""}</span>
         ${schiff.mitglieder ? `<span class="mitglieder">${schiff.mitglieder.length} Schiffe: ${esc(schiff.mitglieder.map((m) => `${this.D.schiffe.typ[m.typ].name} «${m.name}»`).join(", "))} · Tempo ${f(s.schiffstyp(schiff).tempo * 100)} %</span>` : ""}
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)}</span>
         ${this.kampfzeile(schiff)}
@@ -707,8 +707,8 @@ export class Oberflaeche {
     const schiffzeile = (t) => `<span class="klein">Laderaum ${t.laderaum} · Tempo ${f(t.tempo * 100)} % · Kampfkraft ${t.kampfkraft} · Rumpf ${t.rumpf} · Unterhalt ${t.unterhalt} Gulden/Tag</span>`;
     let html = "";
     if (w.istWerft(stadt)) {
-      html += `<h3>Neue Schiffe</h3><ul class="betriebe">`;
-      for (const t of daten.typen) {
+      html += `<h3>Neue Schiffe <small>im Jahr ${s.jahr()}</small></h3><ul class="betriebe">`;
+      for (const t of w.neueTypen()) {
         const grund = w.pruefeNeukauf(stadt, t.id);
         html += `<li class="betrieb"><div class="betriebkopf"><b>${esc(t.name)}</b> ${schiffzeile(t)}</div>
           <div class="betriebinfo">${esc(t.text)}</div>
@@ -718,6 +718,10 @@ export class Oberflaeche {
     } else {
       html += `<p class="hilfe">${esc(stadt.name)} hat keine Werft. Neue Schiffe gibt es in ${esc(daten.werften.join(", "))}.</p>`;
     }
+    const kommend = w.kommendeTypen().slice(0, 2);
+    if (kommend.length && w.istWerft(stadt)) {
+      html += `<p class="hilfe">${kommend.map((t) => `Ab ${t.ab_jahr}: ${esc(t.name)}`).join(" · ")}. Ältere Schiffe verlieren an Wert, kosten mehr Unterhalt und haben öfter Havarien.</p>`;
+    }
     const angebote = w.angeboteIn(stadt);
     html += `<h3>Gebrauchte Schiffe</h3>`;
     if (angebote.length) {
@@ -726,7 +730,7 @@ export class Oberflaeche {
         const t = w.typ(a.typ);
         const grund = w.pruefeGebraucht(a);
         html += `<li class="betrieb"><div class="betriebkopf"><b>${esc(t.name)}</b> ${schiffzeile(t)}</div>
-          <div class="betriebinfo">gebraucht, Neupreis ${f(t.preis)} Gulden · Unterhalt ${f(t.unterhalt * daten.gebraucht.unterhalt_faktor)} statt ${t.unterhalt} Gulden/Tag · Angebot bis ${esc(s.datumWelt(a.bis))}</div>
+          <div class="betriebinfo">gebraucht, ${a.alter ?? 0} Jahre alt, Neupreis ${f(t.preis)} Gulden · Unterhalt ${f(t.unterhalt * daten.gebraucht.unterhalt_faktor)} statt ${t.unterhalt} Gulden/Tag · Angebot bis ${esc(s.datumWelt(a.bis))}</div>
           <div class="betriebknoepfe"><button class="haupt" data-gebraucht="${a.nr}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">kaufen: ${f(a.preis)} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}</div></li>`;
       }
       html += `</ul>`;

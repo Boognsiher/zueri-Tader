@@ -23,8 +23,26 @@ export class Werft {
     return this.spiel.ausbau.vorOrt(stadt);
   }
 
+  // --- Epochen: Welche Typen baut die Werft im laufenden Jahr? ---------------------------
+  neuBaubar(typ) {
+    const jahr = this.spiel.jahr();
+    return jahr >= (typ.ab_jahr ?? 0) && jahr <= (typ.bis_jahr ?? Infinity);
+  }
+
+  // Typen, die jetzt neu zu kaufen sind (in der Reihenfolge der Daten)
+  neueTypen() {
+    return this.daten.typen.filter((t) => this.neuBaubar(t));
+  }
+
+  // Typen, die es in den nächsten Jahrzehnten erstmals gibt (für die Anzeige)
+  kommendeTypen() {
+    const jahr = this.spiel.jahr();
+    return this.daten.typen.filter((t) => (t.ab_jahr ?? 0) > jahr).sort((a, b) => a.ab_jahr - b.ab_jahr);
+  }
+
   // --- Neue Schiffe ---------------------------------------------------------------
   pruefeNeukauf(stadt, typId) {
+    if (!this.neuBaubar(this.typ(typId))) return this.typ(typId).ab_jahr > this.spiel.jahr() ? `Diesen Typ gibt es erst ab ${this.typ(typId).ab_jahr}.` : `Diesen Typ baut keine Werft mehr (bis ${this.typ(typId).bis_jahr}).`;
     if (!this.istWerft(stadt)) return `In ${stadt.name} gibt es keine Werft (Werften: ${this.daten.werften.join(", ")}).`;
     if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
     if (this.spiel.gulden < this.typ(typId).preis) return "Zu wenig Gulden.";
@@ -44,7 +62,7 @@ export class Werft {
   // --- Verkauf eigener Schiffe ----------------------------------------------------------
   verkaufserloes(schiff) {
     if (schiff.mitglieder) return schiff.mitglieder.reduce((a, m) => a + this.verkaufserloes(m), 0);
-    return Math.round((this.typ(schiff.typ).preis * this.daten.verkaufsanteil) / 100) * 100;
+    return Math.round((this.typ(schiff.typ).preis * this.daten.verkaufsanteil * this.spiel.alterswert(schiff)) / 100) * 100;
   }
 
   pruefeVerkauf(schiff) {
@@ -85,7 +103,7 @@ export class Werft {
     this.spiel.gulden -= angebot.preis;
     this.spiel.buche("schiffeKauf", -angebot.preis);
     this.angebote = this.angebote.filter((a) => a !== angebot);
-    const schiff = this.spiel.neuesSchiff(stadt, angebot.typ, true);
+    const schiff = this.spiel.neuesSchiff(stadt, angebot.typ, true, angebot.alter ?? 0);
     this.spiel.melde(`Gebrauchten ${this.typ(angebot.typ).name} «${schiff.name}» in ${stadt.name} für ${angebot.preis} Gulden gekauft.`, "gut");
     return schiff;
   }
@@ -96,10 +114,11 @@ export class Werft {
     const g = this.daten.gebraucht;
     this.angebote = this.angebote.filter((a) => a.bis > welt.tag);
     if (this.angebote.length >= g.max_angebote || welt.zufall.zahl() >= g.chance_pro_tag) return;
-    const t = welt.zufall.wahl(this.daten.typen);
+    const t = welt.zufall.wahl(this.daten.typen.filter((x) => (x.ab_jahr ?? 0) <= this.spiel.jahr() && this.spiel.jahr() <= (x.bis_jahr ?? Infinity) + 30));
     const stadt = welt.zufall.wahl(welt.staedte);
     const rabatt = g.rabatt_min + (g.rabatt_max - g.rabatt_min) * welt.zufall.zahl();
-    const angebot = { nr: this.naechsteNr++, typ: t.id, stadt: stadt.name, preis: Math.round((t.preis * (1 - rabatt)) / 100) * 100, bis: welt.tag + g.dauer_tage };
+    const alt = this.daten.alter;
+    const angebot = { nr: this.naechsteNr++, typ: t.id, stadt: stadt.name, alter: alt.gebraucht_alter_min + ((this.naechsteNr * 7) % (alt.gebraucht_alter_max - alt.gebraucht_alter_min + 1)), preis: Math.round((t.preis * (1 - rabatt)) / 100) * 100, bis: welt.tag + g.dauer_tage };
     this.angebote.push(angebot);
     this.spiel.melde(`In ${stadt.name} wird ein gebrauchter ${t.name} für ${angebot.preis} Gulden angeboten (bis ${this.spiel.datumWelt(angebot.bis)}).`, "ereignis");
   }
