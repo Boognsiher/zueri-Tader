@@ -80,10 +80,17 @@ export class Oberflaeche {
     try {
       this.seite = localStorage.getItem("zueri-trade.seite") || "flotte";
     } catch {}
+    // Auf dem Handy öffnet ein Reiter das Menü über der Karte, derselbe Reiter schliesst es wieder
+    this.mobil = window.matchMedia("(max-width: 900px)");
     this.e.seitenreiter.addEventListener("click", (ev) => {
       const k = ev.target.closest("[data-seite]");
-      if (k) this.zeigeSeite(k.dataset.seite);
+      if (!k) return;
+      if (this.mobil.matches && k.dataset.seite === this.seite && document.body.classList.contains("seite-offen")) return this.schliesseSeite();
+      this.zeigeSeite(k.dataset.seite);
+      if (this.mobil.matches) document.body.classList.add("seite-offen");
     });
+    // Ein Tipp auf die Karte schliesst das Menü (die Karte reagiert trotzdem auf den Tipp)
+    this.karte.svg?.addEventListener("pointerdown", () => this.schliesseSeite());
     this.zeigeSeite(this.seite);
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
     this.e.seen.addEventListener("click", (ev) => this.klickSeen(ev));
@@ -249,6 +256,10 @@ export class Oberflaeche {
     } catch {}
     for (const k of this.e.seitenreiter.querySelectorAll("[data-seite]")) k.setAttribute("aria-selected", String(k.dataset.seite === seite));
     for (const t of this.e.seitenreiter.parentElement.querySelectorAll("section[data-seite]")) t.hidden = t.dataset.seite !== seite;
+  }
+
+  schliesseSeite() {
+    document.body.classList.remove("seite-offen");
   }
 
   aktualisiere() {

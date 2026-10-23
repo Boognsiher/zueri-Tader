@@ -536,3 +536,29 @@ details.verbindung summary { cursor: pointer; }
 .cheatliste { min-width: 17rem; }
 .cheatknoepfe { display: flex; flex-wrap: wrap; gap: 0.25rem; }
 .nureinkauf { display: block; margin: 0.4rem 0; }
+
+/* --- Handy: Seitenleiste als Menü von unten ------------------------------------
+   Die Karte füllt den Bildschirm, unten steht die Reiterleiste. Ein Tipp auf einen Reiter
+   öffnet das Menü über der Karte (body.seite-offen), ein zweiter Tipp oder ein Tipp auf die
+   Karte schliesst es. */
+@media (max-width: 900px) {
+  html, body { height: 100%; }
+  main { flex: 1; min-height: 0; grid-template-rows: minmax(0, 1fr); }
+  #kartenbereich { min-height: 0; border-bottom: none; padding-bottom: 3.2rem; }
+  #karte { flex: 1 1 auto; height: auto; min-height: 0; }
+  #meldungen { max-height: 5.5rem; overflow-y: auto; }
+  #seite {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 6;
+    max-height: 75vh; max-height: 75dvh; overflow-y: auto; overscroll-behavior: contain;
+    padding: 0 0.4rem; gap: 0.4rem; background: transparent;
+  }
+  body:not(.seite-offen) #seite .tafel { display: none; }
+  body.seite-offen #seite { background: var(--papier); padding-top: 0.4rem; border-top: 2px solid var(--holz); box-shadow: 0 -8px 24px rgba(40, 25, 10, 0.35); }
+  .seitenreiter {
+    position: sticky; top: auto; bottom: 0; order: 99;
+    margin: 0 -0.4rem; padding: 0.3rem 0.4rem calc(0.3rem + env(safe-area-inset-bottom));
+    background: var(--papier); border-top: 1px solid var(--rand); border-bottom: none;
+  }
+  .seitenreiter button { border-radius: 4px; border-bottom: 1px solid var(--rand); margin-bottom: 0; padding: 0.45em 0.2em; }
+  dialog.fenster { z-index: 7; }
+}

@@ -160,6 +160,7 @@ async function start() {
       else if (bilanzDialog.open) bilanzZu();
       else if (routenfenster.offen) routenfenster.schliesse();
       else if (ui.handelOffen) ui.schliesseHandel();
+      else if (document.body.classList.contains("seite-offen")) ui.schliesseSeite();
       else if (!e.target.closest("details")) ui.abwaehlen();
       return;
     }
