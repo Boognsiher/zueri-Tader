@@ -11,6 +11,7 @@
 // 11.  Automatik «Versorgen».
 // 12.  Flotten.
 // 13.  Stände, Kriege, Kaperbriefe und Gefechte.
+// 14.  Kapitäne: Anheuern, Lohn, Stufen, Bonus, Verschollen, Speichern.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -719,6 +720,73 @@ console.log("\nStände und Kampf");
   delete d.kriege["schwyz|zuerich"];
   d.kaperbriefeNachFrieden();
   pruefe("Mit dem Frieden erlischt der Kaperbrief", !d.kaperbriefe.includes("zuerich"));
+}
+
+// --- 14. Kapitäne -----------------------------------------------------------
+console.log("\nKapitäne");
+{
+  const spiel = new Spiel(D, 1);
+  const kk = spiel.kapitaene;
+  const schiff = spiel.schiffe[0];
+  const stadt = schiff.ort;
+  pruefe("Ohne Kapitän: Faktor 1 und kein Lohn", kk.faktor(schiff, "tempo") === 1 && kk.liste.length === 0);
+  const tempo0 = spiel.tempo(schiff);
+  const b = kk.neuerBewerber(stadt.name);
+  const geld0 = spiel.gulden;
+  const k = kk.anheuern(b);
+  pruefe("Kapitän anheuern kostet das Anwerbegeld", !!k && spiel.gulden === geld0 - kk.anwerbegeld(b) && !kk.wirtshaus.includes(b));
+  pruefe("Anheuern ohne Anwesenheit ist nicht möglich", (() => {
+    const fern = spiel.welt.staedte.find((s) => s !== stadt && !spiel.ausbau.vorOrt(s));
+    const x = kk.neuerBewerber(fern.name);
+    return kk.pruefeAnheuern(x) !== null;
+  })());
+  pruefe("Kapitän zuweisen", kk.zuweisen(k, schiff) && kk.von(schiff) === k);
+  const bonus = 1 + (kk.stufe(k) - 1) * D.kapitaene.wirkung_je_stufe.tempo + (kk.eigenschaft(k)?.tempo ?? 0);
+  pruefe("Tempo folgt Stufe und Eigenschaft", Math.abs(spiel.tempo(schiff) - tempo0 * bonus) < 1e-9);
+  // Stufenaufstieg durch Erfahrung
+  k.erfahrung = 0;
+  k.eigenschaft = null;
+  const stufe0 = kk.stufe(k);
+  kk.erfahre(schiff, "umsatz", 100 * D.kapitaene.erfahrung_ab_stufe[1] / D.kapitaene.erfahrung.je_100_gulden);
+  pruefe("Erfahrung bringt eine höhere Stufe und mehr Tempo", kk.stufe(k) === stufe0 + 1 && spiel.tempo(schiff) > tempo0);
+  const lohnStufe = kk.lohn(k);
+  pruefe("Lohn steigt mit der Stufe, Reserve zahlt weniger", lohnStufe > D.kapitaene.lohn.grund && kk.lohn(k, false) < lohnStufe);
+  // Lohn wird täglich gebucht
+  const g1 = spiel.gulden;
+  const lohnHeute = kk.lohn(k, true);
+  spiel.tagVoran();
+  pruefe("Lohn der Kapitäne wird gebucht", spiel.konten.gesamt.kapitaenslohn <= -lohnHeute + 1e-9 && spiel.gulden < g1);
+  // Verschollen: Untergang eines Kriegsschiffs, Rückkehr nach Monaten
+  const kriegsschiff = spiel.neuesSchiff(stadt, "wachtschiff");
+  const k2 = kk.anheuern(kk.neuerBewerber(stadt.name));
+  kk.zuweisen(k2, kriegsschiff);
+  kk.schiffVerloren(kriegsschiff, true);
+  spiel.schiffe = spiel.schiffe.filter((x) => x !== kriegsschiff);
+  const wartezeit = k2.bis - spiel.welt.tag;
+  pruefe(`Kapitän ist nach dem Untergang verschollen (${wartezeit} Tage) und stirbt nicht`, kk.verschollen(k2) && wartezeit >= D.kapitaene.verschollen.tage_min && wartezeit <= D.kapitaene.verschollen.tage_max && kk.liste.includes(k2));
+  const lohnVor = spiel.konten.gesamt.kapitaenslohn;
+  // Speichern und Laden
+  const stand = JSON.parse(JSON.stringify(speichere(spiel)));
+  const geladen = lade(D, stand);
+  pruefe("Kapitäne überstehen Speichern und Laden", JSON.stringify(spiel.kapitaene.zustand()) === JSON.stringify(geladen.kapitaene.zustand()) && geladen.kapitaene.von(geladen.schiffe[0])?.nr === k.nr);
+  for (let t = 0; t < wartezeit + 1; t++) {
+    spiel.tagVoran();
+    geladen.tagVoran();
+  }
+  pruefe("Verschollener Kapitän kehrt zurück", !kk.verschollen(k2) && kk.zustandVon(k2) === "reserve");
+  pruefe("Verschollene kosten keinen Lohn, Verlauf nach dem Laden gleich", JSON.stringify(spiel.kapitaene.zustand()) === JSON.stringify(geladen.kapitaene.zustand()) && spiel.gulden === geladen.gulden && spiel.konten.gesamt.kapitaenslohn < lohnVor);
+  // Schiff verkaufen: Kapitän geht in die Reserve
+  const zweit = spiel.neuesSchiff(stadt, "nauen");
+  kk.zuweisen(k2, zweit);
+  spiel.werft.verkaufe(zweit);
+  pruefe("Verkauf eines Schiffs schickt den Kapitän in die Reserve", kk.zustandVon(k2) === "reserve");
+  // Flotte: Kapitän bleibt erhalten
+  const a = spiel.schiffe[0];
+  const c = spiel.neuesSchiff(a.ort, "nauen");
+  spiel.zusammenlegen(a, c);
+  pruefe("Kapitän bleibt bei der Flotte", kk.von(a) === k);
+  spiel.aufloesen(a);
+  pruefe("Beim Auflösen behält das erste Schiff den Kapitän", spiel.schiffe.some((x) => kk.von(x) === k));
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

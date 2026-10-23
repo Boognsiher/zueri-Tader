@@ -59,11 +59,13 @@ export function speichere(spiel) {
         auto: s.auto,
         mitglieder: s.mitglieder ?? null,
         kampf: s.kampf,
+        kapitaen: s.kapitaen ?? null,
       })),
       kriegszufall: spiel.kriegszufall.zustand,
       diplomatie: spiel.diplomatie.zustand(),
       kampf: spiel.kampf.zustand(),
       ausbau: spiel.ausbau.zustand(),
+      kapitaene: spiel.kapitaene.zustand(),
     },
   };
 }
@@ -116,6 +118,7 @@ export function lade(D, stand) {
     ladung: z.ladung,
     auto: z.auto,
     ...(z.mitglieder ? { mitglieder: z.mitglieder } : {}),
+    ...(z.kapitaen ? { kapitaen: z.kapitaen } : {}),
   }));
   // Spielstände vor dem Kampfsystem: Kampfdaten nach Schiffstyp
   for (const [i, s] of spiel.schiffe.entries()) s.kampf = sp.schiffe[i].kampf ?? neueKampfdaten(spiel.schiffstyp(s).kampfschiff);
@@ -124,5 +127,6 @@ export function lade(D, stand) {
   spiel.kampf.laden(sp.kampf);
   spiel.ausbau.laden(sp.ausbau);
   spiel.werft.laden(sp.werft);
+  spiel.kapitaene.laden(sp.kapitaene);
   return spiel;
 }

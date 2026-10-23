@@ -60,6 +60,7 @@ export class Werft {
     const erloes = this.verkaufserloes(schiff);
     this.spiel.gulden += erloes;
     this.spiel.buche("schiffeVerkauf", erloes);
+    this.spiel.kapitaene.schiffVerloren(schiff, false);
     this.spiel.schiffe = this.spiel.schiffe.filter((s) => s !== schiff);
     this.spiel.namen.push(schiff.name); // der Name wird wieder frei
     this.spiel.melde(`${this.typ(schiff.typ).name} «${schiff.name}» in ${schiff.ort.name} für ${erloes} Gulden verkauft.`);

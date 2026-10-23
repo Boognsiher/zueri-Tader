@@ -1,6 +1,6 @@
 # Spieltiefe und Erweiterung
 
-Stand: 23.10.2026, Entwurf nach Rückmeldung zur Demo. Noch nichts davon ist umgesetzt.
+Stand: 23.10.2026, Entwurf nach Rückmeldung zur Demo. Umgesetzt sind bisher nur die Kapitäne (erste Fassung, `game/src/kapitaene.js`). Das Übrige ist Entwurf.
 
 ## Befund
 
@@ -21,7 +21,8 @@ Idee des Projektinhabers: Kapitäne steigen auf, je mehr sie handeln.
 - Erfahrung wächst mit Handelsumsatz und gefahrenen Strecken, im Gefecht zusätzlich mit Kampferfahrung.
 - Eine höhere Stufe bringt Vorteile: schneller, besserer Umschlag, mehr Laderaum nutzbar, bessere Fluchtchance, bessere Kampfwerte. Eigenschaften (zum Beispiel «Kenner des Obersees», «Zöllnerschreck») geben Unterschiede.
 - Kapitäne kosten Lohn, steigen mit der Stufe und können abgeworben werden. Das macht die Automatik zu einer Entscheidung: wen setze ich worauf.
-- Offen: Kapitäne anheuern in Wirtshäusern der Städte oder frei verfügbar? Gibt es Verlust (Tod, Kündigung)? Alle Zahlen gehören in `data/`.
+- Entschieden: Kapitäne werden in den Wirtshäusern angeheuert und sterben nicht. Sinkt das Schiff, sind sie Monate verschollen und kehren dann zurück.
+- Offen: Kündigung bei schlechter Behandlung oder zu niedrigem Lohn? Eigenschaften mit mehr Wirkung? Alle Zahlen gehören in `data/kapitaene.json` und sind noch zu balancieren.
 
 ## Erweiterung: weitere Seen, verbunden durch Flüsse
 
@@ -32,12 +33,13 @@ Idee des Projektinhabers: weitere Seen der Schweiz als eigene Karten, verbunden 
 - Das passt zu den Säulen Handel und Diplomatie: Preisunterschiede zwischen den Zonen sind der Handelsanreiz, der Zoll und die Verträge sind die Reibung.
 - Der Walensee schliesst an den Obersee an (Schmerikon und die Linth, Weesen, Walenstadt). Historische Wege und Schiffbarkeit im 17. Jahrhundert sind noch zu prüfen.
 - Technisch: Karten, Städte und Waren stehen bereits in `data/`. Nötig sind mehrere Karten (heute eine, `data/karte.json`), Zonenzugehörigkeit pro Stadt, Zölle als Daten und eine Simulation mit mehreren Zonen.
-- Offen: Wie viele Zonen insgesamt (Hobby-Umfang, siehe [konzept.md](konzept.md))? Fahren Schiffe selbst zwischen den Zonen, oder braucht es Umladen und Treideln an den Flussstädten? Hat jede Zone eigene Waren?
+- Entschieden: Reihenfolge Walensee, Bodensee, Genfersee, dazu ein Terminal in Basel für die Flussfahrt. Schiffe laden um bzw. ins Kontor, von dort wird in die Anschlussstädte des anderen Sees gehandelt. Eine Bahnverbindung wäre denkbar.
+- Offen: Historische Machbarkeit (Flüsse, Bahn), Hat jede Zone eigene Waren? Wie bildet das Basel-Terminal die Flussfahrt ab (Rhein, Aare)? Passt das noch zum Hobby-Umfang von 15 bis 25 Städten (siehe [konzept.md](konzept.md))?
 
 ## Vorgeschlagene Reihenfolge
 
-1. **Kapitäne mit Stufen:** klein, in sich abgeschlossen, gibt der Automatik sofort mehr Gewicht. Dazu die ersten **Risiko-Ereignisse** für Schiffe.
-2. **Spielziel:** Etappen festlegen. Dann hat alles Weitere ein Maß.
+1. **Kapitäne mit Stufen:** erste Fassung im Spiel. Dazu die ersten **Risiko-Ereignisse** für Schiffe.
+2. **Spielziel:** Rang und Ratssitz in Städten, rund 25 Stunden Spielzeit bis alles freigeschaltet ist. Dann hat alles Weitere ein Maß.
 3. **Zoll und Verträge** auf der bestehenden Karte (Zölle zwischen den Ständen), zuerst in der Simulation.
 4. **Walensee als zweite Karte** mit Flussstädten als Zoll- und Handelstor.
 

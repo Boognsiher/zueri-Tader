@@ -242,6 +242,7 @@ export class Oberflaeche {
         ${schiff.mitglieder ? `<span class="mitglieder">${schiff.mitglieder.length} Schiffe: ${esc(schiff.mitglieder.map((m) => `${this.D.schiffe.typ[m.typ].name} «${m.name}»`).join(", "))} · Tempo ${f(s.schiffstyp(schiff).tempo * 100)} %</span>` : ""}
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)}</span>
         ${this.kampfzeile(schiff)}
+        ${this.kapitaenzeile(schiff)}
         <span class="status">${this.status(schiff)}</span>
         ${schiff.auto ? `<span class="modus ${schiff.auto.pausiert ? "pausiert" : ""}">${schiff.auto.pausiert ? "pausiert: " : ""}${esc(this.modus(schiff))}</span>` : ""}
         ${ladung ? `<span class="ladung">${ladung}</span>` : ""}
@@ -458,6 +459,7 @@ export class Oberflaeche {
       ["kontor", kontor ? "Kontor" : "Kontor (keins)"],
       ["betriebe", `Betriebe${eigene ? ` (${eigene} eigene)` : ""}`],
       ["werft", werftReiter],
+      ["wirtshaus", `Wirtshaus${s.kapitaene.bewerberIn(stadt).length ? " (Bewerber)" : ""}`],
       ["rathaus", "Rathaus"],
     ]
       .map(([w, t]) => `<button role="tab" data-reiter="${w}" aria-selected="${this.reiter === w}">${t}</button>`)
@@ -475,6 +477,10 @@ export class Oberflaeche {
     }
     if (this.reiter === "werft") {
       this.e.handelInhalt.innerHTML = html + this.werftReiter(stadt);
+      return;
+    }
+    if (this.reiter === "wirtshaus") {
+      this.e.handelInhalt.innerHTML = html + this.wirtshausReiter(stadt);
       return;
     }
     if (this.reiter === "rathaus") {
@@ -677,6 +683,73 @@ export class Oberflaeche {
           <div class="betriebknoepfe"><button data-schiffverkauf="${s.schiffe.indexOf(x)}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">verkaufen: ${f(w.verkaufserloes(x))} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}</div></li>`;
       }
       html += `</ul>`;
+    }
+    return html;
+  }
+
+  // Zeile in der Flottenliste: Kapitän des Schiffs mit Stufe
+  kapitaenzeile(schiff) {
+    const kk = this.spiel.kapitaene;
+    const k = kk.von(schiff);
+    return k ? `<span class="kapitaen" title="${esc(kk.eigenschaft(k)?.name ?? "")}">Kapitän ${esc(k.name)}, Stufe ${kk.stufe(k)}</span>` : "";
+  }
+
+  // Wirtshaus: eigene Kapitäne verwalten, Bewerber anheuern
+  wirtshausReiter(stadt) {
+    const s = this.spiel;
+    const kk = s.kapitaene;
+    const w = this.D.kapitaene.wirkung_je_stufe;
+    const hier = s.schiffe.filter((x) => s.imHafen(x, stadt));
+    const eigenschaft = (k) => {
+      const e = kk.eigenschaft(k);
+      return e ? `<b>${esc(e.name)}</b>: ${esc(e.text)}` : "ohne Besonderheit";
+    };
+    const stufentext = (k) => {
+      const naechste = kk.naechsteStufeBei(k);
+      return `Stufe ${kk.stufe(k)}${naechste ? ` · Erfahrung ${f(k.erfahrung)} von ${f(naechste)}` : " (höchste Stufe)"}`;
+    };
+    let html = `<p class="hilfe">Ein Schiff ohne Kapitän fährt ohne Bonus und ohne Lohn. Jede Stufe bringt ${f(w.tempo * 100)} % mehr Tempo, ${f(w.umschlag * 100)} % schnelleres Laden und ${f(w.kampf * 100)} % mehr Kampfkraft. Kapitäne lernen durch Fahrten, Handel und Gefechte. Sinkt ihr Schiff, sind sie Monate verschollen.</p>`;
+    html += `<h3>Deine Kapitäne</h3>`;
+    if (!kk.liste.length) html += `<p class="hilfe">Du hast noch keinen Kapitän angeheuert.</p>`;
+    else {
+      html += `<ul class="betriebe">`;
+      for (const k of kk.liste) {
+        const zustand = kk.zustandVon(k);
+        const schiff = kk.schiffVon(k);
+        const ort =
+          zustand === "verschollen" ? `verschollen bis ${esc(s.datumWelt(k.bis))}` : zustand === "schiff" ? `auf «${esc(schiff.name)}»${s.imHafen(schiff) ? ` (${esc(schiff.ort.name)})` : " (unterwegs)"}` : "in Reserve";
+        const knoepfe = [];
+        if (zustand !== "verschollen") {
+          for (const x of hier) {
+            if (x.kapitaen === k.nr) continue;
+            const grund = kk.pruefeZuweisen(k, x);
+            const altesSchiff = schiff && !s.imHafen(schiff) ? "Sein Schiff ist auf See." : null;
+            knoepfe.push(this.knopf(`data-kap-zuweisen="${k.nr}" data-schiff-nr="${s.schiffe.indexOf(x)}"`, `auf «${esc(x.name)}»`, grund ?? altesSchiff));
+          }
+          if (schiff && s.imHafen(schiff)) knoepfe.push(`<button data-kap-absetzen="${k.nr}">Ins Reserve</button>`);
+          const grundEntlassen = kk.pruefeEntlassen(k);
+          knoepfe.push(`<button data-kap-entlassen="${k.nr}" ${grundEntlassen ? "disabled" : ""} title="${esc(grundEntlassen ?? "")}">Entlassen</button>`);
+        }
+        html += `<li class="betrieb eigen"><div class="betriebkopf"><b>${esc(k.name)}</b> <span class="klein">${stufentext(k)} · ${ort}</span></div>
+          <div class="betriebinfo">${eigenschaft(k)} · Lohn ${f(kk.lohn(k, zustand === "schiff"))} Gulden/Tag${zustand === "reserve" ? " (Reserve, halber Lohn)" : ""}</div>
+          <div class="betriebknoepfe">${knoepfe.join(" ")}</div></li>`;
+      }
+      html += `</ul>`;
+    }
+    const bewerber = kk.bewerberIn(stadt);
+    html += `<h3>Bewerber in ${esc(stadt.name)}</h3>`;
+    if (bewerber.length) {
+      html += `<ul class="betriebe">`;
+      for (const b of bewerber) {
+        const grund = kk.pruefeAnheuern(b);
+        html += `<li class="betrieb"><div class="betriebkopf"><b>${esc(b.name)}</b> <span class="klein">${stufentext(b)}</span></div>
+          <div class="betriebinfo">${eigenschaft(b)} · Lohn ${f(kk.lohn(b))} Gulden/Tag · wartet bis ${esc(s.datumWelt(b.bis))}</div>
+          <div class="betriebknoepfe"><button class="haupt" data-kap-anheuern="${b.nr}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">anheuern: ${f(kk.anwerbegeld(b))} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}</div></li>`;
+      }
+      html += `</ul>`;
+    } else {
+      const anderswo = [...new Set(kk.wirtshaus.map((b) => b.stadt))].join(", ");
+      html += `<p class="hilfe">Hier sucht gerade niemand Arbeit. ${anderswo ? `Bewerber gibt es in: ${esc(anderswo)}.` : "Bewerber tauchen ab und zu in einem Wirtshaus auf."}</p>`;
     }
     return html;
   }
@@ -952,6 +1025,14 @@ export class Oberflaeche {
       s.diplomatie.kaufeKaperbrief(stadt);
     } else if (d.kaperbriefZurueck) {
       s.diplomatie.gibZurueck(d.kaperbriefZurueck);
+    } else if (d.kapAnheuern) {
+      s.kapitaene.anheuern(s.kapitaene.wirtshaus.find((b) => b.nr === Number(d.kapAnheuern)));
+    } else if (d.kapZuweisen) {
+      s.kapitaene.zuweisen(s.kapitaene.liste.find((k) => k.nr === Number(d.kapZuweisen)), s.schiffe[Number(d.schiffNr)]);
+    } else if (d.kapAbsetzen) {
+      s.kapitaene.absetzen(s.kapitaene.liste.find((k) => k.nr === Number(d.kapAbsetzen)));
+    } else if (d.kapEntlassen) {
+      s.kapitaene.entlassen(s.kapitaene.liste.find((k) => k.nr === Number(d.kapEntlassen)));
     } else if (d.neuschiff) {
       s.werft.kaufeNeu(stadt, d.neuschiff);
     } else if (d.gebraucht) {

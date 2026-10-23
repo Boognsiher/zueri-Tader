@@ -237,7 +237,7 @@ export class Kampf {
       const t = this.typ(x);
       const kd = this.daten(x);
       return {
-        x, name: x.name, typname: t.name, fraktion: x.fraktion ?? null, kampfkraft: t.kampfkraft, rumpf: t.rumpf, tempo: t.tempo,
+        x, name: x.name, typname: t.name, fraktion: x.fraktion ?? null, kampfkraft: t.kampfkraft * this.spiel.kapitaene.faktor(x, "kampf"), rumpf: t.rumpf, tempo: t.tempo * this.spiel.kapitaene.faktor(x, "tempo"),
         vorher: kd.schaden, schaden: kd.schaden, flieht: !x.fraktion && kd.haltung === "ausweichen", kampfschiff: !!t.kampfschiff, aus: null,
       };
     };
@@ -304,6 +304,7 @@ export class Kampf {
           d.verlust(e.fraktion);
           if (spielerDabei[1 - i]) prisengeld += this.belohnung(e);
         } else if (!e.fraktion && e.aus === "versenkt") {
+          spiel.kapitaene.schiffVerloren(e.x, true);
           spiel.schiffe = spiel.schiffe.filter((s) => s !== e.x);
           meldungen.push(`«${e.name}» ist gesunken.`);
         } else if (!e.fraktion && e.aus === "aufgebracht") {
@@ -311,6 +312,14 @@ export class Kampf {
           kd.schaden = Math.round(e.rumpf * 0.9);
           meldungen.push(`«${e.name}» wurde aufgebracht, die Ladung ist verloren.`);
         }
+      }
+    }
+    // Erfahrung für Kapitäne in Gefechten, mehr beim Sieg
+    for (const [i, seite] of S.entries()) {
+      for (const e of seite) {
+        if (e.fraktion || e.aus === "versenkt" || !spiel.schiffe.includes(e.x)) continue;
+        spiel.kapitaene.erfahre(e.x, "gefecht");
+        if (S[1 - i].every((g) => g.aus && g.aus !== "entkommen")) spiel.kapitaene.erfahre(e.x, "sieg");
       }
     }
     const versenkt = S.flat().filter((e) => e.aus === "versenkt").map((e) => e.name);

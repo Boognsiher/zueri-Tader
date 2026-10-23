@@ -1,0 +1,20 @@
+{
+  "_info": "Kapitäne der Spielerschiffe. Wird nur vom Spiel gelesen (game/src/kapitaene.js), nicht von der Simulation: Kapitäne ändern die Wirtschaft der KI-Händler nicht. Ein Schiff ohne Kapitän fährt mit einem einfachen Steuermann ohne Bonus und ohne Lohn. erfahrung_ab_stufe[i] = Erfahrung, ab der Stufe i+1 erreicht ist. wirkung_je_stufe = Zuschlag je Stufe über Stufe 1 (Tempo, Umschlag in den Häfen, Kampfkraft). lohn: Gulden pro Tag, grund + je_stufe * (Stufe - 1); ohne Schiff (Reserve) zahlt man reserve_anteil davon, verschollene Kapitäne kosten nichts. anwerbegeld_tage = Anwerbegeld als Vielfaches des Tageslohns. erfahrung: je_seetag = pro Tag auf See, je_100_gulden = pro 100 Gulden Verkaufserlös des Schiffs, je_gefecht und je_sieg im Gefecht. wirtshaus: Bewerber erscheinen mit chance_pro_tag in einer Stadt (höchstens max_je_stadt), bleiben bleibt_tage, starten mit Stufe 1 bis stufe_max. verschollen: Sinkt ein Schiff, ist sein Kapitän so viele Tage verschollen und kehrt dann in die Reserve zurück. Kapitäne sterben nicht. eigenschaften: Zuschläge auf Tempo, Umschlag und Kampfkraft, lohn = Faktor auf den Lohn.",
+  "stufen_max": 10,
+  "erfahrung_ab_stufe": [0, 60, 150, 280, 450, 680, 960, 1300, 1700, 2200],
+  "wirkung_je_stufe": {"tempo": 0.02, "umschlag": 0.05, "kampf": 0.05},
+  "lohn": {"grund": 1, "je_stufe": 1, "reserve_anteil": 0.5},
+  "anwerbegeld_tage": 30,
+  "erfahrung": {"je_seetag": 1, "je_100_gulden": 0.5, "je_gefecht": 12, "je_sieg": 20},
+  "wirtshaus": {"chance_pro_tag": 0.06, "max_je_stadt": 2, "bleibt_tage": 45, "stufe_max": 4, "start_chance": 0.5},
+  "verschollen": {"tage_min": 60, "tage_max": 150},
+  "eigenschaften": [
+    {"id": "seebaer", "name": "Seebär", "text": "Kennt Wind und Strömung: schneller unterwegs.", "tempo": 0.05},
+    {"id": "rechner", "name": "Zahlenmensch", "text": "Lädt und löscht zügig, der Hafenaufenthalt wird kürzer.", "umschlag": 0.1},
+    {"id": "raufbold", "name": "Raufbold", "text": "Im Gefecht gefürchtet.", "kampf": 0.15},
+    {"id": "sparsam", "name": "Genügsam", "text": "Verlangt weniger Lohn.", "lohn": 0.75},
+    {"id": "alter_hase", "name": "Alter Hase", "text": "Etwas schneller und im Gefecht ruhiger, dafür teurer.", "tempo": 0.03, "kampf": 0.05, "lohn": 1.25}
+  ],
+  "vornamen": ["Hans", "Jakob", "Ulrich", "Heinrich", "Rudolf", "Felix", "Kaspar", "Werner", "Konrad", "Melchior", "Balthasar", "Johannes", "Andreas", "Leonhard", "Gall", "Marx"],
+  "nachnamen": ["Keller", "Meier", "Wyss", "Huber", "Bachmann", "Gut", "Schmid", "Egli", "Hotz", "Landis", "Ruegg", "Bosshard", "Haab", "Pfister", "Stucki", "Zollinger", "Brunner", "Rusterholz", "Nägeli", "Hauser"]
+}

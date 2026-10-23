@@ -121,7 +121,7 @@ function route(spiel, schiff) {
 
 // Liegezeit in Tagen für eine umgeschlagene Menge (je nach Schiffstyp)
 function liegezeit(spiel, schiff, menge) {
-  return menge / spiel.schiffstyp(schiff).umschlag_pro_tag;
+  return menge / (spiel.schiffstyp(schiff).umschlag_pro_tag * spiel.kapitaene.faktor(schiff, "umschlag"));
 }
 
 function tageText(tage) {

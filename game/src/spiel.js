@@ -11,6 +11,7 @@ import * as automatik from "./automatik.js";
 import { neueKonten, buche } from "./bilanz.js";
 import { Diplomatie } from "./diplomatie.js";
 import { Kampf, neueKampfdaten } from "./kampf.js";
+import { Kapitaene } from "./kapitaene.js";
 import { Zufall } from "./zufall.js";
 
 const MELDUNGEN_JE_REIHE = 60;
@@ -38,6 +39,8 @@ export class Spiel {
     this.kriegszufall = new Zufall((seed ^ 0x2b1d5eed) | 0);
     this.diplomatie = new Diplomatie(this);
     this.kampf = new Kampf(this);
+    this.kapitaene = new Kapitaene(this, seed);
+    if (!leer) this.kapitaene.starte();
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
   }
 
@@ -151,6 +154,8 @@ export class Spiel {
       ziel.menge += p.menge;
     }
     a.auto = null;
+    if (!a.kapitaen && b.kapitaen) a.kapitaen = b.kapitaen; // sonst bleibt b's Kapitän in Reserve
+    else if (b.kapitaen) delete b.kapitaen;
     a.kampf.schaden += b.kampf.schaden;
     this.schiffe = this.schiffe.filter((s) => s !== b);
     this.melde(`${b.name} schliesst sich der Flotte «${a.name}» an (${a.mitglieder.length} Schiffe, Laderaum ${this.laderaum(a)}).`);
@@ -185,6 +190,7 @@ export class Spiel {
         frei -= m;
       }
     }
+    if (flotte.kapitaen) neu[0].kapitaen = flotte.kapitaen; // der Kapitän der Flotte bleibt beim ersten Schiff
     const i = this.schiffe.indexOf(flotte);
     this.schiffe.splice(i, 1, ...neu);
     this.melde(`Flotte «${flotte.name}» in ${flotte.ort.name} aufgelöst.`);
@@ -193,7 +199,7 @@ export class Spiel {
 
   // Geschwindigkeit in Karteneinheiten pro Tag
   tempo(schiff) {
-    return this.D.p.SPEED * this.schiffstyp(schiff).tempo;
+    return this.D.p.SPEED * this.schiffstyp(schiff).tempo * this.kapitaene.faktor(schiff, "tempo");
   }
 
   ladungsmenge(schiff) {
@@ -296,6 +302,7 @@ export class Spiel {
       stadt.bestand[g] += menge;
       this.gulden += betrag;
       this.buche("handelVerkauf", betrag);
+      this.kapitaene.erfahre(schiff, "umsatz", betrag);
       posten.menge -= menge;
       if (posten.menge <= 1e-9) delete schiff.ladung[g];
     }
@@ -393,6 +400,7 @@ export class Spiel {
     this.werft.tag();
     this.diplomatie.tag();
     this.kampf.tag();
+    this.kapitaene.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
     for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
