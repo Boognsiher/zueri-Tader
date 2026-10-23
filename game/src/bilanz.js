@@ -17,19 +17,20 @@ export const KONTEN = [
   { id: "versicherungPraemie", name: "Versicherungsprämien", gruppe: "Schiffe" },
   { id: "versicherungLeistung", name: "Leistungen der Versicherung", gruppe: "Schiffe" },
   { id: "kapitaenslohn", name: "Lohn der Kapitäne", gruppe: "Schiffe" },
+  { id: "maut", name: "Mauteinnahmen", gruppe: "Betriebe und Gebäude" },
   { id: "ratsanteil", name: "Anteil aus Ratssitzen", gruppe: "Betriebe und Gebäude" },
   { id: "prisengeld", name: "Prisengeld", gruppe: "Krieg" },
   { id: "kaperbriefe", name: "Kaperbriefe", gruppe: "Krieg" },
   { id: "kapitaenAnwerbung", name: "Kapitäne angeworben", gruppe: "Investitionen" },
   { id: "erschliessung", name: "Seen erschlossen", gruppe: "Investitionen" },
-  { id: "bahnbau", name: "Bahnen gebaut", gruppe: "Investitionen" },
+  { id: "konzession", name: "Konzessionen gekauft", gruppe: "Investitionen" },
   { id: "vertragsgebuehr", name: "Handelsverträge", gruppe: "Investitionen" },
   { id: "ratssitzKauf", name: "Ratssitze gekauft", gruppe: "Investitionen" },
   { id: "schiffeKauf", name: "Schiffe gekauft", gruppe: "Investitionen" },
   { id: "schiffeVerkauf", name: "Schiffe verkauft", gruppe: "Investitionen" },
   { id: "betriebeKauf", name: "Betriebe gekauft", gruppe: "Investitionen" },
   { id: "betriebeVerkauf", name: "Betriebe verkauft", gruppe: "Investitionen" },
-  { id: "bauten", name: "Bauten und Ausbau", gruppe: "Investitionen" },
+  { id: "bauten", name: "Bauten, Strecken- und Netzausbau", gruppe: "Investitionen" },
 ];
 
 const MONATE_BEHALTEN = 24;

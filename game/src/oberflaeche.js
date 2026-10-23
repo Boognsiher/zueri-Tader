@@ -49,6 +49,11 @@ export class Oberflaeche {
     this.routenfenster = null; // wird von main.js gesetzt
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
     this.e.seen.addEventListener("click", (ev) => this.klickSeen(ev));
+    this.e.seen.addEventListener("change", (ev) => {
+      if (!ev.target.dataset.maut) return;
+      this.spiel.zonen.setzeMaut(this.spiel.zonen.strecke(ev.target.dataset.maut), Number(ev.target.value) / 100);
+      this.aktualisiere();
+    });
     this.e.gefecht.addEventListener("click", (ev) => {
       if (ev.target.closest("[data-gefecht-zu]")) this.schliesseGefecht();
     });
@@ -73,6 +78,13 @@ export class Oberflaeche {
       const sperrWare = ev.target.dataset.sperre;
       if (sperrWare) {
         this.spiel.ausbau.setzeSperre(this.fensterStadt, sperrWare, ev.target.value === "" ? 0 : Number(ev.target.value));
+        this.aktualisiere();
+        return;
+      }
+      const mautId = ev.target.dataset.maut;
+      if (mautId) {
+        const z = this.spiel.zonen;
+        z.setzeMaut(z.strecke(mautId), Number(ev.target.value) / 100);
         this.aktualisiere();
         return;
       }
@@ -392,7 +404,7 @@ export class Oberflaeche {
   // Fahrzeit in Tagen (auf halbe Tage gerundet) für die Anzeige
   // tempo: Karteneinheiten pro Tag (Standard: Nauen)
   tage(von, nach, tempo = this.D.p.SPEED) {
-    const w = this.spiel.nav.route(von, nach);
+    const w = this.spiel.nav.route(von, nach) ?? this.spiel.navLand.route(von, nach);
     return w ? Math.round((2 * weglaenge(w)) / tempo) / 2 : null;
   }
 
@@ -596,25 +608,52 @@ export class Oberflaeche {
     return html;
   }
 
-  // Verbindungen zu anderen Seen: Waren aus dem Kontor schicken, Regeln zum Weiterleiten
+  // Ausbau, Konzession und Maut einer Strecke (Verbindung oder Netz einer Landzone)
+  streckenBlock(str) {
+    const s = this.spiel;
+    const zo = s.zonen;
+    const z = zo.zustand_(str.id);
+    const w = zo.werte(str);
+    const stufen = zo.stufen(str);
+    const naechste = zo.naechsteStufe(str);
+    const besitzer = z.besitzer === "spieler" ? "du" : z.stufe >= 1 ? "Staat" : "–";
+    const tempoText = str.typ === "netz" ? ` · Tempo ×${f(zo.netzTempo(str.zone) * 100) / 100}` : "";
+    let html = `<p class="klein"><b>${esc(w.name)}</b> (Stufe ${z.stufe} von ${stufen.length - 1})${tempoText}${z.stufe >= 1 ? ` · Konzession: ${besitzer}` : ""}</p>`;
+    if (z.projekt) {
+      const st = stufen[z.projekt.ziel];
+      const rest = Math.round((1 - z.projekt.fortschritt) * z.projekt.tage);
+      html += `<p class="klein">Im Bau: ${esc(st.name)}, ${f(z.projekt.fortschritt * 100)} % <span class="balken" aria-hidden="true"><span style="display:block;height:100%;width:${f(z.projekt.fortschritt * 100)}%;background:var(--gruen)"></span></span> noch rund ${f(rest)} Tage. Es wird täglich Geld und Material aus deinen Kontoren an der Strecke verbraucht, fehlt etwas, ruht der Bau.</p>`;
+    } else if (naechste !== null) {
+      const st = stufen[naechste];
+      const k = zo.baukosten(str, naechste);
+      const material = Object.entries(k.material).map(([g, n]) => `${f(n)} ${esc(g)}`).join(", ");
+      const grund = zo.pruefeAusbau(str);
+      html += `<p class="hilfe">Nächste Stufe: <b>${esc(st.name)}</b>, ab ${st.ab_jahr}${st.staat_jahr ? `, der Staat baut sie ab ${st.staat_jahr}` : ""}. Bau: ${f(k.gulden)} Gulden und ${material}, Bauzeit ${f(k.tage)} Tage. Danach hältst du die Konzession und kannst Maut verlangen.</p>
+        <button data-ausbau="${str.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">${esc(st.name)} bauen</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""}`;
+    }
+    if (z.besitzer === "spieler" && w.maut_max > 0) {
+      html += `<label class="maut">Maut <input type="number" min="0" max="${f(w.maut_max * 100)}" step="1" value="${f(z.maut * 100)}" data-maut="${str.id}" aria-label="Mautsatz in Prozent"> % <small>(höchstens ${f(w.maut_max * 100)} %, bei hohem Satz weicht Verkehr aus) · Ertrag heute rund ${f(zo.mautErtrag(str))} Gulden pro Tag</small></label>`;
+    } else if (z.stufe >= 1 && z.besitzer !== "spieler") {
+      const grund = zo.pruefeKonzession(str);
+      html += `<div><button data-konzession="${str.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">Konzession kaufen: ${f(zo.konzessionspreis(str))} Gulden</button>${grund ? ` <span class="hinweis">${esc(grund)}</span>` : ""} <small>Mit der Konzession kassierst du Maut.</small></div>`;
+    }
+    return html;
+  }
+
+  // Verbindungen zu anderen Zonen: Ausbau, Waren aus dem Kontor schicken, Regeln zum Weiterleiten
   verbindungsAbschnitt(stadt, k, wunsch) {
     const s = this.spiel;
     const zo = s.zonen;
     const liste = zo.verbindungenVon(stadt);
     if (!liste.length) return "";
-    const art = { fluss: "Fluss", fuhrweg: "Fuhrweg", bahn: "Bahn" };
-    let html = `<h3>Verbindungen</h3><p class="hilfe">Zwischen den Seen reisen Waren von Kontor zu Kontor, nicht mit dem Schiff. Am anderen Ende handeln deine Schiffe und das Kontor weiter. Fracht und Zoll der Zielstadt zahlst du beim Absenden, der Zoll hängt vom Stand, der Ware und deinen Verträgen ab.</p>`;
+    let html = `<h3>Verbindungen</h3><p class="hilfe">Zwischen den Zonen reisen Waren von Kontor zu Kontor, nicht mit dem Schiff. Am anderen Ende handeln deine Schiffe und Fahrzeuge und das Kontor weiter. Fracht und Zoll der Zielstadt zahlst du beim Absenden, der Zoll hängt vom Stand, der Ware und deinen Verträgen ab. Strecken lassen sich ausbauen: Der Staat tut es nach seinem Fahrplan, wer früher baut, erhält die Konzession und Maut.</p>`;
     for (const { v, ziel } of liste) {
+      const w = zo.werte(v);
       const grund = zo.pruefeFracht(v, stadt);
       const frei = zo.freieKapazitaet(v, stadt);
       const unterwegs = zo.unterwegs.filter((l) => l.v === v.id && l.nach === ziel.name).reduce((x, l) => x + l.menge, 0);
-      html += `<details class="regeln verbindung" ${!grund ? "open" : ""}><summary><b>${art[v.art]} ${esc(v.name)}</b> nach ${esc(ziel.name)} (${esc(ziel.zone === stadt.zone ? "" : s.zonen.zone(ziel.zone).name)}) · ${v.tage} ${v.tage === 1 ? "Tag" : "Tage"} · Fracht ${f(v.fracht)} Gulden je Stück · heute noch ${f(frei)} von ${f(v.kapazitaet)}${unterwegs ? ` · ${f(unterwegs)} unterwegs` : ""}</summary>
-        <p class="hilfe">${esc(v.text)}</p>`;
-      if (v.art === "bahn" && !zo.gebaut(v)) {
-        const g = zo.pruefeBahn(v);
-        html += `<button class="haupt" data-bahnbau="${v.id}" ${g ? "disabled" : ""} title="${esc(g ?? "")}">Bahn bauen: ${f(v.bau_gulden)} Gulden</button>${g ? ` <span class="hinweis">${esc(g)}</span>` : ""}</details>`;
-        continue;
-      }
+      html += `<details class="regeln verbindung" ${!grund ? "open" : ""}><summary><b>${esc(v.name)}</b> nach ${esc(ziel.name)}${ziel.zone === stadt.zone ? "" : ` (${esc(zo.zone(ziel.zone).name)})`} · ${esc(w.name)} · ${w.tage} ${w.tage === 1 ? "Tag" : "Tage"} · Fracht ${f(w.fracht * 100) / 100} Gulden je Stück · heute noch ${f(frei)} von ${f(w.kapazitaet)}${unterwegs ? ` · ${f(unterwegs)} unterwegs` : ""}</summary>
+        <p class="hilfe">${esc(v.text)}</p>${this.streckenBlock(v)}`;
       if (grund) {
         html += `<p class="hinweis">${esc(grund)}</p></details>`;
         continue;
@@ -707,8 +746,8 @@ export class Oberflaeche {
     const schiffzeile = (t) => `<span class="klein">Laderaum ${t.laderaum} · Tempo ${f(t.tempo * 100)} % · Kampfkraft ${t.kampfkraft} · Rumpf ${t.rumpf} · Unterhalt ${t.unterhalt} Gulden/Tag</span>`;
     let html = "";
     if (w.istWerft(stadt)) {
-      html += `<h3>Neue Schiffe <small>im Jahr ${s.jahr()}</small></h3><ul class="betriebe">`;
-      for (const t of w.neueTypen()) {
+      html += `<h3>Neue ${s.zonen.zone(stadt.zone).art === "land" ? "Fahrzeuge" : "Schiffe"} <small>im Jahr ${s.jahr()}</small></h3><ul class="betriebe">`;
+      for (const t of w.neueTypen(stadt)) {
         const grund = w.pruefeNeukauf(stadt, t.id);
         html += `<li class="betrieb"><div class="betriebkopf"><b>${esc(t.name)}</b> ${schiffzeile(t)}</div>
           <div class="betriebinfo">${esc(t.text)}</div>
@@ -718,7 +757,7 @@ export class Oberflaeche {
     } else {
       html += `<p class="hilfe">${esc(stadt.name)} hat keine Werft. Neue Schiffe gibt es in ${esc(daten.werften.join(", "))}.</p>`;
     }
-    const kommend = w.kommendeTypen().slice(0, 2);
+    const kommend = w.kommendeTypen(stadt).slice(0, 2);
     if (kommend.length && w.istWerft(stadt)) {
       html += `<p class="hilfe">${kommend.map((t) => `Ab ${t.ab_jahr}: ${esc(t.name)}`).join(" · ")}. Ältere Schiffe verlieren an Wert, kosten mehr Unterhalt und haben öfter Havarien.</p>`;
     }
@@ -788,17 +827,33 @@ export class Oberflaeche {
       html += `<li class="${offen ? "" : "gesperrt"}"><div><b>${offen ? "" : "🔒 "}${esc(zone.name)}</b> <small>${esc(zone.text)}</small></div>
         <div class="klein">${offen ? `${kontore} Kontor${kontore === 1 ? "" : "e"} · ${schiffe} Schiff${schiffe === 1 ? "" : "e"}` : `Rang «${esc(s.ziel.raenge[zone.rang].name)}», ab ${zone.ab_jahr}, ${f(zone.erschliessung)} Gulden`}
           <button data-zone-zeige="${zone.id}" title="Karte zu diesem See bewegen">anzeigen</button>
-          ${offen ? "" : `<button class="haupt" data-zone-erschliessen="${zone.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">erschliessen</button>`}</div>${!offen && grund ? `<div class="hinweis">${esc(grund)}</div>` : ""}</li>`;
+          ${offen ? "" : `<button class="haupt" data-zone-erschliessen="${zone.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">erschliessen</button>`}</div>${!offen && grund ? `<div class="hinweis">${esc(grund)}</div>` : ""}${offen && zone.art === "land" ? `<details class="regeln"><summary>Strassen- und Schienennetz</summary>${this.streckenBlock(zo.strecke("netz_" + zone.id))}</details>` : ""}</li>`;
     }
     html += `</ul>`;
+    const kanaele = zo.alleStrecken().filter((x) => x.typ === "kanal");
+    if (kanaele.length) {
+      html += `<h3>Kanäle <small>Grossprojekte</small></h3><p class="hilfe">Ein Kanal verbindet zwei Zonen mit dem Schiff, dazu kommt Maut. Der Bau braucht riesige Mengen Material aus deinen Kontoren in den beiden Zonen, viel Geld und Zeit.</p><ul class="seeliste">`;
+      for (const k of kanaele) {
+        const fertig = zo.kanalFertig(k);
+        html += `<li><div><b>${esc(k.name)}</b> <small>${esc(zo.zone(k.zone_a).name)} – ${esc(zo.zone(k.zone_b).name)}, ab ${k.ab_jahr}</small></div><div class="klein">${esc(k.text)}</div>${fertig ? `<div class="klein"><b>Fertig.</b></div>` : ""}${this.streckenBlock(k)}</li>`;
+      }
+      html += `</ul>`;
+    }
     this.e.seen.innerHTML = html;
   }
 
   klickSeen(ev) {
     const knopf = ev.target.closest("button");
     if (!knopf) return;
+    const z = this.spiel.zonen;
     if (knopf.dataset.zoneZeige) this.karte.zeigeZone(knopf.dataset.zoneZeige);
-    else if (knopf.dataset.zoneErschliessen) {
+    else if (knopf.dataset.ausbau) {
+      z.starteAusbau(z.strecke(knopf.dataset.ausbau));
+      this.aktualisiere();
+    } else if (knopf.dataset.konzession) {
+      z.kaufeKonzession(z.strecke(knopf.dataset.konzession));
+      this.aktualisiere();
+    } else if (knopf.dataset.zoneErschliessen) {
       this.spiel.zonen.erschliesse(knopf.dataset.zoneErschliessen);
       this.aktualisiere();
     }
@@ -1178,8 +1233,10 @@ export class Oberflaeche {
       const v = s.zonen.verbindung(d.fracht);
       const m = s.zonen.schicken(v, stadt, d.ware, wunsch);
       if (m) s.melde(`${m} ${d.ware} aus dem Kontor ${stadt.name} auf die Verbindung ${v.name} geschickt.`, "handel");
-    } else if (d.bahnbau) {
-      s.zonen.baueBahn(s.zonen.verbindung(d.bahnbau));
+    } else if (d.ausbau) {
+      s.zonen.starteAusbau(s.zonen.strecke(d.ausbau));
+    } else if (d.konzession) {
+      s.zonen.kaufeKonzession(s.zonen.strecke(d.konzession));
     } else if (d.vertrag !== undefined) {
       s.zoll.schliesseVertrag(stadt);
     } else if (d.ratssitz !== undefined) {

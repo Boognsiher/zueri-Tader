@@ -51,6 +51,11 @@ CITIES = []       # Staedte (intern: name, pop, pos, prod, work)
 EVENTS = []       # Zufallsereignisse (events.json)
 DISTANZEN = {}    # (Stadt, Stadt) -> Weglaenge ueber Wasser (karte.json, tools/karte/distanzen.mjs)
 ZONEN = {}        # Zone -> {Ware: Preisfaktor} (zonen.json)
+ZONEN_ART = {}    # Zone -> see, fluss oder land (zonen.json)
+KURVEN = {}       # Epochenkurven (epochen.json)
+EP_FRACHT = 1.0   # Laderaum der KI-Schiffe heute (ki_fracht)
+EP_TEMPO = 1.0    # Tempo der KI-Schiffe heute (ki_tempo)
+EP_NETZ = 1.0     # Tempo in Landzonen heute (netz_tempo)
 # Parameter (SPREAD, PRICE_MIN, ...) werden ebenfalls aus params.json als
 # Modulvariablen gesetzt.
 
@@ -62,7 +67,7 @@ def _read(data_dir, name):
 
 def load_data(data_dir=DEFAULT_DATA_DIR):
     """Liest data/*.json in die Modulvariablen."""
-    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN, ZONEN
+    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN, ZONEN, ZONEN_ART, KURVEN
     GOODS = {n: v["basispreis"] for n, v in _read(data_dir, "goods.json")["waren"].items()}
     RECIPES = _read(data_dir, "recipes.json")["rezepte"]
     c = _read(data_dir, "consumption.json")
@@ -75,6 +80,8 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
               for s in _read(data_dir, "cities.json")["staedte"]]
     EVENTS = _read(data_dir, "events.json")["ereignisse"]
     ZONEN = {z["id"]: z.get("preisfaktor", {}) for z in _read(data_dir, "zonen.json")["zonen"]}   # Preisniveau je Zone und Ware
+    ZONEN_ART = {z["id"]: z.get("art", "see") for z in _read(data_dir, "zonen.json")["zonen"]}
+    KURVEN = _read(data_dir, "epochen.json")["kurven"]
     DISTANZEN = {}
     for paar, d in _read(data_dir, "karte.json")["distanzen"].items():
         a, b = paar.split("|")
@@ -91,6 +98,17 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
 # ======================================================================
 # 2) MODELL
 # ======================================================================
+def kurve(name, jahr):
+    """Epochenkurve (epochen.json): lineare Zwischenwerte, ausserhalb der erste bzw. letzte Wert."""
+    punkte = KURVEN[name]
+    if jahr <= punkte[0][0]:
+        return punkte[0][1]
+    for (j0, w0), (j1, w1) in zip(punkte, punkte[1:]):
+        if jahr <= j1:
+            return w0 + (w1 - w0) * (jahr - j0) / (j1 - j0)
+    return punkte[-1][1]
+
+
 def price(base, target, stock, k):
     """Preis = Basispreis * (Zielbestand / Lagerbestand) ** k, begrenzt."""
     ratio = target / max(stock, 1.0)
@@ -108,6 +126,7 @@ class City:
         self.satisfaction_bonus = 0.0        # Versorgungsgebaeude des Spielers (nur im Spiel)
         self.housing_bonus = 0.0             # zusaetzlicher Wohnraum (nur im Spiel)
         self.pos = cfg["pos"]
+        self.epoch_housing = 1.0             # Epochenfaktor auf den Wohnraum (wohnraum)
         self.prod = cfg["prod"]
         self.work = cfg["work"]
         self.incoming = defaultdict(float)  # Ladung, die gerade hierher unterwegs ist
@@ -213,7 +232,7 @@ class City:
             rate = POP_GROWTH * (self.satisfaction - n) / (100 - n)
         else:
             rate = -POP_SHRINK * (n - self.satisfaction) / n
-        hoch = self.pop0 * (POP_MAX_FACTOR + self.housing_bonus)
+        hoch = self.pop0 * (POP_MAX_FACTOR * self.epoch_housing + self.housing_bonus)
         tief = self.pop0 * POP_MIN_FACTOR
         self.pop = min(max(self.pop * (1 + rate), tief), max(hoch, tief))
         self.rescale()
@@ -231,7 +250,9 @@ def route_length(a, b):
 
 
 def travel_days(a, b):
-    return max(1, math.ceil(route_length(a, b) / SPEED))
+    # Schiffe: ki_tempo; in Landzonen bestimmt das Strassen- und Schienennetz das Tempo (netz_tempo)
+    tempo = round((EP_NETZ if ZONEN_ART.get(a.zone) == "land" else EP_TEMPO) * 20) / 20
+    return max(1, math.ceil(route_length(a, b) / (SPEED * tempo)))
 
 
 def quote(src, dst, g, money, k):
@@ -239,14 +260,17 @@ def quote(src, dst, g, money, k):
     s_src, s_dst = src.stock[g], dst.stock[g] + dst.incoming[g]
     cost = rev = 0.0
     q = 0
-    while q < SHIP_CAP and s_src - q >= 2:
+    ship_cap = round(SHIP_CAP * EP_FRACHT)
+    # Grosse Schiffe (spaetere Epochen) in Stuecken von hoechstens 1/120 des Laderaums rechnen
+    step = max(1, ship_cap // 120)
+    while q + step <= ship_cap and s_src - q >= 1 + step:
         mb = price(src.base(g), src.target[g], s_src - q, k) * (1 + SPREAD / 2)
         ms = price(dst.base(g), dst.target[g], s_dst + q, k) * (1 - SPREAD / 2)
-        if ms <= mb or cost + mb > money:
+        if ms <= mb or cost + mb * step > money:
             break
-        cost += mb
-        rev += ms
-        q += 1
+        cost += mb * step
+        rev += ms * step
+        q += step
     return q, cost, rev
 
 
@@ -421,15 +445,49 @@ def record(day, cities, k, stats, writer):
 def ai_target(cities, args, zone):
     """Anzahl KI-Haendler einer Zone: AI_SHIPS_PER_1000 je 1000 Einwohner der Zone (--ships: feste
     Gesamtzahl, nach Einwohnern verteilt). Die Haendler bleiben in ihrer Zone."""
-    pop = sum(c.pop for c in cities if c.zone == zone)
+    pop = sum(c.pop0 for c in cities if c.zone == zone)   # Startbevoelkerung: wachsende Staedte -> groessere Schiffe, nicht mehr Schiffe
     if args.ships is not None:
-        return round(args.ships * pop / sum(c.pop for c in cities))
+        return round(args.ships * pop / sum(c.pop0 for c in cities))
     return round(AI_SHIPS_PER_1000 * pop / 1000)
+
+
+def set_epoch(cities, year):
+    """Epochenfaktoren fuer das Jahr setzen (wohnraum, ki_fracht, ki_tempo)."""
+    global EP_FRACHT, EP_TEMPO, EP_NETZ
+    EP_FRACHT = kurve("ki_fracht", year)
+    EP_TEMPO = kurve("ki_tempo", year)
+    EP_NETZ = kurve("netz_tempo", year)
+    for c in cities:
+        c.epoch_housing = kurve("wohnraum", year)
+
+
+def land_traffic(cities, year):
+    """Bahn und Lastwagen gleichen die Lager innerhalb einer Zone aus (epochen.json: ausgleich_*)."""
+    for zone in dict.fromkeys(c.zone for c in cities):
+        strength = kurve("ausgleich_" + ZONEN_ART.get(zone, "see"), year) * 0.25
+        if strength <= 0:
+            continue
+        members = [c for c in cities if c.zone == zone]
+        for g in GOODS:
+            part = [c for c in members if g in c.stock]
+            total_target = sum(c.target[g] for c in part)
+            if total_target <= 0:
+                continue
+            mean = sum(c.stock[g] for c in part) / total_target
+            for c in part:
+                c.stock[g] = max(0.0, c.stock[g] + strength * (mean * c.target[g] - c.stock[g]))
 
 
 def run(args):
     rng = random.Random(args.seed)
     cities = [City(c) for c in CITIES]
+    set_epoch(cities, args.jahr)
+    if args.jahr > 1651:                       # spaeter Start: die Staedte sind schon gewachsen
+        for c in cities:
+            c.pop = c.pop0 * kurve("wohnraum", args.jahr) * 0.9
+            c.rescale()
+            for g in c.stock:
+                c.stock[g] = c.target[g]
     zones = list(dict.fromkeys(c.zone for c in cities))
     ships = [Ship(rng.choice([c for c in cities if c.zone == z])) for z in zones for _ in range(ai_target(cities, args, z))]
     stats = Stats()
@@ -442,6 +500,8 @@ def run(args):
         writer.writerow(["tag", "stadt", "ware", "preis", "bestand"])
 
     for day in range(args.days):
+        year = args.jahr + max(0, day - WARMUP) / 365.25
+        set_epoch(cities, year)
         stats.on = day >= WARMUP
         if day == WARMUP:
             stats.money0 = sum(s.money for s in ships)
@@ -453,6 +513,7 @@ def run(args):
             short = c.step(day, stats)
             if short and stats.on:
                 stats.short_days[c.name] += 1
+        land_traffic(cities, year)
         # Mit der Bevoelkerung kommen neue Haendler dazu (es verschwinden keine)
         for z in zones:
             while sum(1 for s in ships if s.city.zone == z) < ai_target(cities, args, z):
@@ -592,6 +653,7 @@ def main():
     ap.add_argument("--k", type=float, help="Preisempfindlichkeit (Standard: K)")
     ap.add_argument("--seed", type=int, default=1)
     ap.add_argument("--no-events", action="store_true")
+    ap.add_argument("--jahr", type=float, default=1650.25, help="Startjahr fuer die Epochenkurven (Standard 1650: alles wie bisher)")
     ap.add_argument("--csv", help="Preisverlauf in CSV schreiben (alle 5 Tage)")
     ap.add_argument("--data", default=DEFAULT_DATA_DIR, help="Ordner mit den JSON-Daten")
     args = ap.parse_args()
@@ -600,6 +662,11 @@ def main():
         args.k = K
     cities, ships, stats = run(args)
     all_ok = report(args, cities, ships, stats)
+    if args.jahr > 1700:
+        # Die Checks beschreiben die Segelschiffzeit. In spaeteren Epochen gleichen Bahn und Lastwagen
+        # die Zonen aus, weniger Schiffshandel ist dort gewollt: Die Ergebnisse sind nur Information.
+        print(f"Hinweis: Startjahr {args.jahr:.0f}. Die Checks gelten fuer die Zeit der Segelschiffe (1650), hier nur zur Information.")
+        sys.exit(0)
     sys.exit(0 if all_ok else 1)
 
 

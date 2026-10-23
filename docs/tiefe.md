@@ -40,35 +40,18 @@ Jeder See ist eine **Zone** mit eigenen Städten, eigenem Wasser, eigenen KI-Hä
 
 Offen: Historische Machbarkeit (Flussläufe und Schiffbarkeit im 17. Jahrhundert, die Bahn gab es erst ab 1847), Karten mit mehr Städten je See, Ereignisse an den Zonengrenzen (Schmuggler, Zollkontrolle), Preisunterschiede zwischen den Zonen nachmessen.
 
-## Epochenwandel vom Schiff zu Schiene und Strasse (Entscheide vom 23.10.2026, noch nicht umgesetzt)
+## Epochenwandel vom Schiff zu Schiene und Strasse (umgesetzt, erste Fassung)
 
-Der Projektinhaber will, dass sich das Spiel mit den Epochen wandelt, das Handelsprinzip aber bleibt.
+Das Spiel wandelt sich bis 2026, das Handelsprinzip bleibt. Alle sechs Schritte sind im Spiel, die Zahlen sind Startwerte. Zeitrahmen: bei rund 2750 Spieltagen pro Stunde sind 1650 bis 2026 etwa **50 Stunden** (Freischaltungen nach Kalenderjahr, siehe `data/ziel.json` und `data/zonen.json`).
 
-**Entschieden**
-- **Zeit:** läuft unverändert weiter, kein Tempowechsel nach 1850. Ob das Endgame so lang genug ist, wird beim Spielen geprüft.
-- **Seeverkehr:** Die Seen werden mit der Zeit unrentabel, Bahn und später LKW übernehmen. Als Nische bleiben grosse Mengen schwerer Güter (Kies, Steine). Der Schiffsverkehr über **Basel** (Rhein Richtung Holland und Deutschland) und ab **Genf** Richtung Frankreich wird wichtiger.
-- **Strassen:** Zuerst werden sie selbst gebaut, später können **Autobahnen** finanziert oder gekauft werden, mit **Mautsystem**.
-- **Karte:** Die **Schweiz** wird, wenn die Engine es trägt, eine Zone, sonst vier Teile (Zonen). Später kommen **Deutschland** und **Holland** dazu.
-- **Grossprojekte:** Man kann **Kanäle zwischen den Seen** bauen. Das braucht riesige Mengen Baumaterial, viel Geld und viel Zeit, bietet danach aber auch im Endgame einen lohnenden Schiffsverkehr.
-- **Schiffe entwickeln sich:** bis zu **Dampfschiffen** und weiter. Die Flotte muss mit der Zeit erneuert werden (veraltete Schiffe verlieren an Wert und Tempo oder lohnen sich nicht mehr).
+1. **Schiffsentwicklung** (`data/schiffe.json`): Segelschiffe, Raddampfer (1835), Schraubendampfer (1880), Motorschiff (1925), Containerschiff (1975), Landfahrzeuge (Fuhrwerk, Frachtwagen, Güterzug, Lastwagen, Sattelzug) und Kriegsschiffe der Stände mit Nachfolgern. Schiffe haben ein Baujahr: Wertverlust, höherer Unterhalt, mehr Havarien. Die Flotte muss erneuert werden.
+2. **Epochen in der Wirtschaft** (`data/epochen.json`): Die Städte wachsen (Wohnraum bis 22-fach), die KI-Händler erneuern ihre Flotten, und Bahn und Lastwagen **gleichen die Lager innerhalb einer Zone aus** (bis 1990 ganz). Damit lohnt sich der Schiffshandel auf den Seen immer weniger, nur der Handel zwischen den Zonen bleibt. Neue Zonen: **Mittelrhein** (Strassburg, Mannheim, Mainz, Köln), **Niederrhein** (Düsseldorf, Duisburg, Arnheim, Rotterdam, Amsterdam) und **Rhône** (Lyon, Valence, Avignon, Marseille). Der Rhein ist der Strom, auf dem der Schiffsverkehr wichtig bleibt (Verbindungen Basel–Strassburg, Köln–Düsseldorf, Genf–Lyon).
+3. **Verkehrsmodell** (`data/zonen.json`, `vorlagen`): Jede Verbindung hat Ausbaustufen (Saumpfad, Chaussee, Eisenbahn, Autobahn; bei Flüssen Segeln, Dampfschlepper, Rheinschiff, Container). Der Staat baut sie nach seinem Fahrplan, der Spieler früher selbst: ein **Bauprojekt** über viele Tage mit Gulden und Material aus den Kontoren an der Strecke.
+4. **Landzonen Schweiz**: Mittelland, Nordostschweiz, Westschweiz, Alpen und Tessin (21 Städte). Dort fahren Landfahrzeuge. Das **Netz** der Zone bestimmt ihr Tempo und das der KI-Händler. Der Güterzug braucht Eisenbahn, der Sattelzug Autobahn.
+5. **Konzessionen und Maut**: Wer eine Stufe selbst baut oder die Konzession einer staatlichen Stufe kauft, setzt einen Mautsatz (höchstens 20 %). Bei hohem Satz weicht der Verkehr aus.
+6. **Kanäle**: Linthkanal (1807), Limmat-Aare-Kanal (1840), Hochrhein-Kanal (1880), Rhein-Rhône-Kanal (1900). Riesige Mengen Material, viel Geld und 900 bis 3000 Tage Bauzeit. Danach fahren Schiffe und KI-Händler zwischen den Zonen, und es gibt Maut.
 
-**Was «Linien auf der Karte» hiess:** Zwei Möglichkeiten, Verkehrswege zu bauen. (a) Der Spieler **zeichnet** die Strecke selbst auf der Karte (Punkte und Linien setzen, Länge und Gelände bestimmen den Preis), wie ein Gleis- oder Strassenplaner. (b) Er **wählt aus vorgegebenen Verbindungen** und baut sie über ein Menü aus, wie die Verbindungen heute. Für die Schweiz als Zone empfehle ich (b) mit einem Netz aus vorgegebenen Knoten (Städte, Pässe, Tunnel), das der Spieler nach und nach ausbaut: Das ist ein Planungs- und Verwaltungsspiel ohne Zeichentool, mit Kosten je Strecke, Kapazität und Maut. Zeichnen (a) wäre ein eigener, grosser Aufwand und würde den Handel in den Hintergrund drängen.
-
-**Machbarkeit (Engine)**
-- **Zone Schweiz:** Technisch kein Problem für die Daten und die Wirtschaft, die Zonen sind schon so gebaut. Heute hat jede Zone aber Wasser, auf dem Schiffe fahren. Eine Landzone braucht ein anderes Netz: Städte als Knoten, Strassen und Gleise als Kanten mit Laufzeit, Kapazität, Zustand und Maut, Transport in Fuhrwerk, Bahn oder LKW. Das ist ein neues Verkehrsmodell und der eigentliche Aufwand, die Karte selbst ist leicht (SVG, Kamera).
-- **Grösse:** Eine Zone mit 60 bis 100 Städten würde die Wirtschaft verlangsamen (die KI-Händler rechnen pro Zone alle Städte durch). Besser sind **vier bis sechs Landzonen** (zum Beispiel Mittelland, Nordostschweiz, Westschweiz, Alpen und Tessin) mit je 8 bis 15 Städten, verbunden durch Kantenverbindungen wie die heutigen Verbindungen.
-- **Dampfschiffe und Erneuerung:** gut machbar über `data/schiffe.json` (Epoche und Baujahr je Typ, Wertverlust nach Alter), die Kapitäne bleiben.
-- **Kanal:** gut machbar als Grossprojekt: neue Verbindung mit Materialliste, Geldkosten und Bauzeit in Tagen, dazu Schiffsverkehr zwischen zwei Zonen (heute fahren Schiffe nicht zwischen Zonen).
-
-**Vorgeschlagene Schritte** (jeder für sich spielbar und prüfbar)
-1. **Schiffsentwicklung:** neue Schiffstypen je Epoche (zum Beispiel Ruderschiff, Segelschiff, Dampfschiff, Motorschiff), Alter und Wertverlust, Erneuerung. Berührt nur Daten und die Werft.
-2. **Epochen in der Wirtschaft:** Preisniveau und Nachfrage je Epoche, Seeverkehr wird unrentabel, Rheinverkehr ab Basel wichtiger (neue Zone Rheinmündung mit Holland und Deutschland).
-3. **Verkehrsmodell:** Strasse, Gleis, Autobahn als Ausbaustufen einer Verbindung (Kapazität, Laufzeit, Fracht, Maut), erst auf den bestehenden Verbindungen.
-4. **Landzonen Schweiz** (vier bis sechs) mit dem Verkehrsmodell.
-5. **Konzessionen und Maut:** Strassen selbst bauen, Autobahnen finanzieren oder kaufen, Maut einnehmen.
-6. **Kanäle** als Grossprojekt zwischen Seen.
-
-Offen: Wie lange das Endgame sein soll (Jahre bis 2000?), und ob es ein klares Ziel gibt (zum Beispiel Konzern oder Verkehrsimperium).
+Offen: Länge und Ziel des Endgames (nach «Herr des Sees» 1830 gibt es kein weiteres Rangziel, die Zeit bis 2026 füllen die Epochen), Deutschland und Holland als grössere Zonen (heute je vier bis fünf Städte), Feinabstimmung der Kosten und Erträge gegen die Einkommen der Spätzeit (die Bot-Messung `tools/sim/spieler_bot.mjs` kennt die neuen Systeme nicht), Linien zeichnen statt Ausbaustufen wählen.
 
 ## Vorgeschlagene Reihenfolge
 

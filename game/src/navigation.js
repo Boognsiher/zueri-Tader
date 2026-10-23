@@ -44,8 +44,24 @@ export function punktAufWeg(punkte, t) {
 }
 
 export class Navigation {
-  constructor(D) {
-    this.teile = Object.values(D.karte.seeteile).map((t) => t.ufer);
+  // medium: "wasser" (Seen, Flüsse, Kanäle), "land" (Landzonen) oder "alle" (Darstellung und Distanzen)
+  constructor(D, medium = "alle") {
+    this.D = D;
+    this.medium = medium;
+    this.teile = [];
+    if (medium !== "land") this.teile.push(...Object.values(D.karte.seeteile).map((t) => t.ufer));
+    if (medium !== "wasser") this.teile.push(...Object.values(D.karte.landteile ?? {}).map((t) => t.ufer));
+    this.baueKnoten();
+  }
+
+  // Ein Kanal (Polygon) wird befahrbar
+  fuegeHinzu(ufer) {
+    this.teile.push(ufer);
+    this.baueKnoten();
+  }
+
+  baueKnoten() {
+    const D = this.D;
     const knoten = [];
     for (const d of D.karte.durchfahrten) knoten.push(d.position);
     for (const s of D.staedte) knoten.push(s.pos);
@@ -72,6 +88,7 @@ export class Navigation {
     }
     this.knoten = knoten;
     this.nachbarn = null; // wird bei der ersten Suche berechnet
+    this.komponente = null;
   }
 
   imWasser(p) {
@@ -104,6 +121,31 @@ export class Navigation {
         }
       }
     }
+    // Zusammenhangskomponenten der Hilfspunkte (einmal): Liegen Start und Ziel in getrennten Gewässern, gibt es keinen Weg
+    if (!this.komponente) {
+      this.komponente = new Array(k.length).fill(-1);
+      let nr = 0;
+      for (let i = 0; i < k.length; i++) {
+        if (this.komponente[i] >= 0) continue;
+        const stapel = [i];
+        this.komponente[i] = nr;
+        while (stapel.length) {
+          const x = stapel.pop();
+          for (const [j] of this.nachbarn[x]) {
+            if (this.komponente[j] < 0) {
+              this.komponente[j] = nr;
+              stapel.push(j);
+            }
+          }
+        }
+        nr++;
+      }
+    }
+    const vomStart = new Set();
+    for (let j = 0; j < k.length; j++) if (this.frei(von, k[j])) vomStart.add(this.komponente[j]);
+    let erreichbar = false;
+    for (let j = 0; j < k.length && !erreichbar; j++) if (vomStart.has(this.komponente[j]) && this.frei(k[j], nach)) erreichbar = true;
+    if (!erreichbar) return null;
     // Dijkstra über die Hilfspunkte, Start = k.length, Ziel = k.length + 1
     const start = k.length;
     const ziel = k.length + 1;

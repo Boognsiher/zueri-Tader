@@ -27,11 +27,12 @@ export class Spiel {
   constructor(D, seed, { leer = false } = {}) {
     this.D = D;
     this.welt = new Welt(D, seed);
-    this.nav = new Navigation(D);
+    this.nav = new Navigation(D, "wasser"); // Schiffe (Seen, Flüsse, später Kanäle)
+    this.navLand = new Navigation(D, "land"); // Fuhrwerke, Züge und Lastwagen in den Landzonen
     this.anteil = 0; // Fortschritt im laufenden Tag (0..1), setzt die Zeitsteuerung
     // Einschwingen ohne Spieler, damit die Preise beim Start nicht mehr springen
     if (!leer) for (let i = 0; i < D.p.WARMUP; i++) this.welt.naechsterTag();
-    this.starttag = this.welt.tag;
+    this.starttag = this.welt.tag; // setzt auch welt.tagNull: Das Jahr 1650 beginnt nach dem Einlaufen
     this.gulden = D.spiel.start.gulden;
     this.schiffe = [];
     this.namen = [...D.spiel.schiffsnamen];
@@ -51,6 +52,16 @@ export class Spiel {
     this.spielsekunden = 0; // echte Spielzeit mit laufender Uhr, für die Abstimmung des Spieltempos
     if (!leer) this.kapitaene.starte();
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
+  }
+
+  // Starttag in der Zeit der Welt; die Welt rechnet das Kalenderjahr für die Epochenkurven ab diesem Tag
+  get starttag() {
+    return this._starttag;
+  }
+
+  set starttag(tag) {
+    this._starttag = tag;
+    this.welt.tagNull = tag;
   }
 
   // Spieltag ab Spielbeginn (0 = Starttag)
@@ -135,6 +146,7 @@ export class Spiel {
       kampfkraft: typen.reduce((a, t) => a + t.kampfkraft, 0),
       rumpf: typen.reduce((a, t) => a + t.rumpf, 0),
       kampfschiff: typen.some((t) => t.kampfschiff),
+      medium: typen[0].medium,
     };
   }
 
@@ -236,8 +248,21 @@ export class Spiel {
   }
 
   // Geschwindigkeit in Karteneinheiten pro Tag
+  // Wegsuche für ein Schiff oder Fahrzeug: Wasser oder Land
+  navFuer(schiff) {
+    return this.schiffstyp(schiff).medium === "land" ? this.navLand : this.nav;
+  }
+
+  // Zone, in der ein Schiff oder Fahrzeug liegt oder fährt
+  zoneVon(schiff) {
+    return (schiff.ort ?? this.naechsteStadt(schiff.pos)).zone;
+  }
+
   tempo(schiff) {
-    return this.D.p.SPEED * this.schiffstyp(schiff).tempo * this.kapitaene.faktor(schiff, "tempo");
+    // Landfahrzeuge: das Strassen- und Schienennetz der Zone bestimmt das Tempo
+    const t = this.schiffstyp(schiff);
+    const netz = t.medium === "land" ? this.zonen.netzTempo(this.zoneVon(schiff)) : 1;
+    return this.D.p.SPEED * t.tempo * netz * this.kapitaene.faktor(schiff, "tempo");
   }
 
   ladungsmenge(schiff) {
@@ -359,7 +384,7 @@ export class Spiel {
     const p = this.position(schiff);
     const von = [p.x, p.y];
     const nach = stadt ? stadt.pos : ziel.punkt;
-    const weg = this.nav.route(von, nach);
+    const weg = this.navFuer(schiff).route(von, nach);
     if (!weg) return { ok: false, grund: "Dort ist Land." };
     const tage = weglaenge(weg) / this.tempo(schiff);
     const warImHafen = schiff.ort;

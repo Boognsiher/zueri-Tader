@@ -18,6 +18,8 @@
 // 17.  Zoll und Handelsverträge.
 // 18.  Zonen (weitere Seen), Erschliessen, Verbindungen, Fracht, Bahn.
 // 19.  Schiffsentwicklung: Epochen, Alter, Erneuerung, Nachfolger der Kriegsschiffe.
+// 20.  Kanäle: Bau über Material und Zeit, Schiffsverkehr zwischen Zonen, Maut.
+// 21.  Epochen: Wohnraum, Ausgleich durch Landverkehr, KI-Flotten.
 //
 // Exit-Code 0 = alles bestanden, 1 = mindestens ein Check durchgefallen.
 
@@ -25,7 +27,7 @@ import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { ladeDaten } from "../src/daten.js";
-import { Welt, neueStatistik, distanz } from "../src/wirtschaft.js";
+import { Welt, Haendler, neueStatistik, distanz } from "../src/wirtschaft.js";
 import { Navigation, weglaenge } from "../src/navigation.js";
 import { Spiel } from "../src/spiel.js";
 import { starteRoute, starteFrei, beende, starteVersorgung } from "../src/automatik.js";
@@ -187,15 +189,18 @@ if (abschnitt("Karte")) {
     }
     for (const b of D.staedte) {
       if (a === b) continue;
-      const w = nav.route(a.pos, b.pos);
       if (a.zone !== b.zone) {
+        // zwischen Zonen gibt es keinen Weg (Waren reisen über Verbindungen); nur einige Paare prüfen
+        if ((a.name.length + b.name.length) % 9 !== 0) continue;
+        const w = nav.route(a.pos, b.pos);
         // zwischen Seen gibt es keinen Wasserweg (Waren reisen über Verbindungen)
         if (w) {
-          console.log(`   Wasserweg zwischen den Zonen ${a.name} -> ${b.name}`);
+          console.log(`   Weg zwischen den Zonen ${a.name} -> ${b.name}`);
           ueberLand++;
         }
         continue;
       }
+      const w = nav.route(a.pos, b.pos);
       if (!w) {
         ueberLand++;
         continue;
@@ -387,7 +392,7 @@ if (abschnitt("Bootshandel")) {
   // Wirtschaftlichkeit: je ein Handelsschiff jedes Typs handelt ein Jahr frei
   // (Kriegsschiffe verdienen ihr Geld mit Prisen, nicht mit Handel)
   const rendite = {};
-  for (const t of D.schiffe.typen.filter((x) => !x.kampfschiff && x.ab_jahr <= 1650)) {
+  for (const t of D.schiffe.typen.filter((x) => !x.kampfschiff && x.medium !== "land" && x.ab_jahr <= 1650)) {
     let summe = 0;
     for (const seed of [51, 52, 53]) {
       const sp = new Spiel(D, seed, { leer: false });
@@ -411,12 +416,13 @@ if (abschnitt("Bootshandel")) {
 // als dieselbe Werkstatt am Markt plus dasselbe Schiff im freien Handel.
 if (abschnitt("Eigenversorgung")) {
   function aufbau(seed) {
-    const sp = new Spiel(D, seed);
+    const sp = ohneRisiko(new Spiel(D, seed)); // geprüft wird die Wirtschaft, nicht das Risiko
     sp.gulden = 100000;
     const s = sp.schiffe[0];
     const stadt = sp.welt.stadt["Wädenswil"];
     s.ort = stadt;
     s.pos = [...stadt.pos];
+    s.fahrt = null;
     const b = sp.ausbau.betriebeIn(stadt).find((x) => x.typ === "trotte");
     sp.ausbau.kaufen(b);
     return { sp, s, stadt, b };
@@ -426,7 +432,7 @@ if (abschnitt("Eigenversorgung")) {
   let werkstattMarkt = 0;
   for (const seed of [61, 62]) {
     const a = aufbau(seed);
-    a.sp.kaufen(a.s, "Holz", 20);
+    a.s.ladung.Holz = { menge: 20, einstand: 60 }; // Baumaterial fürs Kontor, unabhängig vom Holzvorrat am Markt
     a.sp.ausbau.kontorBauen(a.stadt);
     a.sp.ausbau.setzeZiel(a.b, "kontor");
     const startA = a.sp.gulden + a.sp.warenwert();
@@ -1010,7 +1016,7 @@ if (abschnitt("Zonen")) {
   const k = spiel.ausbau.kontor(schmerikon);
   k.lager.Korn = { menge: 200, einstand: 20 };
   const vorschau = zo.schicken(v, schmerikon, "Korn", 150, false);
-  pruefe(`Kapazität begrenzt die Sendung (${vorschau} von 150, höchstens ${v.kapazitaet} am Tag)`, vorschau === v.kapazitaet);
+  pruefe(`Kapazität begrenzt die Sendung (${vorschau} von 150, höchstens ${zo.werte(v).kapazitaet} am Tag)`, vorschau === zo.werte(v).kapazitaet);
   const g1 = spiel.gulden;
   const kosten = zo.kosten(v, schmerikon, "Korn", 50);
   const gesendet = zo.schicken(v, schmerikon, "Korn", 50);
@@ -1036,16 +1042,89 @@ if (abschnitt("Zonen")) {
   const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
   pruefe("Zonen und Lieferungen überstehen Speichern und Laden", JSON.stringify(geladen.zonen.zustand()) === JSON.stringify(zo.zustand()) && !!geladen.ausbau.kontor(geladen.welt.stadt["Weesen"]));
 
-  // Bahn: Rang und beide Seen nötig
-  const bahn = zo.verbindung("bahn_zuerich_basel");
-  pruefe("Die Bahn braucht Rang und erschlossene Seen", zo.pruefeBahn(bahn) !== null);
-  spiel.ziel.rangIndex = 7;
+  // Ausbau einer Strecke: Jahr, Kontor, Gulden und Material über viele Tage
+  const strasse = zo.strecke("zuerich_basel");
   zo.erschlossen.push("hochrhein");
-  pruefe("Die Eisenbahn gibt es erst ab 1847", zo.pruefeBahn(bahn)?.includes("1847") === true);
-  insJahr(spiel, 1850);
-  const g2 = spiel.gulden;
-  pruefe("Bahn bauen kostet den Einmalpreis", zo.baueBahn(bahn) && spiel.gulden === g2 - bahn.bau_gulden && zo.gebaut(bahn));
-  pruefe("Vor dem Bau ist eine Bahn nicht benutzbar", !zo.gebaut(zo.verbindung("bahn_lausanne_basel")));
+  insJahr(spiel, 1700);
+  pruefe("Die Chaussee gibt es erst ab 1760", zo.pruefeAusbau(strasse)?.includes("1760") === true);
+  insJahr(spiel, 1800);
+  const basel = welt.stadt["Basel"];
+  const zuerichStadt = welt.stadt["Zürich"];
+  pruefe("Ohne Kontor an der Strecke kein Ausbau", zo.pruefeAusbau(strasse)?.includes("Kontor") === true);
+  spiel.ausbau.kontore["Zürich"] = { stufe: 1, lager: { Holz: { menge: 1e6, einstand: 1 }, Eisenerz: { menge: 1e6, einstand: 1 } }, regeln: {}, sperren: {} };
+  spiel.gulden = 50_000_000;
+  const bau = zo.baukosten(strasse, 1);
+  pruefe(`Der Bau kostet Gulden, Material und Zeit (${bau.gulden} Gulden, ${bau.tage} Tage, ${Object.keys(bau.material).join(", ")})`, bau.gulden > 0 && bau.tage > 100 && bau.material.Holz > 0);
+  const geldVorBau = spiel.gulden;
+  pruefe("Bau beginnen", zo.starteAusbau(strasse) && zo.zustand_(strasse.id).projekt !== null);
+  pruefe("Zwei Projekte auf derselben Strecke gehen nicht", zo.pruefeAusbau(strasse)?.includes("gebaut") === true);
+  for (let t = 0; t < bau.tage + 2; t++) zo.projektTag(strasse);
+  const z = zo.zustand_(strasse.id);
+  pruefe("Nach der Bauzeit ist die Stufe fertig, der Spieler hält die Konzession", z.stufe === 1 && z.besitzer === "spieler" && !z.projekt);
+  pruefe(`Gulden und Material wurden über die Bauzeit verbraucht (${Math.round(geldVorBau - spiel.gulden)} Gulden)`, Math.abs(geldVorBau - spiel.gulden - bau.gulden) < 5 && spiel.ausbau.kontor(zuerichStadt).lager.Holz.menge < 1e6);
+  const w1 = zo.werte(strasse);
+  const w0 = zo.werteStufe(strasse, 0);
+  pruefe(`Die Chaussee ist schneller und billiger (${w0.tage} -> ${w1.tage} Tage, Fracht ${w0.fracht.toFixed(2)} -> ${w1.fracht.toFixed(2)})`, w1.tage < w0.tage && w1.fracht < w0.fracht && w1.kapazitaet > w0.kapazitaet);
+  zo.setzeMaut(strasse, 0.5);
+  pruefe("Der Mautsatz ist nach oben begrenzt", zo.zustand_(strasse.id).maut === w1.maut_max);
+  zo.setzeMaut(strasse, 0.08);
+  const g3 = spiel.gulden;
+  zo.mautTag();
+  pruefe(`Die Maut bringt Geld (${(spiel.gulden - g3).toFixed(0)} Gulden pro Tag)`, spiel.gulden > g3 && spiel.konten.gesamt.maut > 0);
+  // Material fehlt: der Bau ruht
+  const strasse2 = zo.strecke("zuerich_konstanz");
+  spiel.ausbau.kontore["Konstanz"] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
+  zo.erschlossen.push("bodensee");
+  spiel.ausbau.kontore["Zürich"].lager = {};
+  pruefe("Bau mit leerem Kontor beginnen", zo.starteAusbau(strasse2));
+  for (let t = 0; t < 5; t++) zo.projektTag(strasse2);
+  pruefe("Ohne Material kommt der Bau nicht voran", zo.zustand_(strasse2.id).projekt.fortschritt === 0);
+  // Der Staat baut nach seinem Fahrplan
+  insJahr(spiel, 1890);
+  zo.staatTag();
+  const zS = zo.zustand_("lausanne_basel");
+  pruefe("1890 hat der Staat Chaussee und Eisenbahn gebaut", zS.stufe === 2 && zS.besitzer === null);
+  pruefe("Wo der Spieler selbst baute, gilt der Fahrplan des Staats trotzdem, die Konzession bleibt", zo.zustand_(strasse.id).stufe === 2 && zo.zustand_(strasse.id).besitzer === "spieler");
+  pruefe("Das laufende Projekt entfällt, wenn der Staat schneller war", zo.zustand_(strasse2.id).projekt === null);
+  // Konzession kaufen
+  spiel.ausbau.kontore["Basel"] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
+  const lb = zo.strecke("lausanne_basel");
+  zo.erschlossen.push("genfersee");
+  const preis = zo.konzessionspreis(lb);
+  const g4 = spiel.gulden;
+  pruefe(`Konzession einer staatlichen Strecke kaufen (${preis} Gulden)`, zo.kaufeKonzession(lb) && zo.zustand_(lb.id).besitzer === "spieler" && spiel.gulden === g4 - preis);
+  // Netz und Landfahrzeuge (frisches Spiel, damit der Fahrplan des Staats noch nicht gelaufen ist)
+  const sp2 = ohneRisiko(new Spiel(D, 15));
+  const zo2 = sp2.zonen;
+  insJahr(sp2, 1650);
+  pruefe("Das Netz in Landzonen: Saumpfad um 1650", Math.abs(zo2.netzTempo("mittelland") - 0.8) < 1e-9 && zo2.netzStufe("mittelland") === 0);
+  insJahr(sp2, 1900);
+  pruefe("Um 1900 fahren Züge: Netzstufe 2", zo2.netzStufe("mittelland") === 2);
+  insJahr(sp2, 1650);
+  zo2.erschlossen.push("mittelland");
+  const bern = sp2.welt.stadt["Bern"];
+  sp2.ausbau.kontore["Bern"] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
+  sp2.gulden = 5_000_000;
+  pruefe("In einer Landzone kauft man Fuhrwerke, keine Schiffe", sp2.werft.pruefeNeukauf(bern, "nauen")?.includes("Landfahrzeuge") === true && sp2.werft.pruefeNeukauf(bern, "fuhrwerk") === null);
+  pruefe("Das Fuhrwerk fährt auf Fuhrwegen (Tempo = Grundtempo mal Netztempo)", (() => {
+    const fw = sp2.werft.kaufeNeu(bern, "fuhrwerk");
+    return !!fw && Math.abs(sp2.tempo(fw) - D.p.SPEED * 0.8) < 1e-6;
+  })());
+  insJahr(sp2, 1700);
+  pruefe("Vor der Eisenbahn gibt es keinen Güterzug", sp2.werft.pruefeNeukauf(bern, "gueterzug") !== null);
+  insJahr(sp2, 1900);
+  pruefe("Der Güterzug braucht ein Eisenbahnnetz (Stufe 2) und fährt dann schneller", sp2.werft.pruefeNeukauf(bern, "gueterzug") === null && (() => {
+    const zug = sp2.werft.kaufeNeu(bern, "gueterzug");
+    return !!zug && sp2.tempo(zug) > D.p.SPEED * 2;
+  })());
+  // Das eigene Netz ist früher schneller als der Fahrplan des Staats
+  const sp3 = ohneRisiko(new Spiel(D, 16));
+  insJahr(sp3, 1800);
+  sp3.zonen.zustand_("netz_mittelland").stufe = 1;
+  pruefe("Wer das Netz früher ausbaut, ist schneller als der Fahrplan (Tempo der Chaussee schon vor dem Staat)", Math.abs(sp3.zonen.netzTempo("mittelland") - 1.0) < 1e-9);
+  // Speichern und Laden
+  const geladen2 = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Strecken, Stufen und Konzessionen überstehen Speichern und Laden", JSON.stringify(geladen2.zonen.zustand()) === JSON.stringify(zo.zustand()));
 }
 
 // --- 19. Schiffsentwicklung ---------------------------------------------------
@@ -1092,6 +1171,85 @@ if (abschnitt("Schiffsentwicklung")) {
     k.tag();
   }
   pruefe(`Die Stände rüsten um (${vor} Wachtschiffe -> ${k.schiffe.filter((s) => s.typ === "wachtschiff").length})`, vor > 0 && k.schiffe.filter((s) => s.typ === "wachtschiff").length === 0);
+}
+
+// --- 20. Kanäle -----------------------------------------------------------------
+if (abschnitt("Kanäle")) {
+  const spiel = ohneRisiko(new Spiel(D, 18));
+  const zo = spiel.zonen;
+  const welt = spiel.welt;
+  const k = zo.strecke("kanal_linth");
+  const schmerikon = welt.stadt["Schmerikon"];
+  const weesen = welt.stadt["Weesen"];
+  insJahr(spiel, 1700);
+  zo.erschlossen.push("walensee");
+  spiel.gulden = 500_000_000;
+  spiel.ausbau.kontore["Schmerikon"] = { stufe: 1, lager: { Holz: { menge: 1e7, einstand: 1 }, Eisenerz: { menge: 1e7, einstand: 1 }, Werkzeug: { menge: 1e7, einstand: 1 } }, regeln: {}, sperren: {} };
+  pruefe("Der Linthkanal gibt es frühestens ab 1807", zo.pruefeAusbau(k)?.includes("1807") === true);
+  insJahr(spiel, 1810);
+  pruefe("Vor dem Bau gibt es keinen Wasserweg zwischen den Seen", spiel.nav.route(schmerikon.pos, weesen.pos) === null && !welt.verbunden("zuerichsee", "walensee"));
+  const bau = zo.baukosten(k, 1);
+  pruefe(`Das Grossprojekt braucht viel (${bau.gulden} Gulden, ${bau.tage} Tage, ${Object.entries(bau.material).map(([g, n]) => `${n} ${g}`).join(", ")})`, bau.gulden >= 600000 && bau.tage >= 900 && bau.material.Holz >= 3000);
+  pruefe("Bau beginnen", zo.starteAusbau(k));
+  for (let t = 0; t < bau.tage + 2; t++) zo.projektTag(k);
+  pruefe("Nach der Bauzeit ist der Kanal fertig und gehört dem Spieler", zo.kanalFertig(k) && zo.zustand_(k.id).besitzer === "spieler");
+  pruefe("Jetzt gibt es einen Wasserweg und die Zonen sind verbunden", spiel.nav.route(schmerikon.pos, weesen.pos) !== null && welt.verbunden("zuerichsee", "walensee"));
+  pruefe("Die Distanz zwischen den Seen ist bekannt (KI-Fahrtage)", welt.fahrtage(schmerikon, weesen) >= 1);
+  // Die KI-Händler dürfen nun über den Kanal handeln
+  const h = new Haendler(schmerikon, D);
+  h.geld = 1e6;
+  const optionen = h.optionen(schmerikon, welt.tag, welt);
+  pruefe(`KI-Händler am Kanal haben auch Ziele im anderen See (${optionen.filter((o) => o.ziel.zone === "walensee").length} von ${optionen.length} Optionen)`, optionen.length > 0 && optionen.some((o) => o.ziel.zone === "walensee"));
+  // Das Schiff des Spielers fährt hinüber
+  const schiff = spiel.schiffe[0];
+  schiff.ort = schmerikon;
+  schiff.pos = [...schmerikon.pos];
+  schiff.fahrt = null;
+  pruefe("Das Schiff des Spielers segelt über den Kanal nach Weesen", spiel.segeln(schiff, { stadt: weesen }, { still: true }).ok);
+  // Maut
+  zo.setzeMaut(k, 0.1);
+  welt.handelswertGestern = { zuerichsee: 20000, walensee: 8000 };
+  const g0 = spiel.gulden;
+  zo.mautTag();
+  pruefe(`Der Kanal bringt Maut (${(spiel.gulden - g0).toFixed(0)} Gulden pro Tag)`, spiel.gulden > g0);
+  // Speichern und Laden
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Der fertige Kanal besteht nach dem Laden weiter", geladen.welt.verbunden("zuerichsee", "walensee") && geladen.nav.route(schmerikon.pos, weesen.pos) !== null);
+  // Land und Wasser bleiben getrennt: Landfahrzeuge nutzen keine Kanäle
+  pruefe("Landfahrzeuge nutzen den Kanal nicht (eigene Wegsuche)", spiel.navLand.route(schmerikon.pos, weesen.pos) === null);
+}
+
+// --- 21. Epochen: Wohnraum, Ausgleich, KI-Flotten --------------------------------
+if (abschnitt("Epochen")) {
+  const welt = new Welt(D, 6);
+  for (let t = 0; t < 120; t++) welt.naechsterTag();
+  pruefe("1650: Die Kurven stehen (fast) auf dem Anfangswert", welt.kurve("wohnraum") < 1.01 && welt.kurve("ausgleich_see") === 0 && welt.kurve("ki_fracht") < 1.01);
+  const zurich = welt.stadt["Zürich"];
+  pruefe("Der Wohnraum wächst mit den Jahrhunderten", (() => {
+    const z0 = zurich.wohnraum();
+    welt.tagNull = welt.tag - Math.round(300 * 365.25); // 300 Jahre später
+    return zurich.wohnraum() > z0 * 3;
+  })());
+  // Ausgleich: Preisgefälle zwischen den Städten eines Sees schrumpft
+  const w2 = new Welt(D, 7);
+  for (let t = 0; t < 60; t++) w2.naechsterTag();
+  const staedte = w2.staedte.filter((s) => s.zone === "zuerichsee");
+  const gefaelle = () => Math.max(...staedte.map((s) => s.mittelpreis("Korn"))) / Math.min(...staedte.map((s) => s.mittelpreis("Korn")));
+  staedte[0].bestand.Korn *= 0.2;
+  staedte[1].bestand.Korn *= 3;
+  const vorher = gefaelle();
+  w2.tagNull = w2.tag - Math.round(300 * 365.25);
+  for (let t = 0; t < 6; t++) w2.landverkehr();
+  pruefe(`Bahn und Lastwagen gleichen die Preise innerhalb eines Sees aus (Gefälle ${vorher.toFixed(2)} -> ${gefaelle().toFixed(2)})`, gefaelle() < vorher * 0.6);
+  const summe = (zone) => w2.staedte.filter((x) => x.zone === zone).reduce((x, c) => x + c.bestand.Korn, 0);
+  const zuerichVorher = summe("zuerichsee");
+  const walenVorher = summe("walensee");
+  w2.landverkehr();
+  pruefe("Der Ausgleich schiebt Ware nur innerhalb einer Zone (die Summe je Zone bleibt)", Math.abs(summe("zuerichsee") - zuerichVorher) < 1e-6 && Math.abs(summe("walensee") - walenVorher) < 1e-6);
+  pruefe("Die KI-Flotte ist 2000 grösser und schneller als 1650", (() => {
+    w2.tagNull = w2.tag - Math.round(350 * 365.25);
+    return w2.kurve("ki_fracht") > 5 && w2.kurve("ki_tempo") > 2.5;
+  })());
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

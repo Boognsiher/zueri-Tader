@@ -232,7 +232,7 @@ function frei(spiel, schiff) {
     // Lange nichts gefunden: leer zum aussichtsreichsten Hafen
     let beste = null;
     for (const andere of spiel.welt.staedte) {
-      if (andere === stadt || andere.zone !== stadt.zone || andere.gesperrt(tag)) continue;
+      if (andere === stadt || !spiel.welt.verbunden(andere.zone, stadt.zone) || andere.gesperrt(tag)) continue;
       const dort = Haendler.prototype.optionen.call(bewerter, andere, tag, spiel.welt);
       if (!dort.length) continue;
       const anfahrt = spiel.welt.fahrtage(stadt, andere);

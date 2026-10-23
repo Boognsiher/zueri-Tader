@@ -1,10 +1,10 @@
 {
- "_info": "Zonen: jeder See (und der Hochrhein) ist eine eigene Wirtschaftszone mit eigenen Städten, eigenen KI-Händlern und eigenem Wasser. Schiffe bleiben in ihrer Zone, zwischen den Zonen gehen Waren über Verbindungen von Kontor zu Kontor (game/src/verbindungen.js). welt = Ausdehnung der Karte in Karteneinheiten (die Seen sind schematisch angeordnet, nicht massstäblich). Je Zone: mitte, breite und hoehe = Ausschnitt, den die Kamera beim Wechsel zeigt; rang = Mindestrang (Index in ziel.json, 1 = Kaufmann) und ab_jahr = frühestes Kalenderjahr, ab dem die Zone erschlossen werden kann; erschliessung = Gulden für das erste Kontor dort. Die Zone Zürichsee ist von Anfang an offen. Verbindungen: art fluss (billig, langsam, wenig Kapazität), fuhrweg (teuer, Zoll hoch) oder bahn (schnell, viel Kapazität, einmaliger Bau bau_gulden, ab Rang und ab_jahr (Eisenbahn historisch ab 1847)). tage = Laufzeit, fracht = Gulden je Einheit, kapazitaet = Einheiten pro Tag in jede Richtung, zoll = Faktor auf den Zollsatz der Zielstadt (Durchfuhr).",
+ "_info": "Zonen: jeder See (und der Hochrhein) ist eine eigene Wirtschaftszone mit eigenen Städten, eigenen KI-Händlern und eigenem Wasser. Schiffe bleiben in ihrer Zone, zwischen den Zonen gehen Waren über Verbindungen von Kontor zu Kontor (game/src/verbindungen.js). welt = Ausdehnung der Karte in Karteneinheiten (die Seen sind schematisch angeordnet, nicht massstäblich). Je Zone: art = see, fluss oder land (bestimmt den Ausgleich in epochen.json und die Fahrzeuge), mitte, breite und hoehe = Ausschnitt, den die Kamera beim Wechsel zeigt; rang = Mindestrang (Index in ziel.json, 1 = Kaufmann) und ab_jahr = frühestes Kalenderjahr, ab dem die Zone erschlossen werden kann; erschliessung = Gulden für das erste Kontor dort. Die Zone Zürichsee ist von Anfang an offen. Verbindungen: art fluss (billig, langsam, wenig Kapazität), fuhrweg (teuer, Zoll hoch) oder bahn (schnell, viel Kapazität, einmaliger Bau bau_gulden, ab Rang und ab_jahr (Eisenbahn historisch ab 1847)). tage = Laufzeit, fracht = Gulden je Einheit, kapazitaet = Einheiten pro Tag in jede Richtung (mal kapazitaet_verbindung aus epochen.json), zoll = Faktor auf den Zollsatz der Zielstadt (Durchfuhr), das alles für die Grundstufe; vorlage nennt die Ausbaustufen (vorlagen). netze = Strassen- und Schienennetz einer Landzone (tage = Grundlaufzeit für die Kosten): Es bestimmt das Tempo der Landfahrzeuge und der KI-Händler dort. kanaele: Grossprojekte, die zwei Wasserzonen mit einem schiffbaren Kanal verbinden (Polygon ufer). Bau: bau_gulden und bau_material gelten für das Jahr 1650 und wachsen mit dem Wohnraum der Epoche (epochen.json), bau_tage = Bauzeit, ab_jahr = frühestens. Während des Baus werden täglich Gulden und Material aus den Kontoren der beiden Zonen verbraucht. Danach können Schiffe und die KI-Händler zwischen den beiden Zonen fahren, wer den Kanal gebaut hat, kassiert Maut.",
  "welt": {
-  "x": -125,
-  "y": -55,
-  "b": 290,
-  "h": 170
+  "x": -170,
+  "y": -170,
+  "b": 340,
+  "h": 315
  },
  "zonen": [
   {
@@ -19,7 +19,8 @@
    "erschliessung": 0,
    "text": "Das Heimatrevier: acht Gemeinden zwischen Zürich und Schmerikon.",
    "hoehe": 66,
-   "ab_jahr": 1650
+   "ab_jahr": 1650,
+   "art": "see"
   },
   {
    "id": "walensee",
@@ -49,7 +50,8 @@
     "Baumwolle": 1.1
    },
    "hoehe": 16,
-   "ab_jahr": 1665
+   "ab_jahr": 1665,
+   "art": "see"
   },
   {
    "id": "hochrhein",
@@ -79,7 +81,8 @@
     "Trauben": 1.05
    },
    "hoehe": 24,
-   "ab_jahr": 1690
+   "ab_jahr": 1690,
+   "art": "fluss"
   },
   {
    "id": "bodensee",
@@ -109,7 +112,8 @@
     "Trauben": 0.95
    },
    "hoehe": 38,
-   "ab_jahr": 1720
+   "ab_jahr": 1720,
+   "art": "see"
   },
   {
    "id": "genfersee",
@@ -139,16 +143,234 @@
     "Trauben": 0.8
    },
    "hoehe": 36,
-   "ab_jahr": 1755
+   "ab_jahr": 1755,
+   "art": "see"
+  },
+  {
+   "id": "mittelrhein",
+   "name": "Mittelrhein",
+   "art": "fluss",
+   "mitte": [
+    -6,
+    -92
+   ],
+   "breite": 40,
+   "hoehe": 80,
+   "rang": 6,
+   "ab_jahr": 1795,
+   "erschliessung": 2000000,
+   "text": "Der Rhein von Strassburg bis Köln: Wein, Eisen und Salz auf dem grossen Strom.",
+   "preisfaktor": {
+    "Korn": 0.95,
+    "Fisch": 1.0,
+    "Holz": 1.0,
+    "Käse": 1.1,
+    "Eisenerz": 0.95,
+    "Wein": 0.9,
+    "Seide": 1.05,
+    "Tuch": 1.0,
+    "Werkzeug": 0.95,
+    "Zucker": 0.95,
+    "Gewürze": 0.95,
+    "Rohseide": 1.05,
+    "Baumwolle": 1.0,
+    "Trauben": 0.9
+   }
+  },
+  {
+   "id": "niederrhein",
+   "name": "Niederrhein",
+   "art": "fluss",
+   "mitte": [
+    36,
+    -150
+   ],
+   "breite": 72,
+   "hoehe": 36,
+   "rang": 6,
+   "ab_jahr": 1800,
+   "erschliessung": 3000000,
+   "text": "Von Düsseldorf zur Nordsee: Rotterdam und Amsterdam sind Tore zur Welt.",
+   "preisfaktor": {
+    "Korn": 1.05,
+    "Fisch": 0.9,
+    "Holz": 1.1,
+    "Käse": 0.85,
+    "Eisenerz": 1.0,
+    "Wein": 1.2,
+    "Seide": 1.1,
+    "Tuch": 0.95,
+    "Werkzeug": 1.0,
+    "Zucker": 0.8,
+    "Gewürze": 0.75,
+    "Rohseide": 1.0,
+    "Baumwolle": 0.85,
+    "Trauben": 1.2
+   }
+  },
+  {
+   "id": "rhone",
+   "name": "Rhône",
+   "art": "fluss",
+   "mitte": [
+    -143,
+    108
+   ],
+   "breite": 40,
+   "hoehe": 50,
+   "rang": 6,
+   "ab_jahr": 1830,
+   "erschliessung": 2000000,
+   "text": "Die Rhône von Lyon ans Mittelmeer: Öl, Seide und Gewürze aus dem Süden.",
+   "preisfaktor": {
+    "Korn": 1.0,
+    "Fisch": 0.95,
+    "Holz": 1.15,
+    "Käse": 1.1,
+    "Eisenerz": 1.1,
+    "Wein": 0.85,
+    "Seide": 0.9,
+    "Tuch": 1.1,
+    "Werkzeug": 1.1,
+    "Zucker": 0.9,
+    "Gewürze": 0.8,
+    "Rohseide": 0.9,
+    "Baumwolle": 0.95,
+    "Trauben": 0.85
+   }
+  },
+  {
+   "id": "mittelland",
+   "name": "Mittelland",
+   "art": "land",
+   "mitte": [
+    -28,
+    42
+   ],
+   "breite": 41,
+   "hoehe": 46,
+   "rang": 3,
+   "ab_jahr": 1700,
+   "erschliessung": 150000,
+   "text": "Zwischen Jura und Voralpen: Bern, Luzern und die Aare-Städte, erreichbar auf Fuhrwegen.",
+   "preisfaktor": {
+    "Korn": 0.9,
+    "Fisch": 1.15,
+    "Holz": 0.95,
+    "Käse": 0.85,
+    "Eisenerz": 1.0,
+    "Wein": 1.1,
+    "Seide": 1.1,
+    "Tuch": 1.0,
+    "Werkzeug": 1.0,
+    "Zucker": 1.15,
+    "Gewürze": 1.15,
+    "Rohseide": 1.05,
+    "Baumwolle": 1.05,
+    "Trauben": 1.05
+   }
+  },
+  {
+   "id": "nordost",
+   "name": "Nordostschweiz",
+   "art": "land",
+   "mitte": [
+    138,
+    19
+   ],
+   "breite": 41,
+   "hoehe": 38,
+   "rang": 3,
+   "ab_jahr": 1710,
+   "erschliessung": 150000,
+   "text": "St. Gallen, Winterthur und Appenzell: Leinwand, Stickerei und Käse.",
+   "preisfaktor": {
+    "Korn": 1.0,
+    "Fisch": 1.2,
+    "Holz": 0.95,
+    "Käse": 0.8,
+    "Eisenerz": 1.1,
+    "Wein": 1.15,
+    "Seide": 1.0,
+    "Tuch": 0.85,
+    "Werkzeug": 1.05,
+    "Zucker": 1.1,
+    "Gewürze": 1.1,
+    "Rohseide": 1.1,
+    "Baumwolle": 0.9,
+    "Trauben": 1.1
+   }
+  },
+  {
+   "id": "westschweiz",
+   "name": "Westschweiz",
+   "art": "land",
+   "mitte": [
+    -86,
+    42
+   ],
+   "breite": 39,
+   "hoehe": 41,
+   "rang": 4,
+   "ab_jahr": 1730,
+   "erschliessung": 250000,
+   "text": "Freiburg, Neuenburg und das Wallis: Uhren, Käse und Wein.",
+   "preisfaktor": {
+    "Korn": 1.05,
+    "Fisch": 1.1,
+    "Holz": 0.9,
+    "Käse": 0.9,
+    "Eisenerz": 1.05,
+    "Wein": 0.9,
+    "Seide": 1.05,
+    "Tuch": 1.1,
+    "Werkzeug": 0.9,
+    "Zucker": 1.05,
+    "Gewürze": 1.05,
+    "Rohseide": 1.1,
+    "Baumwolle": 1.1,
+    "Trauben": 0.9
+   }
+  },
+  {
+   "id": "alpen",
+   "name": "Alpen und Tessin",
+   "art": "land",
+   "mitte": [
+    76,
+    106
+   ],
+   "breite": 56,
+   "hoehe": 31,
+   "rang": 4,
+   "ab_jahr": 1740,
+   "erschliessung": 250000,
+   "text": "Von Chur über den Gotthard nach Bellinzona und Lugano: Säumer, Zoll und Pässe.",
+   "preisfaktor": {
+    "Korn": 1.2,
+    "Fisch": 1.25,
+    "Holz": 0.8,
+    "Käse": 0.8,
+    "Eisenerz": 0.9,
+    "Wein": 0.95,
+    "Seide": 1.0,
+    "Tuch": 1.15,
+    "Werkzeug": 1.0,
+    "Zucker": 1.2,
+    "Gewürze": 1.1,
+    "Rohseide": 1.0,
+    "Baumwolle": 1.2,
+    "Trauben": 0.95
+   }
   }
  ],
  "verbindungen": [
   {
    "id": "linth",
    "name": "Linth",
-   "art": "fluss",
    "von": "Schmerikon",
    "nach": "Weesen",
+   "vorlage": "fluss",
    "tage": 2,
    "fracht": 0.5,
    "kapazitaet": 90,
@@ -158,9 +380,9 @@
   {
    "id": "limmat_aare",
    "name": "Limmat und Aare",
-   "art": "fluss",
    "von": "Zürich",
    "nach": "Basel",
+   "vorlage": "fluss",
    "tage": 4,
    "fracht": 0.9,
    "kapazitaet": 70,
@@ -170,9 +392,9 @@
   {
    "id": "rheinfall",
    "name": "Rheinfall",
-   "art": "fluss",
    "von": "Konstanz",
    "nach": "Schaffhausen",
+   "vorlage": "fluss",
    "tage": 3,
    "fracht": 0.8,
    "kapazitaet": 70,
@@ -180,11 +402,47 @@
    "text": "Vom Bodensee den Rhein hinab, am Rheinfall wird umgeladen."
   },
   {
+   "id": "oberrhein",
+   "name": "Oberrhein",
+   "von": "Basel",
+   "nach": "Strassburg",
+   "vorlage": "fluss",
+   "tage": 2,
+   "fracht": 0.7,
+   "kapazitaet": 90,
+   "zoll": 0.6,
+   "text": "Der Rhein von Basel nach Strassburg."
+  },
+  {
+   "id": "mittelrhein_nieder",
+   "name": "Rhein nach Holland",
+   "von": "Köln",
+   "nach": "Düsseldorf",
+   "vorlage": "fluss",
+   "tage": 1,
+   "fracht": 0.5,
+   "kapazitaet": 120,
+   "zoll": 0.6,
+   "text": "Von Köln den Rhein hinab nach Düsseldorf und zur Nordsee."
+  },
+  {
+   "id": "rhone",
+   "name": "Rhône",
+   "von": "Genf",
+   "nach": "Lyon",
+   "vorlage": "fluss",
+   "tage": 3,
+   "fracht": 0.9,
+   "kapazitaet": 70,
+   "zoll": 0.7,
+   "text": "Die Rhône von Genf nach Lyon."
+  },
+  {
    "id": "sarganserland",
    "name": "Sarganserland",
-   "art": "fuhrweg",
    "von": "Walenstadt",
    "nach": "Rorschach",
+   "vorlage": "strasse",
    "tage": 5,
    "fracht": 2.2,
    "kapazitaet": 40,
@@ -194,9 +452,9 @@
   {
    "id": "juraweg",
    "name": "Jurafuss-Strasse",
-   "art": "fuhrweg",
    "von": "Genf",
    "nach": "Basel",
+   "vorlage": "strasse",
    "tage": 9,
    "fracht": 3.0,
    "kapazitaet": 30,
@@ -204,49 +462,669 @@
    "text": "Der lange Weg von Genf über Bern und den Jura nach Basel."
   },
   {
-   "id": "bahn_zuerich_basel",
-   "name": "Bahn Zürich–Basel",
-   "art": "bahn",
+   "id": "zuerich_basel",
+   "name": "Strasse Zürich–Basel",
    "von": "Zürich",
    "nach": "Basel",
-   "tage": 1,
-   "fracht": 0.8,
-   "kapazitaet": 250,
-   "zoll": 0.4,
-   "rang": 6,
-   "bau_gulden": 800000,
-   "text": "Die Eisenbahn: ein Tag statt vier.",
-   "ab_jahr": 1847
+   "vorlage": "strasse",
+   "tage": 4,
+   "fracht": 1.4,
+   "kapazitaet": 60,
+   "zoll": 0.8,
+   "text": "Über den Bözberg nach Basel."
   },
   {
-   "id": "bahn_zuerich_konstanz",
-   "name": "Bahn Zürich–Konstanz",
-   "art": "bahn",
+   "id": "zuerich_konstanz",
+   "name": "Strasse Zürich–Konstanz",
    "von": "Zürich",
    "nach": "Konstanz",
-   "tage": 1,
-   "fracht": 1.0,
-   "kapazitaet": 200,
-   "zoll": 0.4,
-   "rang": 6,
-   "bau_gulden": 900000,
-   "text": "Über Winterthur an den Bodensee.",
-   "ab_jahr": 1847
+   "vorlage": "strasse",
+   "tage": 3,
+   "fracht": 1.6,
+   "kapazitaet": 60,
+   "zoll": 0.8,
+   "text": "Über Winterthur an den Bodensee."
   },
   {
-   "id": "bahn_lausanne_basel",
-   "name": "Bahn Lausanne–Basel",
-   "art": "bahn",
+   "id": "lausanne_basel",
+   "name": "Strasse Lausanne–Basel",
    "von": "Lausanne",
    "nach": "Basel",
+   "vorlage": "strasse",
+   "tage": 8,
+   "fracht": 2.4,
+   "kapazitaet": 40,
+   "zoll": 1.0,
+   "text": "Durch den Jura vom Genfersee an den Rhein."
+  },
+  {
+   "id": "zuerich_aarau",
+   "name": "Zürich–Aarau",
+   "von": "Zürich",
+   "nach": "Aarau",
+   "vorlage": "strasse",
+   "tage": 2,
+   "fracht": 1.4,
+   "kapazitaet": 50,
+   "zoll": 0.8,
+   "text": "Über den Heitersberg ins Mittelland."
+  },
+  {
+   "id": "zuerich_winterthur",
+   "name": "Zürich–Winterthur",
+   "von": "Zürich",
+   "nach": "Winterthur",
+   "vorlage": "strasse",
    "tage": 1,
-   "fracht": 1.2,
-   "kapazitaet": 200,
-   "zoll": 0.4,
-   "rang": 6,
-   "bau_gulden": 1500000,
-   "text": "Durch den Jura vom Genfersee an den Rhein.",
-   "ab_jahr": 1847
+   "fracht": 1.0,
+   "kapazitaet": 60,
+   "zoll": 0.8,
+   "text": "Nach Winterthur und in die Nordostschweiz."
+  },
+  {
+   "id": "rapperswil_wil",
+   "name": "Rapperswil–Wil",
+   "von": "Rapperswil",
+   "nach": "Wil",
+   "vorlage": "strasse",
+   "tage": 2,
+   "fracht": 1.4,
+   "kapazitaet": 50,
+   "zoll": 0.8,
+   "text": "Durch das Toggenburg nach Wil."
+  },
+  {
+   "id": "lachen_altdorf",
+   "name": "Lachen–Altdorf",
+   "von": "Lachen",
+   "nach": "Altdorf",
+   "vorlage": "strasse",
+   "tage": 4,
+   "fracht": 2.0,
+   "kapazitaet": 35,
+   "zoll": 1.0,
+   "text": "Über Schwyz an den Vierwaldstättersee, dann nach Altdorf."
+  },
+  {
+   "id": "walenstadt_chur",
+   "name": "Walenstadt–Chur",
+   "von": "Walenstadt",
+   "nach": "Chur",
+   "vorlage": "strasse",
+   "tage": 2,
+   "fracht": 1.6,
+   "kapazitaet": 40,
+   "zoll": 0.9,
+   "text": "Über Sargans nach Chur."
+  },
+  {
+   "id": "rorschach_stgallen",
+   "name": "Rorschach–St. Gallen",
+   "von": "Rorschach",
+   "nach": "St. Gallen",
+   "vorlage": "strasse",
+   "tage": 1,
+   "fracht": 1.0,
+   "kapazitaet": 60,
+   "zoll": 0.8,
+   "text": "Ins Hinterland des Bodensees."
+  },
+  {
+   "id": "konstanz_frauenfeld",
+   "name": "Konstanz–Frauenfeld",
+   "von": "Konstanz",
+   "nach": "Frauenfeld",
+   "vorlage": "strasse",
+   "tage": 1,
+   "fracht": 1.0,
+   "kapazitaet": 60,
+   "zoll": 0.8,
+   "text": "Durch den Thurgau."
+  },
+  {
+   "id": "lausanne_fribourg",
+   "name": "Lausanne–Fribourg",
+   "von": "Lausanne",
+   "nach": "Fribourg",
+   "vorlage": "strasse",
+   "tage": 2,
+   "fracht": 1.5,
+   "kapazitaet": 50,
+   "zoll": 0.8,
+   "text": "Von der Waadt nach Freiburg."
+  },
+  {
+   "id": "vevey_sitten",
+   "name": "Vevey–Sitten",
+   "von": "Vevey",
+   "nach": "Sitten",
+   "vorlage": "strasse",
+   "tage": 3,
+   "fracht": 1.8,
+   "kapazitaet": 40,
+   "zoll": 0.9,
+   "text": "Das Rhonetal hinauf ins Wallis."
+  },
+  {
+   "id": "bern_fribourg",
+   "name": "Bern–Fribourg",
+   "von": "Bern",
+   "nach": "Fribourg",
+   "vorlage": "strasse",
+   "tage": 1,
+   "fracht": 1.0,
+   "kapazitaet": 60,
+   "zoll": 0.8,
+   "text": "Zwischen Mittelland und Westschweiz."
+  },
+  {
+   "id": "aarau_basel",
+   "name": "Aarau–Basel",
+   "von": "Aarau",
+   "nach": "Basel",
+   "vorlage": "strasse",
+   "tage": 2,
+   "fracht": 1.4,
+   "kapazitaet": 50,
+   "zoll": 0.8,
+   "text": "Durch das Fricktal an den Rhein."
+  },
+  {
+   "id": "luzern_altdorf",
+   "name": "Luzern–Altdorf",
+   "von": "Luzern",
+   "nach": "Altdorf",
+   "vorlage": "strasse",
+   "tage": 2,
+   "fracht": 1.5,
+   "kapazitaet": 45,
+   "zoll": 0.9,
+   "text": "Über den Vierwaldstättersee zum Gotthard."
+  },
+  {
+   "id": "stgallen_chur",
+   "name": "St. Gallen–Chur",
+   "von": "St. Gallen",
+   "nach": "Chur",
+   "vorlage": "strasse",
+   "tage": 3,
+   "fracht": 1.8,
+   "kapazitaet": 35,
+   "zoll": 0.9,
+   "text": "Durch das Rheintal nach Graubünden."
+  },
+  {
+   "id": "zug_zuerich",
+   "name": "Zug–Zürich",
+   "von": "Zug",
+   "nach": "Zürich",
+   "vorlage": "strasse",
+   "tage": 1,
+   "fracht": 1.0,
+   "kapazitaet": 60,
+   "zoll": 0.8,
+   "text": "Von Zug an den Zürichsee."
+  }
+ ],
+ "vorlagen": {
+  "_info": "Ausbaustufen von Verbindungen und Netzen. faktor = Faktor auf die Grundwerte der Strecke (Laufzeit tage, Fracht je Stück, Kapazität, Zollfaktor). ab_jahr = frühestens bauen, staat_jahr = so früh baut der Staat die Stufe auf jeder Strecke, die du nicht selbst ausgebaut hast (kostenlos). bau: Kosten je Tag der Grundlaufzeit der Strecke (gulden_je_tag), Material je Tag der Grundlaufzeit (material_je_tag), Bauzeit in Tagen je Tag der Grundlaufzeit (tage_je_tag). Gulden und Material wachsen mit dem Wohnraum der Epoche (epochen.json: wohnraum), gezahlt und verbraucht werden sie täglich über die Bauzeit; fehlt Material im Kontor an einem Ende der Strecke, ruht der Bau. maut_max = höchster Mautsatz, den der Konzessionär setzen darf. tempo (nur Netze) = Tempofaktor der Landfahrzeuge in der Zone.",
+  "strasse": [
+   {
+    "art": "fuhrweg",
+    "name": "Saumpfad und Fuhrweg",
+    "faktor": {
+     "tage": 1,
+     "fracht": 1,
+     "kapazitaet": 1,
+     "zoll": 1
+    },
+    "tempo": 0.8
+   },
+   {
+    "art": "strasse",
+    "name": "Chaussee",
+    "ab_jahr": 1760,
+    "staat_jahr": 1795,
+    "faktor": {
+     "tage": 0.6,
+     "fracht": 0.7,
+     "kapazitaet": 3,
+     "zoll": 0.9
+    },
+    "tempo": 1.0,
+    "maut_max": 0.2,
+    "bau": {
+     "gulden_je_tag": 40000,
+     "material_je_tag": {
+      "Holz": 150,
+      "Eisenerz": 30
+     },
+     "tage_je_tag": 60
+    }
+   },
+   {
+    "art": "bahn",
+    "name": "Eisenbahn",
+    "ab_jahr": 1847,
+    "staat_jahr": 1880,
+    "faktor": {
+     "tage": 0.2,
+     "fracht": 0.4,
+     "kapazitaet": 12,
+     "zoll": 0.6
+    },
+    "tempo": 2.2,
+    "maut_max": 0.2,
+    "bau": {
+     "gulden_je_tag": 500000,
+     "material_je_tag": {
+      "Eisenerz": 600,
+      "Holz": 300,
+      "Werkzeug": 60
+     },
+     "tage_je_tag": 120
+    }
+   },
+   {
+    "art": "autobahn",
+    "name": "Autobahn und Lastwagen",
+    "ab_jahr": 1955,
+    "staat_jahr": 1985,
+    "faktor": {
+     "tage": 0.1,
+     "fracht": 0.25,
+     "kapazitaet": 35,
+     "zoll": 0.5
+    },
+    "tempo": 3.2,
+    "maut_max": 0.2,
+    "bau": {
+     "gulden_je_tag": 3000000,
+     "material_je_tag": {
+      "Eisenerz": 1500,
+      "Holz": 200,
+      "Werkzeug": 200
+     },
+     "tage_je_tag": 150
+    }
+   }
+  ],
+  "fluss": [
+   {
+    "art": "fluss",
+    "name": "Segeln und Treideln",
+    "faktor": {
+     "tage": 1,
+     "fracht": 1,
+     "kapazitaet": 1,
+     "zoll": 1
+    }
+   },
+   {
+    "art": "dampfschlepp",
+    "name": "Dampfschleppschifffahrt",
+    "ab_jahr": 1830,
+    "staat_jahr": 1860,
+    "faktor": {
+     "tage": 0.5,
+     "fracht": 0.5,
+     "kapazitaet": 4,
+     "zoll": 0.8
+    },
+    "maut_max": 0.2,
+    "bau": {
+     "gulden_je_tag": 60000,
+     "material_je_tag": {
+      "Holz": 120,
+      "Eisenerz": 40,
+      "Werkzeug": 10
+     },
+     "tage_je_tag": 60
+    }
+   },
+   {
+    "art": "rheinschiff",
+    "name": "Grossschifffahrt mit Schleusen",
+    "ab_jahr": 1900,
+    "staat_jahr": 1930,
+    "faktor": {
+     "tage": 0.3,
+     "fracht": 0.3,
+     "kapazitaet": 15,
+     "zoll": 0.6
+    },
+    "maut_max": 0.2,
+    "bau": {
+     "gulden_je_tag": 400000,
+     "material_je_tag": {
+      "Eisenerz": 400,
+      "Holz": 200,
+      "Werkzeug": 50
+     },
+     "tage_je_tag": 100
+    }
+   },
+   {
+    "art": "container",
+    "name": "Containerverkehr",
+    "ab_jahr": 1968,
+    "staat_jahr": 1990,
+    "faktor": {
+     "tage": 0.25,
+     "fracht": 0.2,
+     "kapazitaet": 40,
+     "zoll": 0.5
+    },
+    "maut_max": 0.2,
+    "bau": {
+     "gulden_je_tag": 1500000,
+     "material_je_tag": {
+      "Eisenerz": 800,
+      "Holz": 100,
+      "Werkzeug": 150
+     },
+     "tage_je_tag": 120
+    }
+   }
+  ],
+  "kanal": [
+   {
+    "art": "keiner",
+    "name": "Kein Kanal",
+    "faktor": {
+     "tage": 1,
+     "fracht": 1,
+     "kapazitaet": 1,
+     "zoll": 1
+    }
+   },
+   {
+    "art": "kanal",
+    "name": "Schifffahrtskanal",
+    "ab_jahr": 1800,
+    "maut_max": 0.2,
+    "bau": {
+     "gulden_je_tag": 1,
+     "material_je_tag": {},
+     "tage_je_tag": 1
+    }
+   }
+  ]
+ },
+ "netze": [
+  {
+   "zone": "mittelland",
+   "tage": 6,
+   "text": "Das Strassen- und Schienennetz im Mittelland."
+  },
+  {
+   "zone": "nordost",
+   "tage": 4,
+   "text": "Das Netz in der Nordostschweiz."
+  },
+  {
+   "zone": "westschweiz",
+   "tage": 6,
+   "text": "Das Netz in der Westschweiz."
+  },
+  {
+   "zone": "alpen",
+   "tage": 8,
+   "text": "Das Netz in den Alpen und im Tessin, mit Pässen und Tunneln."
+  }
+ ],
+ "kanaele": [
+  {
+   "id": "kanal_linth",
+   "typ": "kanal",
+   "name": "Linthkanal",
+   "zone_a": "zuerichsee",
+   "zone_b": "walensee",
+   "vorlage": "kanal",
+   "tage": 1,
+   "fracht": 0,
+   "kapazitaet": 0,
+   "zoll": 1,
+   "ab_jahr": 1807,
+   "bau_gulden": 600000,
+   "bau_material": {
+    "Holz": 3000,
+    "Eisenerz": 600,
+    "Werkzeug": 300
+   },
+   "bau_tage": 900,
+   "ufer": [
+    [
+     95.84,
+     51.39
+    ],
+    [
+     103.71,
+     52.17
+    ],
+    [
+     110.49,
+     54.12
+    ],
+    [
+     116.41,
+     56.49
+    ],
+    [
+     117.59,
+     53.51
+    ],
+    [
+     111.51,
+     51.08
+    ],
+    [
+     104.29,
+     49.03
+    ],
+    [
+     96.16,
+     48.21
+    ]
+   ],
+   "text": "Ein schiffbarer Kanal von Schmerikon zum Walensee, der Linth entlang. Schiffe fahren dann zwischen den beiden Seen."
+  },
+  {
+   "id": "kanal_limmat",
+   "typ": "kanal",
+   "name": "Limmat-Aare-Kanal",
+   "zone_a": "zuerichsee",
+   "zone_b": "hochrhein",
+   "vorlage": "kanal",
+   "tage": 1,
+   "fracht": 0,
+   "kapazitaet": 0,
+   "zoll": 1,
+   "ab_jahr": 1840,
+   "bau_gulden": 2500000,
+   "bau_material": {
+    "Holz": 8000,
+    "Eisenerz": 2500,
+    "Werkzeug": 900
+   },
+   "bau_tage": 1500,
+   "ufer": [
+    [
+     11.34,
+     3.48
+    ],
+    [
+     7.56,
+     -10.37
+    ],
+    [
+     4.56,
+     -25.34
+    ],
+    [
+     1.54,
+     -38.44
+    ],
+    [
+     -1.5,
+     -46.56
+    ],
+    [
+     -4.5,
+     -45.44
+    ],
+    [
+     -1.54,
+     -37.56
+    ],
+    [
+     1.44,
+     -24.66
+    ],
+    [
+     4.44,
+     -9.63
+    ],
+    [
+     8.26,
+     4.32
+    ]
+   ],
+   "text": "Eine Wasserstrasse von Zürich über die Aare an den Rhein bei Basel, mit Schleusen."
+  },
+  {
+   "id": "kanal_hochrhein",
+   "typ": "kanal",
+   "name": "Hochrhein-Kanal",
+   "zone_a": "bodensee",
+   "zone_b": "hochrhein",
+   "vorlage": "kanal",
+   "tage": 1,
+   "fracht": 0,
+   "kapazitaet": 0,
+   "zoll": 1,
+   "ab_jahr": 1880,
+   "bau_gulden": 3000000,
+   "bau_material": {
+    "Holz": 6000,
+    "Eisenerz": 4000,
+    "Werkzeug": 1200
+   },
+   "bau_tage": 1800,
+   "ufer": [
+    [
+     101.14,
+     -32.09
+    ],
+    [
+     90.12,
+     -33.1
+    ],
+    [
+     75.07,
+     -34.1
+    ],
+    [
+     58.05,
+     -34.6
+    ],
+    [
+     57.95,
+     -31.4
+    ],
+    [
+     74.93,
+     -30.9
+    ],
+    [
+     89.88,
+     -29.9
+    ],
+    [
+     100.86,
+     -28.91
+    ]
+   ],
+   "text": "Ein Schleusenkanal um den Rheinfall vom Bodensee nach Schaffhausen und Basel."
+  },
+  {
+   "id": "kanal_rhein_rhone",
+   "typ": "kanal",
+   "name": "Rhein-Rhône-Kanal",
+   "zone_a": "hochrhein",
+   "zone_b": "genfersee",
+   "vorlage": "kanal",
+   "tage": 1,
+   "fracht": 0,
+   "kapazitaet": 0,
+   "zoll": 1,
+   "ab_jahr": 1900,
+   "bau_gulden": 6000000,
+   "bau_material": {
+    "Holz": 12000,
+    "Eisenerz": 9000,
+    "Werkzeug": 2500
+   },
+   "bau_tage": 3000,
+   "ufer": [
+    [
+     -5.27,
+     -46.98
+    ],
+    [
+     -25.13,
+     -21.13
+    ],
+    [
+     -50.76,
+     -1.41
+    ],
+    [
+     -80.81,
+     8.62
+    ],
+    [
+     -119.31,
+     39.09
+    ],
+    [
+     -127.6,
+     75.88
+    ],
+    [
+     -123.55,
+     92.39
+    ],
+    [
+     -120.45,
+     91.61
+    ],
+    [
+     -124.4,
+     76.12
+    ],
+    [
+     -116.69,
+     40.91
+    ],
+    [
+     -79.19,
+     11.38
+    ],
+    [
+     -49.24,
+     1.41
+    ],
+    [
+     -22.87,
+     -18.87
+    ],
+    [
+     -2.73,
+     -45.02
+    ]
+   ],
+   "text": "Der grosse Kanal von Basel durch den Jura an den Genfersee: Ein durchgehender Wasserweg vom Rhein zur Rhône."
   }
  ]
 }

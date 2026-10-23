@@ -5,6 +5,7 @@
 
 import { Zufall } from "./zufall.js";
 import { Navigation } from "./navigation.js";
+import { kurve } from "./epochen.js";
 
 // Preis = Basispreis * (Zielbestand / Lagerbestand) ^ k, begrenzt
 export function preis(D, basis, ziel, bestand) {
@@ -14,9 +15,9 @@ export function preis(D, basis, ziel, bestand) {
 
 // Weglänge über Wasser zwischen zwei Städten, vorberechnet aus der Karte
 // (karte.json: distanzen, erzeugt mit tools/karte/distanzen.mjs)
-export function distanz(D, a, b) {
+export function distanz(D, a, b, extra = null) {
   if (a === b) return 0;
-  const d = D.karte.distanzen[`${a.name}|${b.name}`] ?? D.karte.distanzen[`${b.name}|${a.name}`];
+  const d = D.karte.distanzen[`${a.name}|${b.name}`] ?? D.karte.distanzen[`${b.name}|${a.name}`] ?? extra?.[`${a.name}|${b.name}`] ?? extra?.[`${b.name}|${a.name}`];
   if (d === undefined) throw new Error(`Distanz ${a.name} - ${b.name} fehlt in karte.json (node tools/karte/distanzen.mjs)`);
   return d;
 }
@@ -42,6 +43,7 @@ export class Stadt {
     this.zufriedenheitBonus = 0; // Versorgungsgebäude des Spielers (betriebe.js)
     this.wohnraumBonus = 0; // zusätzlicher Wohnraum als Anteil der Startbevölkerung
     this.pos = cfg.pos;
+    this.welt = null; // wird von der Welt gesetzt (Jahr für die Epochenkurven)
     this.zone = cfg.zone; // Wirtschaftszone (zonen.json): KI-Händler handeln nur innerhalb einer Zone
     this.preisfaktor = D.zonen?.zonen.find((z) => z.id === cfg.zone)?.preisfaktor ?? {}; // Preisniveau der Zone je Ware
     // Kopien: Betriebe des Spielers verschieben Leistung zwischen Stadt und Spieler (betriebe.js)
@@ -91,7 +93,8 @@ export class Stadt {
 
   // Obergrenze der Bevölkerung (Wohnraum)
   wohnraum() {
-    return this.einwohner0 * (this.D.p.POP_MAX_FACTOR + this.wohnraumBonus);
+    const epoche = this.welt ? this.welt.kurve("wohnraum") : 1; // Verstädterung über die Jahrhunderte (epochen.json)
+    return this.einwohner0 * (this.D.p.POP_MAX_FACTOR * epoche + this.wohnraumBonus);
   }
 
   skaliere() {
@@ -204,13 +207,16 @@ export function angebot(D, von, nach, g, geld, laderaum = D.p.SHIP_CAP) {
   let kosten = 0;
   let erloes = 0;
   let menge = 0;
-  while (menge < laderaum && bestandVon - menge >= 2) {
+  // Grosse Schiffe (spätere Epochen) werden in Stücken von höchstens 1/120 des Laderaums gerechnet,
+  // sonst dauert jede Schätzung zu lang; bis 120 Einheiten ist es Stück für Stück wie bisher
+  const schritt = Math.max(1, Math.floor(laderaum / 120));
+  while (menge + schritt <= laderaum && bestandVon - menge >= 1 + schritt) {
     const kauf = von.kaufpreis(g, bestandVon - menge);
     const verkauf = nach.verkaufspreis(g, bestandNach + menge);
-    if (verkauf <= kauf || kosten + kauf > geld) break;
-    kosten += kauf;
-    erloes += verkauf;
-    menge++;
+    if (verkauf <= kauf || kosten + kauf * schritt > geld) break;
+    kosten += kauf * schritt;
+    erloes += verkauf * schritt;
+    menge += schritt;
   }
   return { menge, kosten, erloes };
 }
@@ -232,7 +238,7 @@ export class Haendler {
     if (this.ziel) {
       if (tag < this.ankunft) return;
       if (this.ladung) {
-        this.verkaufe(tag, st);
+        this.verkaufe(tag, st, welt);
       } else {
         // Leerfahrt beendet
         this.ziel.ballast -= 1;
@@ -244,7 +250,7 @@ export class Haendler {
     this.plane(tag, welt, st);
   }
 
-  verkaufe(tag, st) {
+  verkaufe(tag, st, welt) {
     const { ware, menge, kosten, von, start } = this.ladung;
     const stadt = this.ziel;
     let erloes = 0;
@@ -252,6 +258,7 @@ export class Haendler {
       erloes += stadt.verkaufspreis(ware);
       stadt.bestand[ware] += 1;
     }
+    if (welt) welt.handelswert[stadt.zone] = (welt.handelswert[stadt.zone] ?? 0) + erloes;
     this.geld += erloes;
     stadt.unterwegs[ware] -= menge;
     if (st && st.an) {
@@ -271,10 +278,10 @@ export class Haendler {
       if (von.bestand[g] < 5) continue;
       const kauf = von.kaufpreis(g);
       for (const nach of welt.staedte) {
-        if (nach === von || nach.zone !== von.zone || nach.gesperrt(tag) || !nach.handelt(g)) continue;
+        if (nach === von || !welt.verbunden(von.zone, nach.zone) || nach.gesperrt(tag) || !nach.handelt(g)) continue;
         if (nach.geplanterVerkaufspreis(g) < kauf * (1 + p.MIN_ROI)) continue;
         // laderaum: nur gesetzt, wenn der freie Handel des Spielers diese Bewertung nutzt
-        const { menge, kosten, erloes } = angebot(this.D, von, nach, g, this.geld, this.laderaum ?? p.SHIP_CAP);
+        const { menge, kosten, erloes } = angebot(this.D, von, nach, g, this.geld, this.laderaum ?? Math.round(p.SHIP_CAP * welt.kurve("ki_fracht")));
         const gewinn = erloes - kosten;
         if (menge <= 0 || gewinn < p.MIN_PROFIT || gewinn / kosten < p.MIN_ROI) continue;
         const tage = welt.fahrtage(von, nach) + 1;
@@ -309,7 +316,7 @@ export class Haendler {
     let beste = null;
     let besteRate = 0;
     for (const stadt of welt.staedte) {
-      if (stadt === von || stadt.zone !== von.zone || stadt.gesperrt(tag)) continue;
+      if (stadt === von || !welt.verbunden(stadt.zone, von.zone) || stadt.gesperrt(tag)) continue;
       const dort = this.optionen(stadt, tag, welt);
       if (!dort.length) continue;
       const anfahrt = welt.fahrtage(von, stadt);
@@ -341,6 +348,18 @@ export class Welt {
     this.tag = 0; // nächster zu rechnender Tag
     this.staedte = D.staedte.map((c) => new Stadt(c, D));
     this.stadt = Object.fromEntries(this.staedte.map((s) => [s.name, s]));
+    for (const s of this.staedte) s.welt = this;
+    // Kalenderjahr für die Epochenkurven: tagNull = Tag, an dem das Spiel (nach dem Einlaufen) beginnt
+    const [j0, m0] = D.spiel.start.datum;
+    this.startjahr = j0 + (m0 - 1) / 12;
+    this.tagNull = 0;
+    this.zonenArt = Object.fromEntries(D.zonen.zonen.map((z) => [z.id, z.art ?? "see"]));
+    this.kanalDistanzen = {}; // Distanzen zwischen Städten, die erst ein Kanal verbindet (zonen.js)
+    this.kanalPaare = []; // fertige Kanäle: [Zone A, Zone B]
+    this.kanalUfer = []; // Polygone der fertigen Kanäle (für die Darstellung der KI-Fahrten)
+    this.netzTempo = {}; // Tempofaktor der Landzonen, wenn der Spieler das Netz früher ausgebaut hat (zonen.js)
+    this.handelswert = {}; // Verkaufserlös der KI-Händler heute, je Zone (Grundlage der Maut)
+    this.handelswertGestern = {};
     this.zonen = [...new Set(this.staedte.map((s) => s.zone))]; // Zonen in der Reihenfolge der Städte
     this.haendler = [];
     for (const zone of this.zonen) {
@@ -352,15 +371,46 @@ export class Welt {
     this.nav = null; // Wegsuche für die Darstellung der KI-Fahrten, erst bei Bedarf
   }
 
-  // Anzahl KI-Händler einer Zone: AI_SHIPS_PER_1000 je 1000 Einwohner der Zone. Die Händler bleiben
-  // in ihrer Zone, darum wird je Zone gerechnet (sonst könnte ein See zufällig zu wenige bekommen).
-  kiZiel(zone) {
-    return Math.round((this.D.p.AI_SHIPS_PER_1000 * this.staedte.filter((s) => s.zone === zone).reduce((a, s) => a + s.einwohner, 0)) / 1000);
+  // Sind zwei Zonen durch Kanäle verbunden (auch über mehrere Kanäle)? Dann handeln die KI-Händler zwischen ihnen.
+  verbunden(a, b) {
+    if (a === b) return true;
+    const gesehen = new Set([a]);
+    for (let neu = true; neu; ) {
+      neu = false;
+      for (const [x, y] of this.kanalPaare) {
+        if (gesehen.has(x) !== gesehen.has(y)) {
+          gesehen.add(x);
+          gesehen.add(y);
+          neu = true;
+        }
+      }
+    }
+    return gesehen.has(b);
   }
 
+  // Jahr (mit Bruchteil) und Epochenkurven (data/epochen.json)
+  jahr() {
+    return this.startjahr + Math.max(0, this.tag - this.tagNull) / 365.25;
+  }
+
+  kurve(name) {
+    return kurve(this.D, name, this.jahr());
+  }
+
+  // Anzahl KI-Händler einer Zone: AI_SHIPS_PER_1000 je 1000 Einwohner der Zone. Die Händler bleiben
+  // in ihrer Zone, darum wird je Zone gerechnet (sonst könnte ein See zufällig zu wenige bekommen).
+  // Gerechnet wird mit der Startbevölkerung: Wächst die Stadt, erneuern die Händler ihre Schiffe (grösserer
+  // Laderaum, mehr Tempo, epochen.json), es kommen nicht mehr Schiffe dazu.
+  kiZiel(zone) {
+    return Math.round((this.D.p.AI_SHIPS_PER_1000 * this.staedte.filter((s) => s.zone === zone).reduce((a, s) => a + s.einwohner0, 0)) / 1000);
+  }
+
+  // Fahrtage der KI-Händler; ihr Tempo wächst mit den Epochen (ki_tempo, in Schritten von 0,05)
   fahrtage(a, b) {
-    const schluessel = `${a.name}|${b.name}`;
-    if (!(schluessel in this.tageCache)) this.tageCache[schluessel] = fahrtage(this.D, a, b);
+    // Schiffe: ki_tempo; in Landzonen bestimmt das Strassen- und Schienennetz das Tempo (netz_tempo)
+    const tempo = Math.round((this.zonenArt[a.zone] === "land" ? Math.max(this.kurve("netz_tempo"), this.netzTempo[a.zone] ?? 0) : this.kurve("ki_tempo")) * 20) / 20;
+    const schluessel = `${a.name}|${b.name}|${tempo}`;
+    if (!(schluessel in this.tageCache)) this.tageCache[schluessel] = Math.max(1, Math.ceil(distanz(this.D, a, b, this.kanalDistanzen) / (this.D.p.SPEED * tempo)));
     return this.tageCache[schluessel];
   }
 
@@ -368,7 +418,10 @@ export class Welt {
   weg(a, b) {
     const schluessel = `${a.name}|${b.name}`;
     if (!(schluessel in this.wegCache)) {
-      this.nav ??= new Navigation(this.D);
+      if (!this.nav) {
+        this.nav = new Navigation(this.D);
+        for (const u of this.kanalUfer) this.nav.fuegeHinzu(u);
+      }
       this.wegCache[schluessel] = this.nav.route(a.pos, b.pos) ?? [a.pos, b.pos];
     }
     return this.wegCache[schluessel];
@@ -378,12 +431,15 @@ export class Welt {
   naechsterTag(mitEreignissen = true) {
     const tag = this.tag;
     const meldungen = [];
+    this.handelswertGestern = this.handelswert;
+    this.handelswert = {};
     if (mitEreignissen) {
       for (const stadt of this.staedte) {
         if (this.zufall.zahl() < this.D.p.EVENT_RATE) meldungen.push(this.ereignis(stadt, tag));
       }
     }
     for (const stadt of this.staedte) stadt.schritt(tag, this.st);
+    this.landverkehr();
     // Mit der Bevölkerung kommen neue Händler dazu (es verschwinden keine)
     for (const zone of this.zonen) {
       let anzahl = this.haendler.filter((h) => h.ort.zone === zone).length;
@@ -396,6 +452,26 @@ export class Welt {
     for (const h of this.zufall.mischen(this.haendler.slice())) h.handle(tag, this, this.st);
     this.tag++;
     return meldungen;
+  }
+
+  // Bahn und Lastwagen gleichen die Lager innerhalb einer Zone aus (epochen.json: ausgleich_*):
+  // Jede Stadt rückt täglich um einen Teil des Gefälles an das Mittel der Zone heran, die Summe
+  // bleibt gleich. So verschwinden mit der Zeit die Preisunterschiede innerhalb eines Sees.
+  landverkehr() {
+    for (const zone of this.zonen) {
+      const art = this.D.zonen.zonen.find((z) => z.id === zone)?.art ?? "see";
+      const staerke = this.kurve(`ausgleich_${art}`) * 0.25;
+      if (staerke <= 0) continue;
+      const staedte = this.staedte.filter((s) => s.zone === zone);
+      for (const g of Object.keys(this.D.waren)) {
+        const mit = staedte.filter((s) => s.handelt(g));
+        const summeBestand = mit.reduce((a, s) => a + s.bestand[g], 0);
+        const summeZiel = mit.reduce((a, s) => a + s.ziel[g], 0);
+        if (summeZiel <= 0) continue;
+        const mittel = summeBestand / summeZiel;
+        for (const s of mit) s.bestand[g] = Math.max(0, s.bestand[g] + staerke * (mittel * s.ziel[g] - s.bestand[g]));
+      }
+    }
   }
 
   ereignis(stadt, tag) {

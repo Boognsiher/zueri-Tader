@@ -173,6 +173,55 @@
         [-111, 98],
         [-117, 100]
       ]
+    },
+    "Mittelrhein": {
+      "staedte": ["Strassburg", "Mannheim", "Mainz", "Köln"],
+      "ufer": [
+        [-11.62, -59.68],
+        [-9.62, -74.68],
+        [-7.69, -89.36],
+        [-1.74, -103.19],
+        [2.24, -117.14],
+        [8.15, -128.93],
+        [3.85, -131.07],
+        [-2.24, -118.86],
+        [-6.26, -104.81],
+        [-12.31, -90.64],
+        [-14.38, -75.32],
+        [-16.38, -60.32]
+      ]
+    },
+    "Niederrhein": {
+      "staedte": ["Düsseldorf", "Duisburg", "Arnheim", "Rotterdam", "Amsterdam"],
+      "ufer": [
+        [12.23, -134.66],
+        [18.05, -144.4],
+        [25.34, -151.77],
+        [36.4, -155.43],
+        [49.63, -155.43],
+        [63.29, -151.5],
+        [64.71, -156.5],
+        [50.37, -160.57],
+        [35.6, -160.57],
+        [22.66, -156.23],
+        [13.95, -147.6],
+        [7.77, -137.34]
+      ]
+    },
+    "Rhône": {
+      "staedte": ["Lyon", "Valence", "Avignon", "Marseille"],
+      "ufer": [
+        [-127.49, 93.45],
+        [-138.26, 91.41],
+        [-149.6, 95.95],
+        [-158.4, 107],
+        [-160.57, 121.63],
+        [-155.43, 122.37],
+        [-153.6, 109],
+        [-146.4, 100.05],
+        [-137.74, 96.59],
+        [-128.51, 98.55]
+      ]
     }
   },
   "beschriftung_unten": ["Horgen", "Wädenswil", "Lachen", "Rapperswil"],
@@ -350,6 +399,41 @@
       "text": "Jura",
       "position": [-102, 76],
       "art": "berg"
+    },
+    {
+      "text": "Oberrhein",
+      "position": [-24, -72],
+      "art": "see"
+    },
+    {
+      "text": "Niederrhein",
+      "position": [40, -150],
+      "art": "see"
+    },
+    {
+      "text": "Rhône",
+      "position": [-146, 86],
+      "art": "see"
+    },
+    {
+      "text": "Mittelland",
+      "position": [-30, 60],
+      "art": "see"
+    },
+    {
+      "text": "Nordostschweiz",
+      "position": [142, 35],
+      "art": "see"
+    },
+    {
+      "text": "Westschweiz",
+      "position": [-92, 58],
+      "art": "see"
+    },
+    {
+      "text": "Alpen und Tessin",
+      "position": [78, 128],
+      "art": "see"
     }
   ],
   "kleine_seen": [
@@ -378,5 +462,52 @@
       ]
     }
   ],
-  "distanzen": {"Zürich|Küsnacht": 21.67, "Zürich|Meilen": 40.17, "Zürich|Horgen": 38.04, "Zürich|Wädenswil": 54.75, "Zürich|Rapperswil": 82.2, "Zürich|Lachen": 94.19, "Zürich|Schmerikon": 109.34, "Küsnacht|Meilen": 18.51, "Küsnacht|Horgen": 16.67, "Küsnacht|Wädenswil": 33.13, "Küsnacht|Rapperswil": 60.54, "Küsnacht|Lachen": 72.52, "Küsnacht|Schmerikon": 87.68, "Meilen|Horgen": 8.46, "Meilen|Wädenswil": 14.85, "Meilen|Rapperswil": 42.03, "Meilen|Lachen": 54.02, "Meilen|Schmerikon": 69.17, "Horgen|Wädenswil": 19.95, "Horgen|Rapperswil": 48.24, "Horgen|Lachen": 60.41, "Horgen|Schmerikon": 75.49, "Wädenswil|Rapperswil": 28.86, "Wädenswil|Lachen": 40.78, "Wädenswil|Schmerikon": 56.01, "Rapperswil|Lachen": 14.16, "Rapperswil|Schmerikon": 27.64, "Lachen|Schmerikon": 19.35, "Weesen|Betlis": 10.36, "Weesen|Murg": 16.02, "Weesen|Walenstadt": 33.12, "Betlis|Murg": 6.95, "Betlis|Walenstadt": 23.65, "Murg|Walenstadt": 17.12, "Schaffhausen|Laufenburg": 20.14, "Schaffhausen|Rheinfelden": 36.9, "Schaffhausen|Basel": 56.38, "Laufenburg|Rheinfelden": 16.98, "Laufenburg|Basel": 36.4, "Rheinfelden|Basel": 19.48, "Konstanz|Meersburg": 15.81, "Konstanz|Arbon": 17.33, "Konstanz|Rorschach": 26.91, "Konstanz|Bregenz": 42.85, "Konstanz|Lindau": 41.15, "Meersburg|Arbon": 21.52, "Meersburg|Rorschach": 26.1, "Meersburg|Bregenz": 33.87, "Meersburg|Lindau": 28.54, "Arbon|Rorschach": 10.44, "Arbon|Bregenz": 30.27, "Arbon|Lindau": 33.12, "Rorschach|Bregenz": 21.19, "Rorschach|Lindau": 26.87, "Bregenz|Lindau": 12.04, "Genf|Nyon": 15.47, "Genf|Lausanne": 34.48, "Genf|Vevey": 55.76, "Nyon|Lausanne": 19.01, "Nyon|Vevey": 40.39, "Lausanne|Vevey": 22.09}
+  "distanzen": {"Zürich|Küsnacht": 21.67, "Zürich|Meilen": 40.17, "Zürich|Horgen": 38.04, "Zürich|Wädenswil": 54.75, "Zürich|Rapperswil": 82.2, "Zürich|Lachen": 94.19, "Zürich|Schmerikon": 109.34, "Küsnacht|Meilen": 18.51, "Küsnacht|Horgen": 16.67, "Küsnacht|Wädenswil": 33.13, "Küsnacht|Rapperswil": 60.54, "Küsnacht|Lachen": 72.52, "Küsnacht|Schmerikon": 87.68, "Meilen|Horgen": 8.46, "Meilen|Wädenswil": 14.85, "Meilen|Rapperswil": 42.03, "Meilen|Lachen": 54.02, "Meilen|Schmerikon": 69.17, "Horgen|Wädenswil": 19.95, "Horgen|Rapperswil": 48.24, "Horgen|Lachen": 60.41, "Horgen|Schmerikon": 75.49, "Wädenswil|Rapperswil": 28.86, "Wädenswil|Lachen": 40.78, "Wädenswil|Schmerikon": 56.01, "Rapperswil|Lachen": 14.16, "Rapperswil|Schmerikon": 27.64, "Lachen|Schmerikon": 19.35, "Weesen|Betlis": 10.36, "Weesen|Murg": 16.02, "Weesen|Walenstadt": 33.12, "Betlis|Murg": 6.95, "Betlis|Walenstadt": 23.65, "Murg|Walenstadt": 17.12, "Schaffhausen|Laufenburg": 20.14, "Schaffhausen|Rheinfelden": 36.9, "Schaffhausen|Basel": 56.38, "Laufenburg|Rheinfelden": 16.98, "Laufenburg|Basel": 36.4, "Rheinfelden|Basel": 19.48, "Konstanz|Meersburg": 15.81, "Konstanz|Arbon": 17.33, "Konstanz|Rorschach": 26.91, "Konstanz|Bregenz": 42.85, "Konstanz|Lindau": 41.15, "Meersburg|Arbon": 21.52, "Meersburg|Rorschach": 26.1, "Meersburg|Bregenz": 33.87, "Meersburg|Lindau": 28.54, "Arbon|Rorschach": 10.44, "Arbon|Bregenz": 30.27, "Arbon|Lindau": 33.12, "Rorschach|Bregenz": 21.19, "Rorschach|Lindau": 26.87, "Bregenz|Lindau": 12.04, "Genf|Nyon": 15.47, "Genf|Lausanne": 34.48, "Genf|Vevey": 55.76, "Nyon|Lausanne": 19.01, "Nyon|Vevey": 40.39, "Lausanne|Vevey": 22.09, "Strassburg|Mannheim": 17.13, "Strassburg|Mainz": 31.61, "Strassburg|Köln": 60.41, "Mannheim|Mainz": 14.59, "Mannheim|Köln": 43.36, "Mainz|Köln": 28.79, "Düsseldorf|Duisburg": 9.6, "Düsseldorf|Arnheim": 21.46, "Düsseldorf|Rotterdam": 43, "Düsseldorf|Amsterdam": 57.24, "Duisburg|Arnheim": 12.04, "Duisburg|Rotterdam": 33.64, "Duisburg|Amsterdam": 47.88, "Arnheim|Rotterdam": 22.2, "Arnheim|Amsterdam": 36.31, "Rotterdam|Amsterdam": 14.48, "Lyon|Valence": 12.39, "Lyon|Avignon": 25.81, "Lyon|Marseille": 34.67, "Valence|Avignon": 13.89, "Valence|Marseille": 22.72, "Avignon|Marseille": 9.06, "Bern|Aarau": 22.13, "Bern|Solothurn": 12.53, "Bern|Olten": 13.68, "Bern|Luzern": 18.97, "Bern|Zug": 22.13, "Aarau|Solothurn": 13.42, "Aarau|Olten": 8.49, "Aarau|Luzern": 20.44, "Aarau|Zug": 10.73, "Solothurn|Olten": 8.05, "Solothurn|Luzern": 23.05, "Solothurn|Zug": 19.39, "Olten|Luzern": 16.1, "Olten|Zug": 11.38, "Luzern|Zug": 11.38, "St. Gallen|Winterthur": 17.65, "St. Gallen|Frauenfeld": 10.87, "St. Gallen|Wil": 8.07, "St. Gallen|Appenzell": 8.92, "Winterthur|Frauenfeld": 7.32, "Winterthur|Wil": 10.8, "Winterthur|Appenzell": 22.83, "Frauenfeld|Wil": 6.38, "Frauenfeld|Appenzell": 17.65, "Wil|Appenzell": 12.06, "Fribourg|Neuenburg": 14.65, "Fribourg|Yverdon": 10.87, "Fribourg|Biel": 14.45, "Fribourg|Sitten": 12, "Neuenburg|Yverdon": 13.42, "Neuenburg|Biel": 9.9, "Neuenburg|Sitten": 26.64, "Yverdon|Biel": 19.68, "Yverdon|Sitten": 19.86, "Biel|Sitten": 24.74, "Chur|Altdorf": 25.21, "Chur|Bellinzona": 20.32, "Chur|Lugano": 15.49, "Chur|Locarno": 24.93, "Altdorf|Bellinzona": 13.28, "Altdorf|Lugano": 19.68, "Altdorf|Locarno": 14.88, "Bellinzona|Lugano": 7.74, "Bellinzona|Locarno": 4.75, "Lugano|Locarno": 11.05},
+  "landteile": {
+    "Mittelland": {
+      "staedte": ["Bern", "Aarau", "Solothurn", "Olten", "Luzern", "Zug"],
+      "ufer": [
+        [-43.6, 25.2],
+        [-14.8, 22.8],
+        [-12.4, 36],
+        [-13.6, 57.6],
+        [-28, 61.2],
+        [-42.4, 56.4],
+        [-44.8, 40.8]
+      ]
+    },
+    "Nordostschweiz": {
+      "staedte": ["St. Gallen", "Winterthur", "Frauenfeld", "Wil", "Appenzell"],
+      "ufer": [
+        [121.2, 5.2],
+        [152.4, 4],
+        [156, 18.4],
+        [151.2, 34],
+        [133.2, 36.4],
+        [122.4, 29.2],
+        [120, 16]
+      ]
+    },
+    "Westschweiz": {
+      "staedte": ["Fribourg", "Neuenburg", "Yverdon", "Biel", "Sitten"],
+      "ufer": [
+        [-101.6, 27.6],
+        [-71.6, 25.2],
+        [-70.4, 56.4],
+        [-89.6, 60],
+        [-102.8, 48]
+      ]
+    },
+    "Alpen und Tessin": {
+      "staedte": ["Chur", "Altdorf", "Bellinzona", "Lugano", "Locarno"],
+      "ufer": [
+        [54.16, 96.76],
+        [94.48, 94.24],
+        [99.52, 105.16],
+        [92.8, 115.24],
+        [69.28, 116.92],
+        [55, 108.52]
+      ]
+    }
+  }
 }

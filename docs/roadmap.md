@@ -14,7 +14,7 @@ Grundsatz: **Erst Spielspass im Kern beweisen, dann Inhalt und Optik ausbauen.**
 - [ ] **M8 Kampf:** statische Ansicht, Auflösung aus Schiffswerten, Risiko für Ladung und Schiff. Erste Fassung im Spiel: Kriegsschiffe, Kampfhaltungen, automatische Gefechte mit Bericht. Offen: taktische Entscheidungen im Gefecht, Besatzung und Ausrüstung
 - [ ] **M9 Ausbau und Politur:** mehr Städte und Waren, Balance, Sound, Menüs. Speichern und Laden sowie automatischer Handel sind schon in der Demo
 - [ ] **M10 Spieltiefe:** Kapitäne mit Stufen (erste Fassung im Spiel), Spielziel mit Rang und Ratssitzen (erste Fassung im Spiel), Risiko-Ereignisse für Schiffe mit Versicherung (erste Fassung im Spiel), Zoll und Verträge, Abstimmung auf rund 25 Stunden (Entwurf in `docs/tiefe.md`)
-- [ ] **M11 Weitere Seen:** zweite Karte (Walensee) als eigene Wirtschaftszone, Flussstädte mit Zoll als Tore
+- [x] **M11 Weitere Seen und Epochenwandel:** Zonen (Walensee, Hochrhein, Bodensee, Genfersee, Rhein, Rhône, vier Landzonen), Verbindungen mit Ausbaustufen, Kanäle, Schiffsentwicklung bis zum Containerschiff, Konzessionen und Maut. Erste Fassung im Spiel, Feinabstimmung offen
 
 ## Hinweise zur Reihenfolge
 

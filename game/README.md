@@ -31,6 +31,7 @@ Das Spiel lädt seine Zahlen aus `data/*.json` und braucht deshalb einen kleinen
 - **Risiko:** Sturm, Havarie, Überfall und Rückenwind treffen Schiffe auf See, mildern lassen sie sich durch Kapitäne, Wachtschiffe als Geleit und eine Versicherung
 - **Zoll und Verträge:** Verkäufe zahlen Zoll nach Stand und Ware, Handelsvertrag, Ratssitz und Ruf senken ihn, Krieg erhöht ihn
 - **Seen und Verbindungen:** Zonen werden gegen Rang und Gebühr erschlossen (Feld «Seen»). Waren reisen zwischen den Seen von Kontor zu Kontor über Fluss, Fuhrweg oder Bahn (im Reiter «Kontor», Abschnitt «Verbindungen»), mit Fracht, Zoll und Laufzeit
+- **Epochen bis 2026:** Dampf-, Motor- und Containerschiffe, Alter und Erneuerung der Flotte, Landzonen mit Fuhrwerken, Zügen und Lastwagen, Ausbau von Strassen, Eisenbahn und Autobahn (Staat oder du), Konzessionen und Maut, Kanäle zwischen den Seen. Bahn und Lastwagen gleichen mit der Zeit die Preise innerhalb eines Sees aus, der Schiffshandel auf den Seen verliert an Bedeutung, der Rhein und die Verbindungen zwischen den Zonen gewinnen
 - **Spielstand:** Speichern und Laden im Browser, automatisches Speichern jede Minute, Export und Import als Datei, «Weiterspielen» beim Start
 - KI-Händler handeln mit (40 am Anfang, mehr mit wachsender Bevölkerung), als graue Punkte auf dem See sichtbar, aber nur in Sichtweite eigener Schiffe und Städte (`sichtweite` in `data/spiel.json`)
 - Ereignisse (Missernte, Seuche, Chilbi, Föhnsturm) verändern Angebot und Nachfrage
@@ -64,7 +65,8 @@ Noch nicht dabei: Spielziel, Verträge und Embargos, Folgen von Kriegen für die
 | `src/ziel.js` | Spielziel: Rang und Ratssitze |
 | `src/risiko.js` | Sturm, Havarie, Überfall, Rückenwind, Versicherung |
 | `src/zoll.js` | Zoll und Handelsverträge |
-| `src/zonen.js` | Zonen, Erschliessen, Verbindungen, Fracht, Bahn |
+| `src/zonen.js` | Zonen, Erschliessen, Verbindungen, Netze, Ausbau, Konzessionen, Maut, Kanäle, Fracht |
+| `src/epochen.js` | Kurven über die Jahre (`data/epochen.json`) |
 | `src/kamera.js` | Kamera der Karte: Verschieben, Zoomen, Schiff verfolgen |
 | `src/oberflaeche.js` | Seitenleiste (Flotte, Besitz, Stände, Marktübersicht), Handelsfenster mit den Reitern Markt, Kontor, Betriebe, Werft, Rathaus, Gefechtsbericht, Meldungen |
 | `src/main.js` | Einstieg, Zeitsteuerung, Menü Spielstand |

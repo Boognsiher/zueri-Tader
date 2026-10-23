@@ -256,6 +256,9 @@ main {
 .haendlerboot .mast { fill: #3a2d20; }
 .haendlerboot .segel { fill: #d9ceb4; stroke: #6b5a40; stroke-width: 0.12; }
 .haendlerboot .wimpel { fill: #8a7d66; }
+.haendlerboot .rad { fill: #8a7d66; stroke: #2b1d10; stroke-width: 0.12; }
+.haendlerboot .kiste, .haendlerboot .kajuete { fill: #9a8b70; stroke: #2b1d10; stroke-width: 0.1; }
+.haendlerboot .ruder { fill: none; stroke: #2b1d10; stroke-width: 0.14; }
 
 .route { fill: none; stroke: var(--rot); stroke-width: 0.3; stroke-dasharray: 0.9 0.6; opacity: 0.8; }
 
@@ -510,3 +513,8 @@ button.autosymbol.pausiert { color: #fff6e8; background: linear-gradient(#4f8a55
 .seeliste button { margin: 0.2rem 0.3rem 0 0; font-size: 0.9rem; padding: 0.1em 0.6em; }
 .zonenwahl { position: absolute; left: 0.5rem; top: 0.5rem; z-index: 3; font: inherit; font-size: 0.95rem; padding: 0.35rem 0.5rem; min-height: 2.5rem; background: var(--papier-hell); color: var(--tinte); border: 2px solid var(--holz); border-radius: 6px; box-shadow: var(--schatten); }
 details.verbindung summary { cursor: pointer; }
+.maut { display: flex; flex-wrap: wrap; align-items: center; gap: 0.3rem; margin: 0.4rem 0; }
+.maut input { width: 4rem; }
+.landflaeche { fill: #d8c7a0; stroke: #8a7350; stroke-width: 0.4; stroke-dasharray: 1.2 0.8; opacity: 0.8; }
+
+.kanal { fill: #a9c5cf; stroke: #5c7a84; stroke-width: 0.25; }

@@ -130,6 +130,41 @@ Object.assign(SYMBOLE, {
   },
 });
 
+// Landfahrzeuge (Bug rechts, Standlinie bei y = 0.8)
+Object.assign(SYMBOLE, {
+  fuhrwerk: (g) => {
+    el("path", { d: "M-1.6,-0.2 L1.4,-0.2 L1.2,0.45 L-1.6,0.45 Z", class: "rumpf" }, g);
+    el("path", { d: "M-1.3,-0.2 Q0,-1.7 1.2,-0.2 Z", class: "segel" }, g);
+    el("circle", { cx: -0.9, cy: 0.55, r: 0.45, class: "rad" }, g);
+    el("circle", { cx: 0.7, cy: 0.55, r: 0.45, class: "rad" }, g);
+    el("path", { d: "M1.4,0.1 L2.3,0.0 L2.5,-0.4", class: "ruder" }, g);
+  },
+  frachtwagen: (g) => {
+    el("path", { d: "M-1.9,-0.3 L1.5,-0.3 L1.3,0.45 L-1.9,0.45 Z", class: "rumpf" }, g);
+    el("path", { d: "M-1.6,-0.3 Q-0.2,-1.9 1.3,-0.3 Z", class: "segel" }, g);
+    for (const x of [-1.1, 0.8]) el("circle", { cx: x, cy: 0.55, r: 0.5, class: "rad" }, g);
+    el("path", { d: "M1.5,0.1 L2.6,0.0 L2.9,-0.5", class: "ruder" }, g);
+  },
+  gueterzug: (g) => {
+    el("rect", { x: -2.8, y: -0.5, width: 1.3, height: 1.0, class: "kiste" }, g);
+    el("rect", { x: -1.4, y: -0.5, width: 1.3, height: 1.0, class: "kiste" }, g);
+    el("path", { d: "M0.0,0.5 L0.0,-0.9 L1.6,-0.9 L1.6,0.5 Z", class: "rumpf" }, g);
+    el("path", { d: "M1.0,-0.9 L1.0,-1.6 L1.4,-1.6 L1.4,-0.9 Z", class: "schlot" }, g);
+    el("path", { d: "M1.2,-1.7 q0.5,-0.5 1.1,-0.2", class: "rauch" }, g);
+    for (const x of [-2.2, -0.8, 0.3, 1.2]) el("circle", { cx: x, cy: 0.62, r: 0.3, class: "rad" }, g);
+  },
+  lkw: (g) => {
+    el("rect", { x: -2.0, y: -0.9, width: 2.6, height: 1.2, class: "kiste" }, g);
+    el("path", { d: "M0.7,0.3 L0.7,-0.6 L1.5,-0.6 L1.9,-0.1 L1.9,0.3 Z", class: "kajuete" }, g);
+    for (const x of [-1.3, 0.2, 1.2]) el("circle", { cx: x, cy: 0.5, r: 0.38, class: "rad" }, g);
+  },
+  sattelzug: (g) => {
+    el("rect", { x: -3.0, y: -1.0, width: 3.5, height: 1.3, class: "kiste" }, g);
+    el("path", { d: "M0.7,0.3 L0.7,-0.7 L1.6,-0.7 L2.1,-0.1 L2.1,0.3 Z", class: "kajuete" }, g);
+    for (const x of [-2.3, -1.6, 0.0, 1.5]) el("circle", { cx: x, cy: 0.5, r: 0.38, class: "rad" }, g);
+  },
+});
+
 // Schiffssymbol des Typs typ (Standard: Nauen) in einer eigenen Gruppe
 export function bootSymbol(eltern, klasse, typ = "nauen") {
   const g = el("g", { class: klasse }, eltern);
@@ -251,6 +286,9 @@ export class Karte {
       }
     }
 
+    // Landzonen: Flächen, auf denen Fuhrwerke, Züge und Lastwagen fahren
+    for (const t of Object.values(D.karte.landteile ?? {})) el("path", { d: glatt(t.ufer), class: "landflaeche" }, land);
+
     // Flüsse und kleine Seen (nur Darstellung, nicht befahrbar)
     for (const f of D.karte.fluesse) el("path", { d: glatt(f.linie, false), class: "fluss" }, land);
     for (const s of D.karte.kleine_seen ?? []) el("path", { d: glatt(s.ufer), class: "kleiner-see" }, land);
@@ -279,6 +317,8 @@ export class Karte {
     this.kartusche(svg);
     this.windrose(svg, 100, 21);
 
+    this.ebeneKanal = el("g", { class: "kanaele" }, svg);
+    this.gezeichneteKanaele = new Set();
     this.ebeneRoute = el("g", { class: "routen" }, svg);
     this.ebeneHaendler = el("g", { class: "haendler" }, svg);
     this.ebeneKrieg = el("g", { class: "kriegsschiffe" }, svg);
@@ -312,6 +352,7 @@ export class Karte {
     }
 
     this.haendlerBoote = [];
+    this.haendlerTypen = [];
     this.haendlerWege = new Map();
     this.spielerBoote = new Map();
     this.kriegsBoote = new Map();
@@ -354,10 +395,18 @@ export class Karte {
     // KI-Händler; mit der Bevölkerung kommen neue dazu, die bekommen hier ihr Schiff
     while (this.haendlerBoote.length < welt.haendler.length) {
       this.haendlerBoote.push(bootSymbol(this.ebeneHaendler, "haendlerboot"));
+      this.haendlerTypen.push("nauen");
     }
     // Fremde Schiffe erscheinen nur in Sichtweite eigener Schiffe und Städte
     const sicht = this.spiel.sichtpunkte();
     welt.haendler.forEach((h, i) => {
+      // In Landzonen fahren Fuhrwerke, später Wagen und Lastwagen, sonst Nauen
+      const typ = this.D.zonen.zonen.find((z) => z.id === h.ort.zone)?.art === "land" ? (this.spiel.jahr() < 1830 ? "fuhrwerk" : this.spiel.jahr() < 1925 ? "frachtwagen" : "lkw") : "nauen";
+      if (this.haendlerTypen[i] !== typ) {
+        this.haendlerBoote[i].remove();
+        this.haendlerBoote[i] = bootSymbol(this.ebeneHaendler, "haendlerboot", typ);
+        this.haendlerTypen[i] = typ;
+      }
       const boot = this.haendlerBoote[i];
       let x;
       let y;
@@ -480,6 +529,12 @@ export class Karte {
   // Wird nach jedem Tag und nach Aktionen aufgerufen: Auswahl, Fahrzeiten, Routen
   aktualisiere() {
     const spiel = this.spiel;
+    // Fertige Kanäle erscheinen als Wasserstrassen zwischen den Zonen
+    for (const k of spiel.zonen.alleStrecken()) {
+      if (k.typ !== "kanal" || this.gezeichneteKanaele.has(k.id) || !spiel.zonen.kanalFertig(k)) continue;
+      this.gezeichneteKanaele.add(k.id);
+      el("path", { d: "M" + k.ufer.map((q) => q.join(",")).join(" L") + "Z", class: "kanal" }, this.ebeneKanal);
+    }
     if (this.zonenAnzahl !== spiel.zonen.erschlossen.length) {
       this.zonenAnzahl = spiel.zonen.erschlossen.length;
       this.fuelleZonenwahl();
@@ -498,7 +553,7 @@ export class Karte {
         if (stadt.gesperrt(welt.tag) || feindlich) {
           text = feindlich ? "feindlich" : "gesperrt";
         } else {
-          const w = spiel.nav.route([p.x, p.y], stadt.pos);
+          const w = spiel.navFuer(schiff).route([p.x, p.y], stadt.pos);
           if (w) text = `${(Math.round((2 * weglaenge(w)) / spiel.tempo(schiff)) / 2).toLocaleString("de-CH")} T.`;
         }
       }
