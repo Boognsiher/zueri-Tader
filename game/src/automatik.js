@@ -11,6 +11,8 @@
 // bis er sie wieder aufnimmt.
 // Laden und Löschen braucht Zeit: Das Schiff bleibt im Hafen, bis die umgeschlagene Menge
 // geschafft ist (schiffe.json: umschlag_pro_tag je Schiffstyp). auto.abfahrt = frühester Abfahrtszeitpunkt.
+// Reparatur: Ab kampf.automatik_reparatur_ab Schaden bleibt das Schiff im nächsten Hafen liegen, bis es
+// ganz repariert ist (auto.reparatur). Repariert wird im Tageslauf von kampf.js.
 //
 // schiff.auto = null (selbst steuern)
 //   | { art: "route", halte: [{ stadt, auftraege: [{ art, ware, menge, preis }] }], index, erledigt, pausiert }
@@ -54,7 +56,8 @@ export function starteRoute(spiel, schiff, halte) {
 }
 
 export function starteFrei(spiel, schiff, einsatz) {
-  schiff.auto = { art: "frei", einsatz: Math.max(0, Number(einsatz) || 0), plan: null, wartetage: 0 };
+  // Beim Start nicht warten: Gibt es hier kein Geschäft, sucht der Kapitän sofort einen besseren Hafen
+  schiff.auto = { art: "frei", einsatz: Math.max(0, Number(einsatz) || 0), plan: null, wartetage: WARTETAGE_FREI };
   spiel.melde(`${schiff.name} handelt jetzt frei (Einsatz bis ${zahl.format(schiff.auto.einsatz)} Gulden).`);
   weiter(spiel, schiff);
 }
@@ -92,9 +95,33 @@ export function weiter(spiel, schiff) {
   if (!aktiv(schiff) || schiff.fahrt) return;
   // Noch beim Laden oder Löschen
   if (schiff.auto.abfahrt != null && spiel.zeit < schiff.auto.abfahrt) return;
+  if (repariert(spiel, schiff)) return;
   if (schiff.auto.art === "route") route(spiel, schiff);
   else if (schiff.auto.art === "versorgen") versorgen(spiel, schiff);
   else frei(spiel, schiff);
+}
+
+// Bleibt das Schiff zur Reparatur im Hafen? Nur in Häfen, die reparieren, und solange das Geld reicht.
+function repariert(spiel, schiff) {
+  const a = schiff.auto;
+  const kd = spiel.kampf.daten(schiff);
+  const rumpf = spiel.kampf.typ(schiff).rumpf;
+  const k = spiel.D.schiffe.kampf;
+  if (kd.schaden <= 0 || !schiff.ort || spiel.diplomatie.hafenGesperrt(schiff.ort)) {
+    a.reparatur = false;
+    return false;
+  }
+  const tageskosten = Math.min(kd.schaden, rumpf * k.reparatur_anteil_pro_tag) * k.reparatur_kosten_je_punkt;
+  if (spiel.gulden < tageskosten) {
+    a.reparatur = false;
+    return false;
+  }
+  if (!a.reparatur && kd.schaden >= rumpf * k.automatik_reparatur_ab) {
+    a.reparatur = true;
+    const tage = Math.ceil(kd.schaden / (rumpf * k.reparatur_anteil_pro_tag));
+    spiel.melde(`${schiff.name} bleibt zur Reparatur in ${schiff.ort.name} (rund ${tage} ${tage === 1 ? "Tag" : "Tage"}, ${zahl.format(kd.schaden * k.reparatur_kosten_je_punkt)} Gulden).`);
+  }
+  return !!a.reparatur;
 }
 
 function route(spiel, schiff) {
@@ -228,6 +255,14 @@ function frei(spiel, schiff) {
       a.abfahrt = spiel.zeit + liegezeit(spiel, schiff, umschlag);
       teile.push(`${gekauft.join(", ")} gekauft, Ziel ${o.ziel.name}${tageText(liegezeit(spiel, schiff, umschlag))}`);
     }
+  } else if (spiel.ladungsmenge(schiff) > 0) {
+    // Nichts zu kaufen (z. B. Laderaum voll), aber Ladung an Bord: dorthin, wo sie am meisten bringt
+    const ziel = besterAbnehmer(spiel, schiff, stadt);
+    if (ziel && spiel.segeln(schiff, { stadt: ziel }, { still: true }).ok) {
+      a.plan = { waren: Object.keys(schiff.ladung), ziel: ziel.name };
+      a.wartetage = 0;
+      teile.push(`bringt die Ladung nach ${ziel.name}`);
+    }
   } else if (++a.wartetage > WARTETAGE_FREI) {
     // Lange nichts gefunden: leer zum aussichtsreichsten Hafen
     let beste = null;
@@ -247,6 +282,19 @@ function frei(spiel, schiff) {
   if (teile.length) spiel.melde(`${schiff.name} (frei) in ${stadt.name}: ${teile.join(", ")}.`, "handel");
   // Ohne nennenswerte Liegezeit gleich ablegen
   if (a.abfahrt != null && spiel.zeit >= a.abfahrt) frei(spiel, schiff);
+}
+
+// Stadt, in der die Ladung pro Tag Fahrt am meisten Gewinn bringt (nach Fahrzeit gewichtet)
+function besterAbnehmer(spiel, schiff, hier) {
+  let beste = null;
+  for (const andere of spiel.welt.staedte) {
+    if (andere === hier || !spiel.welt.verbunden(andere.zone, hier.zone) || andere.gesperrt(spiel.welt.tag) || spiel.diplomatie.hafenGesperrt(andere)) continue;
+    let gewinn = 0;
+    for (const [g, p] of Object.entries(schiff.ladung)) if (andere.handelt(g)) gewinn += (spiel.verkaufspreis(andere, g) - p.einstand) * p.menge;
+    const wert = gewinn / (1 + spiel.welt.fahrtage(hier, andere));
+    if (!beste || wert > beste.wert) beste = { stadt: andere, wert };
+  }
+  return beste?.stadt ?? null;
 }
 
 // --- Versorgen ------------------------------------------------------------------

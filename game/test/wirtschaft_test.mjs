@@ -303,6 +303,31 @@ if (abschnitt("Automatischer Handel")) {
   const vermoegen = frei.gulden + frei.warenwert();
   pruefe(`Freier Handel macht in einem Jahr Gewinn (${(vermoegen - start).toFixed(0)} Gulden, ${geschaefte}+ Meldungen)`, vermoegen > start);
   pruefe("Freier Handel hält das Einsatzlimit ein", Object.values(s2.ladung).every((p) => p.menge * p.einstand <= 8000 + 1));
+
+  // Mit vollem Laderaum im Hafen gestartet: Das Schiff bringt die Ladung weg, statt ewig zu warten
+  const voll = new Spiel(D, 3);
+  const s3 = voll.schiffe[0];
+  voll.kaufen(s3, "Korn", Infinity, true);
+  starteFrei(voll, s3, 5000);
+  let abgelegt = !!s3.fahrt;
+  for (let t = 0; t < 5 && !abgelegt; t++) {
+    voll.tagVoran();
+    abgelegt = !!s3.fahrt || s3.ort?.name !== "Zürich";
+  }
+  pruefe("Freier Handel mit vollem Laderaum legt im Hafen ab", abgelegt);
+
+  // Reparatur: Ab automatik_reparatur_ab Schaden bleibt das Schiff im Hafen, bis es repariert ist
+  const rep = new Spiel(D, 1);
+  const s4 = rep.schiffe[0];
+  const rumpf = rep.schiffstyp(s4).rumpf;
+  starteRoute(rep, s4, [{ stadt: "Zürich", auftraege: [] }, { stadt: "Horgen", auftraege: [] }]);
+  s4.kampf.schaden = rumpf * 0.7;
+  let lagRepariert = false;
+  for (let t = 0; t < 20; t++) {
+    rep.tagVoran();
+    if (s4.auto.reparatur && s4.ort) lagRepariert = true;
+  }
+  pruefe("Automatik bleibt zur Reparatur im Hafen und fährt danach weiter", lagRepariert && s4.kampf.schaden === 0 && !s4.auto.reparatur);
 }
 
 // --- 6. Speichern und Laden ---------------------------------------------------

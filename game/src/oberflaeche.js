@@ -239,9 +239,17 @@ export class Oberflaeche {
   modus(schiff) {
     const a = schiff.auto;
     if (!a) return "";
-    if (a.art === "route") return `Route: ${a.halte.map((h) => h.stadt).join(" – ")}`;
-    if (a.art === "versorgen") return `Versorgen: ${a.staedte.join(", ")}`;
-    return `Freier Handel, Einsatz bis ${f(a.einsatz)} Gulden`;
+    let text;
+    if (a.art === "route") text = `Route: ${a.halte.map((h) => h.stadt).join(" – ")}`;
+    else if (a.art === "versorgen") text = `Versorgen: ${a.staedte.join(", ")}`;
+    else text = `Freier Handel, Einsatz bis ${f(a.einsatz)} Gulden`;
+    // Was die Automatik gerade tut, wenn das Schiff im Hafen liegt
+    if (!schiff.fahrt && !a.pausiert) {
+      if (a.reparatur) text += " · bleibt zur Reparatur im Hafen";
+      else if (a.abfahrt != null && this.spiel.zeit < a.abfahrt) text += " · lädt und löscht";
+      else if (a.wartetage > 0) text += a.art === "frei" ? " · wartet auf ein Geschäft" : " · wartet, nichts zu verteilen";
+    }
+    return text;
   }
 
   flotte() {
