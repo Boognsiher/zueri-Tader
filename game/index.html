@@ -34,9 +34,14 @@
         <button data-menue="export">Als Datei exportieren</button>
         <button data-menue="import">Datei importieren …</button>
         <button data-menue="neu">Neues Spiel</button>
+        <button id="cheatschalter">Cheat-Modus einschalten</button>
         <p class="klein" id="speicherinfo"></p>
         <input type="file" id="importdatei" accept=".json,application/json" hidden>
       </div>
+    </details>
+    <details class="menue" id="cheatmenue" hidden>
+      <summary>Cheats</summary>
+      <div class="menueliste cheatliste" id="cheatliste"></div>
     </details>
   </header>
 
@@ -50,12 +55,19 @@
       <dialog id="gefecht" class="fenster" aria-label="Gefechtsbericht"><div id="gefecht-inhalt"></div></dialog>
     </div>
     <aside id="seite">
-      <section id="ansehen" class="tafel"></section>
-      <section id="seen" class="tafel"></section>
-      <section id="flotte" class="tafel"></section>
-      <section id="besitz" class="tafel"></section>
-      <section id="staende" class="tafel"></section>
-      <section id="markt" class="tafel"></section>
+      <nav id="seitenreiter" class="reiter seitenreiter" role="tablist" aria-label="Seitenleiste">
+        <button role="tab" data-seite="flotte">Flotte</button>
+        <button role="tab" data-seite="markt">Markt</button>
+        <button role="tab" data-seite="besitz">Besitz</button>
+        <button role="tab" data-seite="seen">Seen</button>
+        <button role="tab" data-seite="ansehen">Ansehen</button>
+      </nav>
+      <section id="flotte" class="tafel" data-seite="flotte"></section>
+      <section id="markt" class="tafel" data-seite="markt"></section>
+      <section id="besitz" class="tafel" data-seite="besitz"></section>
+      <section id="seen" class="tafel" data-seite="seen"></section>
+      <section id="ansehen" class="tafel" data-seite="ansehen"></section>
+      <section id="staende" class="tafel" data-seite="ansehen"></section>
     </aside>
   </main>
 
@@ -66,7 +78,7 @@
       <ul>
         <li><b>Klick auf den See:</b> Dein Schiff segelt dorthin. Unterwegs kannst du jederzeit einen neuen Kurs setzen.</li>
         <li><b>Klick auf eine Stadt:</b> Das Schiff läuft den Hafen an. Bei der Ankunft öffnet sich das <b>Handelsfenster</b>. Grün heisst günstig, rot heisst teuer, grosse Mengen verschieben den Preis.</li>
-        <li><b>Schiff abwählen</b> (nochmals anklicken oder Esc): Dann hebt ein Klick eine Stadt nur hervor und zeigt ihre Preise rechts, ohne dass ein Schiff losfährt.</li>
+        <li><b>Schiff abwählen</b> (nochmals anklicken oder Esc): Dann öffnet ein Klick auf eine Stadt ihr Stadtfenster mit Preisen, Kontor und Betrieben, ohne dass ein Schiff losfährt.</li>
         <li>Neue Schiffe (Weidling, Nauen, Ledischiff) gibt es in den Werften von Zürich, Wädenswil und Rapperswil, gebrauchte tauchen ab und zu irgendwo auf.</li>
         <li>Die <b>Marktübersicht</b> rechts zeigt die Preise jeder Stadt. Die grauen Punkte auf dem See sind andere Händler. Fremde Schiffe siehst du nur in der Nähe deiner Schiffe und deiner Städte (mit Kontor oder Betrieb).</li>
         <li>Im Handelsfenster unter <b>Betriebe</b> kaufst du Betriebe der Stadt oder baust neue, unter <b>Kontor</b> lagerst du Waren.</li>

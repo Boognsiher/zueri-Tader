@@ -4,9 +4,8 @@
 //
 // Steuerung: Klick auf den See schickt das gewählte Schiff dorthin, Klick auf eine Stadt
 // lässt es dort anlegen. Liegt es schon dort, öffnet sich das Handelsfenster.
-// Ohne gewähltes Schiff (abwählen per Klick auf das Schiff, Esc oder Knopf) hebt ein Klick auf
-// eine Stadt sie nur hervor und zeigt sie in der Marktübersicht. Von dort öffnet ein Knopf das
-// Stadtfenster (Markt, Kontor, Betriebe, Werft) ohne Schiff.
+// Ohne gewähltes Schiff (abwählen per Klick auf das Schiff, Esc oder Knopf) öffnet ein Klick auf
+// eine Stadt direkt das Stadtfenster (Markt, Kontor, Betriebe, Werft) ohne Schiff.
 // Lenkt der Spieler ein Schiff mit Automatik von Hand, pausiert die Automatik.
 // Stände: Übersicht in der Seitenleiste, Kaperbriefe im Reiter «Rathaus» des Stadtfensters,
 // Gefechtsberichte in einem eigenen Fenster (statische Ansicht).
@@ -21,6 +20,34 @@ const f = (n) => zahl.format(Math.round(n));
 
 function esc(text) {
   return String(text).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+}
+
+// Inhalt eines Bereichs ersetzen, ohne dass er unnötig springt. Gleicher Inhalt bleibt stehen
+// (Tooltips, Mauszeiger und Knöpfe bleiben, wo sie sind). Aufgeklappte Abschnitte
+// (<details data-key>) bleiben so, wie der Spieler sie gestellt hat, die Scrollposition bleibt.
+// Während ein Eingabefeld den Fokus hat, wartet der neue Inhalt, bis man es verlässt.
+const klappZustand = new Map(); // data-key -> offen, vom Spieler gesetzt
+document.addEventListener("click", (ev) => {
+  const d = ev.target.closest("summary")?.parentElement;
+  if (d?.dataset.key) klappZustand.set(d.dataset.key, !d.open);
+});
+
+function setze(el, html) {
+  if (el._html === html) return;
+  const aktiv = document.activeElement;
+  if (aktiv && el.contains(aktiv) && /^(INPUT|TEXTAREA)$/.test(aktiv.tagName)) {
+    if (el._wartet === undefined) aktiv.addEventListener("blur", () => setTimeout(() => setze(el, el._wartet ?? el._html), 0), { once: true });
+    el._wartet = html;
+    return;
+  }
+  el._wartet = undefined;
+  // Scrollpositionen des Bereichs und seiner Vorfahren festhalten
+  const scroll = [];
+  for (let x = el; x && x !== document.documentElement; x = x.parentElement) if (x.scrollTop) scroll.push([x, x.scrollTop]);
+  el.innerHTML = html;
+  el._html = html;
+  for (const d of el.querySelectorAll("details[data-key]")) if (klappZustand.has(d.dataset.key)) d.open = klappZustand.get(d.dataset.key);
+  for (const [x, top] of scroll) x.scrollTop = top;
 }
 
 const MENGEN = [
@@ -47,6 +74,16 @@ export class Oberflaeche {
     this.fensterSchiff = null; // Schiff im Handelsfenster, null = Stadtfenster
     this.fensterStadt = null;
     this.routenfenster = null; // wird von main.js gesetzt
+    // Reiter der Seitenleiste, gemerkt im Browser
+    this.seite = "flotte";
+    try {
+      this.seite = localStorage.getItem("zueri-trade.seite") || "flotte";
+    } catch {}
+    this.e.seitenreiter.addEventListener("click", (ev) => {
+      const k = ev.target.closest("[data-seite]");
+      if (k) this.zeigeSeite(k.dataset.seite);
+    });
+    this.zeigeSeite(this.seite);
     this.e.flotte.addEventListener("click", (ev) => this.klickFlotte(ev));
     this.e.seen.addEventListener("click", (ev) => this.klickSeen(ev));
     this.e.seen.addEventListener("change", (ev) => {
@@ -130,11 +167,8 @@ export class Oberflaeche {
 
   klickStadt(stadt) {
     this.stadt = stadt;
-    if (!this.schiff) {
-      // nur hervorheben; ein offenes Stadtfenster zeigt die neue Stadt
-      if (this.handelOffen && !this.fensterSchiff) this.fensterStadt = stadt;
-      return this.aktualisiere();
-    }
+    // Ohne gewähltes Schiff öffnet ein Klick das Stadtfenster (ein offenes zeigt die neue Stadt)
+    if (!this.schiff) return this.oeffneStadt(stadt);
     if (this.spiel.imHafen(this.schiff, stadt)) return this.oeffneHandel();
     this.segle({ stadt });
   }
@@ -201,6 +235,16 @@ export class Oberflaeche {
   }
 
   // --- Darstellung -----------------------------------------------------------
+  zeigeSeite(seite) {
+    if (!this.e.seitenreiter.querySelector(`[data-seite="${seite}"]`)) seite = "flotte";
+    this.seite = seite;
+    try {
+      localStorage.setItem("zueri-trade.seite", seite);
+    } catch {}
+    for (const k of this.e.seitenreiter.querySelectorAll("[data-seite]")) k.setAttribute("aria-selected", String(k.dataset.seite === seite));
+    for (const t of this.e.seitenreiter.parentElement.querySelectorAll("section[data-seite]")) t.hidden = t.dataset.seite !== seite;
+  }
+
   aktualisiere() {
     if (this.schiff && !this.spiel.schiffe.includes(this.schiff)) this.schiff = null; // gesunken
     if (this.handelOffen && this.fensterSchiff && !this.spiel.imHafen(this.fensterSchiff)) this.schliesseHandel();
@@ -213,6 +257,7 @@ export class Oberflaeche {
     this.staende();
     if (this.handelOffen) this.handelsfenster();
     this.meldungen();
+    if (this.e.bilanzInhalt.closest("dialog")?.open) this.bilanz();
     this.karte.waehle({ stadt: this.stadt, schiff: this.schiff });
     this.karte.aktualisiere();
   }
@@ -255,7 +300,9 @@ export class Oberflaeche {
   flotte() {
     const s = this.spiel;
     const D = this.D;
-    let html = `<h2>Flotte</h2><ul class="schiffsliste">`;
+    // Die Knöpfe zum gewählten Schiff stehen oben, die Liste darunter: So verschieben sich die
+    // Knöpfe nicht, wenn sich eine Schiffszeile ändert
+    let liste = `<ul class="schiffsliste">`;
     for (const schiff of s.schiffe) {
       const ladung = Object.entries(schiff.ladung)
         .map(([g, p]) => `${p.menge} ${esc(g)}`)
@@ -266,7 +313,7 @@ export class Oberflaeche {
           ? `<button class="autosymbol pausiert" data-aufnehmen="${nr}" title="Automatik pausiert, Klick nimmt sie wieder auf" aria-label="Automatik von ${esc(schiff.name)} wieder aufnehmen">▶</button>`
           : `<span class="autosymbol" title="Automatik läuft" aria-label="Automatik läuft">⟳</span>`
         : "";
-      html += `<li class="schiffzeile">${auto}<button class="schiff ${schiff === this.schiff ? "gewaehlt" : ""}" data-schiff="${nr}">
+      liste += `<li class="schiffzeile">${auto}<button class="schiff ${schiff === this.schiff ? "gewaehlt" : ""}" data-schiff="${nr}">
         <span class="schiffsname">${esc(s.schiffstyp(schiff).name)} «${esc(schiff.name)}»${schiff.gebraucht ? " <small>gebraucht</small>" : ""}${s.alter(schiff) >= 5 ? ` <small title="Baujahr ${schiff.baujahr}${s.istAlt(schiff) ? ": alt, hoher Unterhalt, öfter Havarie" : ""}">${s.alter(schiff)} J.${s.istAlt(schiff) ? " alt" : ""}</small>` : ""}${schiff.versichert ? ' <small title="versichert">🛡</small>' : ""}</span>
         ${schiff.mitglieder ? `<span class="mitglieder">${schiff.mitglieder.length} Schiffe: ${esc(schiff.mitglieder.map((m) => `${this.D.schiffe.typ[m.typ].name} «${m.name}»`).join(", "))} · Tempo ${f(s.schiffstyp(schiff).tempo * 100)} %</span>` : ""}
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)}</span>
@@ -277,10 +324,11 @@ export class Oberflaeche {
         ${ladung ? `<span class="ladung">${ladung}</span>` : ""}
       </button></li>`;
     }
-    html += `</ul>`;
+    liste += `</ul>`;
+    let html = `<h2>Flotte</h2>`;
     const schiff = this.schiff;
     if (!schiff) {
-      html += `<p class="steuerhilfe">Kein Schiff gewählt. Klick auf eine Stadt: Preise, Betriebe und Kontor ansehen. Ein Schiff wählst du per Klick in dieser Liste oder auf der Karte.</p>`;
+      html += `<p class="steuerhilfe">Kein Schiff gewählt. Klick auf eine Stadt öffnet ihr Stadtfenster (Preise, Kontor, Betriebe). Ein Schiff wählst du per Klick in dieser Liste oder auf der Karte.</p>`;
     } else {
       const aktionen = [];
       if (s.imHafen(schiff)) aktionen.push(`<button data-handeln>Handelsfenster öffnen</button>`);
@@ -312,8 +360,9 @@ export class Oberflaeche {
         ? `«${esc(schiff.name)}» handelt automatisch. Lenkst du es mit einem Klick auf die Karte, pausiert die Automatik. Mit ▶ läuft sie weiter.`
         : `Klick auf den See: «${esc(schiff.name)}» segelt dorthin. Klick auf eine Stadt: anlegen und handeln. Abwählen, um Städte nur anzusehen.`
     }</p>`;
+    html += liste;
     html += `<p class="bilanz">Unterhalt der Flotte ${f(s.schiffe.reduce((x, y) => x + s.unterhalt(y), 0))} Gulden pro Tag · Einnahmen und Ausgaben unter «Bilanz» oben</p>`;
-    this.e.flotte.innerHTML = html;
+    setze(this.e.flotte, html);
   }
 
   // Kontore und eigene Betriebe auf einen Blick
@@ -322,7 +371,7 @@ export class Oberflaeche {
     const eigene = a.eigene();
     const kontore = Object.entries(a.kontore);
     if (!eigene.length && !kontore.length && !Object.keys(a.gebaeude).length) {
-      this.e.besitz.innerHTML = `<h2>Besitz</h2><p class="hilfe">Noch keine Kontore und Betriebe. Im Handelsfenster unter «Betriebe» kannst du Betriebe der Stadt kaufen oder neue bauen.</p>`;
+      setze(this.e.besitz, `<h2>Besitz</h2><p class="hilfe">Noch keine Kontore und Betriebe. Im Handelsfenster unter «Betriebe» kannst du Betriebe der Stadt kaufen oder neue bauen.</p>`);
       return;
     }
     let html = `<h2>Besitz</h2>`;
@@ -352,7 +401,7 @@ export class Oberflaeche {
     const gebaeude = Object.entries(a.gebaeude).flatMap(([stadt, g]) =>
       Object.entries(g).filter(([, st]) => st > 0).map(([id, st]) => `<li><b>${esc(a.gebaeudetypen[id].name)}</b> ${st > 1 ? `(${st}) ` : ""}${esc(stadt)}</li>`));
     if (gebaeude.length) html += `<h3>Stadtgebäude</h3><ul class="besitzliste">${gebaeude.join("")}</ul>`;
-    this.e.besitz.innerHTML = html;
+    setze(this.e.besitz, html);
   }
 
   // Stadtinfo und Preise einer beliebigen Stadt, ohne Handel
@@ -370,7 +419,7 @@ export class Oberflaeche {
       <button data-stadtfenster>Stadtfenster öffnen: Kontor, Betriebe${this.spiel.werft.istWerft(stadt) || this.spiel.werft.angeboteIn(stadt).length ? ", Werft" : ""}</button>`;
     html += this.stadtprofil(stadt);
     html += this.markttabelle(stadt, null);
-    this.e.markt.innerHTML = html;
+    setze(this.e.markt, html);
   }
 
   // Einwohner mit Trend und Wohnraum, Zufriedenheit mit Aufschlüsselung
@@ -518,35 +567,35 @@ export class Oberflaeche {
       ${MENGEN.map(([wert, text]) => `<button data-menge="${wert}" class="${this.menge === wert ? "aktiv" : ""}">${text}</button>`).join("")}
       ${schiff ? `<span class="frei">Frei im Laderaum: ${s.freierLaderaum(schiff)}</span>` : ""}</div>`;
     if (this.reiter === "kontor") {
-      this.e.handelInhalt.innerHTML = html + this.kontorReiter(stadt, schiff, mengenwahl);
+      setze(this.e.handelInhalt, html + this.kontorReiter(stadt, schiff, mengenwahl));
       return;
     }
     if (this.reiter === "betriebe") {
-      this.e.handelInhalt.innerHTML = html + this.betriebeReiter(stadt);
+      setze(this.e.handelInhalt, html + this.betriebeReiter(stadt));
       return;
     }
     if (this.reiter === "werft") {
-      this.e.handelInhalt.innerHTML = html + this.werftReiter(stadt);
+      setze(this.e.handelInhalt, html + this.werftReiter(stadt));
       return;
     }
     if (this.reiter === "wirtshaus") {
-      this.e.handelInhalt.innerHTML = html + this.wirtshausReiter(stadt);
+      setze(this.e.handelInhalt, html + this.wirtshausReiter(stadt));
       return;
     }
     if (this.reiter === "rathaus") {
-      this.e.handelInhalt.innerHTML = html + this.rathausReiter(stadt);
+      setze(this.e.handelInhalt, html + this.rathausReiter(stadt));
       return;
     }
     html += this.stadtprofil(stadt);
     if (!schiff) {
       html += this.markttabelle(stadt, null);
-      this.e.handelInhalt.innerHTML = html;
+      setze(this.e.handelInhalt, html);
       return;
     }
     html += mengenwahl;
     html += this.markttabelle(stadt, schiff);
 
-    html += `<details class="direktfahrt"><summary>Direkt zu einem Hafen segeln</summary><div class="ziele">`;
+    html += `<details class="direktfahrt" data-key="direktfahrt"><summary>Direkt zu einem Hafen segeln</summary><div class="ziele">`;
     for (const ziel of welt.staedte) {
       if (ziel === stadt || ziel.zone !== stadt.zone) continue;
       const feindlich = s.diplomatie.hafenGesperrt(ziel);
@@ -557,7 +606,7 @@ export class Oberflaeche {
         <small>${gesperrt ? "gesperrt" : `${tage.toLocaleString("de-CH")} T.`}</small></button>`;
     }
     html += `</div></details>`;
-    this.e.handelInhalt.innerHTML = html;
+    setze(this.e.handelInhalt, html);
   }
 
   // Kosten als Text: "3'000 Gulden + 20 Holz, 5 Werkzeug"
@@ -610,9 +659,11 @@ export class Oberflaeche {
     html += `</tbody></table>`;
 
     // Handelsregeln
-    html += `<details class="regeln" ${Object.keys(k.regeln ?? {}).length ? "open" : ""}><summary>Handelsregeln: Das Kontor kauft und verkauft jeden Tag selbst</summary>
+    html += `<details class="regeln" data-key="kontorregeln" ${Object.keys(k.regeln ?? {}).length ? "open" : ""}><summary>Handelsregeln: Das Kontor kauft und verkauft jeden Tag selbst</summary>
       <p class="hilfe">Pro Ware: kaufen, bis so viel im Kontor liegt (nur bis zum Höchstpreis), und verkaufen, was über einer Menge liegt (nur ab dem Mindestpreis). Leer lassen = aus bzw. egal. Höchstens ${kb.handel_pro_tag} Stück je Ware und Tag. Die Regeln wirken, sobald die Zeit läuft (Fenster schliessen); jeder Handel erscheint in den Meldungen.
       <b>Sperren:</b> So viele Tage Bedarf deiner Werkstätten (mit Kontor-Versorgung) bleiben im Kontor: Das Kontor verkauft sie nicht, Schiffe laden sie nicht weg.</p>
+      <div class="betriebknoepfe"><button data-regeln-vorschlag title="Setzt für jede Ware eine Regel: Was die Stadt herstellt, kauft das Kontor günstig ein; was deine Werkstätten brauchen, hält es als Vorrat; alles andere verkauft es ab einem guten Preis. Ersetzt die bisherigen Regeln.">Regeln vorschlagen</button>
+        <button data-regeln-loeschen ${Object.keys(k.regeln ?? {}).length || Object.keys(k.sperren ?? {}).length ? "" : "disabled"}>Alle Regeln löschen</button></div>
       <table class="auftraege"><thead><tr><th>Ware</th><th>kaufen bis</th><th>höchstens</th><th>verkaufen über</th><th>mindestens</th><th>sperren (Tage)</th></tr></thead><tbody>`;
     for (const g of Object.keys(this.D.waren).filter((x) => stadt.handelt(x))) {
       const r = a.regel(stadt, g) ?? {};
@@ -671,7 +722,7 @@ export class Oberflaeche {
       const grund = zo.pruefeFracht(v, stadt);
       const frei = zo.freieKapazitaet(v, stadt);
       const unterwegs = zo.unterwegs.filter((l) => l.v === v.id && l.nach === ziel.name).reduce((x, l) => x + l.menge, 0);
-      html += `<details class="regeln verbindung" ${!grund ? "open" : ""}><summary><b>${esc(v.name)}</b> nach ${esc(ziel.name)}${ziel.zone === stadt.zone ? "" : ` (${esc(zo.zone(ziel.zone).name)})`} · ${esc(w.name)} · ${w.tage} ${w.tage === 1 ? "Tag" : "Tage"} · Fracht ${f(w.fracht * 100) / 100} Gulden je Stück · heute noch ${f(frei)} von ${f(w.kapazitaet)}${unterwegs ? ` · ${f(unterwegs)} unterwegs` : ""}</summary>
+      html += `<details class="regeln verbindung" data-key="verbindung-${v.id}-${esc(ziel.name)}" ${!grund ? "open" : ""}><summary><b>${esc(v.name)}</b> nach ${esc(ziel.name)}${ziel.zone === stadt.zone ? "" : ` (${esc(zo.zone(ziel.zone).name)})`} · ${esc(w.name)} · ${w.tage} ${w.tage === 1 ? "Tag" : "Tage"} · Fracht ${f(w.fracht * 100) / 100} Gulden je Stück · heute noch ${f(frei)} von ${f(w.kapazitaet)}${unterwegs ? ` · ${f(unterwegs)} unterwegs` : ""}</summary>
         <p class="hilfe">${esc(v.text)}</p>${this.streckenBlock(v)}`;
       if (grund) {
         html += `<p class="hinweis">${esc(grund)}</p></details>`;
@@ -830,7 +881,7 @@ export class Oberflaeche {
     const sek = Math.floor(s.spielsekunden);
     const tageProStunde = sek >= 300 ? Math.round((s.tag / sek) * 3600) : null;
     html += `<p class="klein">Spielzeit ${Math.floor(sek / 3600)} h ${String(Math.floor((sek % 3600) / 60)).padStart(2, "0")} min · ${f(s.tag)} Spieltage${tageProStunde ? ` (rund ${f(tageProStunde)} pro Stunde)` : ""}</p>`;
-    this.e.ansehen.innerHTML = html;
+    setze(this.e.ansehen, html);
   }
 
   // Seitenleiste: die Seen mit Stand der Erschliessung
@@ -846,7 +897,7 @@ export class Oberflaeche {
       html += `<li class="${offen ? "" : "gesperrt"}"><div><b>${offen ? "" : "🔒 "}${esc(zone.name)}</b> <small>${esc(zone.text)}</small></div>
         <div class="klein">${offen ? `${kontore} Kontor${kontore === 1 ? "" : "e"} · ${schiffe} Schiff${schiffe === 1 ? "" : "e"}` : `Rang «${esc(s.ziel.raenge[zone.rang].name)}», ab ${zone.ab_jahr}, ${f(zone.erschliessung)} Gulden`}
           <button data-zone-zeige="${zone.id}" title="Karte zu diesem See bewegen">anzeigen</button>
-          ${offen ? "" : `<button class="haupt" data-zone-erschliessen="${zone.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">erschliessen</button>`}</div>${!offen && grund ? `<div class="hinweis">${esc(grund)}</div>` : ""}${offen && zone.art === "land" ? `<details class="regeln"><summary>Strassen- und Schienennetz</summary>${this.streckenBlock(zo.strecke("netz_" + zone.id))}</details>` : ""}</li>`;
+          ${offen ? "" : `<button class="haupt" data-zone-erschliessen="${zone.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">erschliessen</button>`}</div>${!offen && grund ? `<div class="hinweis">${esc(grund)}</div>` : ""}${offen && zone.art === "land" ? `<details class="regeln" data-key="netz-${zone.id}"><summary>Strassen- und Schienennetz</summary>${this.streckenBlock(zo.strecke("netz_" + zone.id))}</details>` : ""}</li>`;
     }
     html += `</ul>`;
     const kanaele = zo.alleStrecken().filter((x) => x.typ === "kanal");
@@ -858,7 +909,7 @@ export class Oberflaeche {
       }
       html += `</ul>`;
     }
-    this.e.seen.innerHTML = html;
+    setze(this.e.seen, html);
   }
 
   klickSeen(ev) {
@@ -1016,7 +1067,7 @@ export class Oberflaeche {
         ${feinde.length ? `<small class="krieg">Krieg mit ${esc(feinde.join(", "))}</small>` : ""}</li>`;
     }
     html += `</ul>`;
-    this.e.staende.innerHTML = html;
+    setze(this.e.staende, html);
   }
 
   kampfzeile(schiff) {
@@ -1129,7 +1180,7 @@ export class Oberflaeche {
       <td class="zahl">${zeichen(vorher ? fn(k.monate[vorher]) : 0)}</td><td class="zahl">${zeichen(fn(k.gesamt))}</td></tr>`;
     html += zeile("Laufendes Ergebnis", ergebnis) + zeile("Investitionen", investitionen) + zeile("Veränderung Bargeld", (t) => ergebnis(t) + investitionen(t));
     html += `</tbody></table>`;
-    this.e.bilanzInhalt.innerHTML = html;
+    setze(this.e.bilanzInhalt, html);
   }
 
   // Meldungen mit zwei Reitern: Wichtig und Handel. Ein Punkt zeigt neue Meldungen im anderen Reiter.
@@ -1147,8 +1198,11 @@ export class Oberflaeche {
       .slice(0, 25)
       .map((m) => `<li class="${m.art}"><span class="wann">${esc(m.datum)}</span> ${esc(m.text)}</li>`)
       .join("");
-    this.e.meldungen.innerHTML = `<div class="meldreiter" role="tablist">${knopf("wichtig", "Wichtig")}${knopf("handel", "Handel")}</div>
-      <ol>${eintraege || `<li class="leer">Noch keine Meldungen.</li>`}</ol>`;
+    setze(
+      this.e.meldungen,
+      `<div class="meldreiter" role="tablist">${knopf("wichtig", "Wichtig")}${knopf("handel", "Handel")}</div>
+      <ol>${eintraege || `<li class="leer">Noch keine Meldungen.</li>`}</ol>`,
+    );
   }
 
   // --- Klicks ----------------------------------------------------------------
@@ -1216,6 +1270,13 @@ export class Oberflaeche {
       if (schiff) a.umlagern(schiff, d.umlagern, wunsch, d.richtung);
     } else if (d.kontorausbau !== undefined) {
       a.kontorAusbauen(stadt);
+    } else if (d.regelnVorschlag !== undefined) {
+      const n = a.schlageRegelnVor(stadt);
+      klappZustand.set("kontorregeln", true);
+      s.melde(`Kontor ${stadt.name}: ${n} Handelsregeln gesetzt. Sie wirken, sobald die Zeit läuft.`);
+    } else if (d.regelnLoeschen !== undefined) {
+      a.loescheRegeln(stadt);
+      s.melde(`Kontor ${stadt.name}: alle Handelsregeln gelöscht.`);
     } else if (d.kontorkauf) {
       const r = a.kontorKaufen(stadt, d.kontorkauf, wunsch);
       if (r.menge) s.melde(`Kontor ${stadt.name}: ${r.menge} ${d.kontorkauf} für ${f(r.betrag)} Gulden gekauft.`, "handel");

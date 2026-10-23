@@ -126,6 +126,17 @@ main {
   flex-direction: column;
   gap: 0.6rem;
 }
+/* Reiter der Seitenleiste: bleiben oben stehen, wenn die Seitenleiste scrollt */
+.seitenreiter {
+  position: sticky;
+  top: -0.6rem;
+  z-index: 2;
+  background: var(--papier);
+  margin: -0.6rem -0.6rem 0;
+  padding: 0.6rem 0.6rem 0;
+}
+.seitenreiter button { flex: 1; }
+.tafel[hidden] { display: none; }
 .tafel {
   background: var(--papier-hell);
   border: 1px solid var(--rand);
@@ -518,3 +529,9 @@ details.verbindung summary { cursor: pointer; }
 .landflaeche { fill: #d8c7a0; stroke: #8a7350; stroke-width: 0.4; stroke-dasharray: 1.2 0.8; opacity: 0.8; }
 
 .kanal { fill: #a9c5cf; stroke: #5c7a84; stroke-width: 0.25; }
+
+/* Ziffern gleich breit: Zahlen, die sich laufend ändern, schieben den Text daneben nicht hin und her */
+#seite, dialog, header { font-variant-numeric: tabular-nums; }
+.menue[hidden] { display: none; }
+.cheatliste { min-width: 17rem; }
+.cheatknoepfe { display: flex; flex-wrap: wrap; gap: 0.25rem; }

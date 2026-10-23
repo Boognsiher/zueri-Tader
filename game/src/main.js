@@ -6,6 +6,7 @@ import { Spiel } from "./spiel.js";
 import { Karte } from "./karte.js";
 import { Oberflaeche } from "./oberflaeche.js";
 import { Routenfenster } from "./routenfenster.js";
+import { richteCheatsEin } from "./cheats.js";
 import { speichere, lade, pruefe } from "./speicher.js";
 
 const $ = (id) => document.getElementById(id);
@@ -90,7 +91,7 @@ async function start() {
       setzeTempo(0);
     },
     fortsetzen: () => {
-      const offen = ui.handelOffen || routenfenster.offen || $("bilanz").open || ui.gefechtOffen;
+      const offen = ui.handelOffen || routenfenster.offen || ui.gefechtOffen;
       if (tempoVorFenster && tempo === 0 && !offen) setzeTempo(tempoVorFenster);
       if (!offen) tempoVorFenster = 0;
     },
@@ -111,6 +112,7 @@ async function start() {
       datum: $("datum"),
       gulden: $("gulden"),
       warenwert: $("warenwert"),
+      seitenreiter: $("seitenreiter"),
       ansehen: $("ansehen"),
       seen: $("seen"),
       flotte: $("flotte"),
@@ -133,17 +135,15 @@ async function start() {
     },
   });
   ui.routenfenster = routenfenster;
-  // Bilanzfenster: hält die Zeit an wie die anderen Fenster
+  richteCheatsEin(spiel, ui, { knopf: $("cheatschalter"), menue: $("cheatmenue"), liste: $("cheatliste"), setzeTempo });
+  // Bilanzfenster: Die Zeit läuft weiter, die Zahlen werden bei jedem Neuzeichnen nachgeführt (ui.aktualisiere)
   const bilanzDialog = $("bilanz");
   function bilanzZu() {
-    if (!bilanzDialog.open) return;
-    bilanzDialog.close();
-    zeit.fortsetzen();
+    if (bilanzDialog.open) bilanzDialog.close();
   }
   $("bilanzknopf").addEventListener("click", () => {
     if (bilanzDialog.open) return bilanzZu();
     ui.bilanz();
-    zeit.anhalten();
     bilanzDialog.show();
   });
   bilanzDialog.addEventListener("click", (e) => {

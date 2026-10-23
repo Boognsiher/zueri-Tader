@@ -548,6 +548,41 @@ export class Ausbau {
     return true;
   }
 
+  // Regeln für alle Waren mit Markt vorschlagen und setzen (kontor.regel_vorschlag), gibt die Anzahl zurück.
+  // Was die Stadt herstellt, ist hier billig: einkaufen. Was eigene Werkstätten brauchen: Vorrat halten
+  // und sperren. Alles andere ist hier gefragt: verkaufen, aber nur zu gutem Preis.
+  schlageRegelnVor(stadt) {
+    const k = this.kontor(stadt);
+    if (!k) return 0;
+    const v = this.bau.kontor.regel_vorschlag;
+    const waren = Object.keys(this.D.waren).filter((g) => stadt.handelt(g));
+    const hier = (g) => g in stadt.prod || g in stadt.werk;
+    const einkauf = waren.filter((g) => hier(g) || this.bedarfProTag(stadt, g) > 0);
+    const vorrat = Math.min(v.vorrat_max, Math.floor(this.lagerKapazitaet(k) / Math.max(1, einkauf.length)));
+    k.regeln = {};
+    for (const g of waren) {
+      const basis = stadt.basispreis(g);
+      const bedarf = this.bedarfProTag(stadt, g);
+      if (bedarf > 0) {
+        this.setzeRegel(stadt, g, { kaufenBis: Math.ceil(Math.max(vorrat, bedarf * v.werkstatt_tage)), kaufPreis: hier(g) ? Math.round(basis * v.kauf_bis_preisfaktor) : null });
+        this.setzeSperre(stadt, g, v.werkstatt_tage);
+      } else if (hier(g)) {
+        this.setzeRegel(stadt, g, { kaufenBis: vorrat, kaufPreis: Math.round(basis * v.kauf_bis_preisfaktor) });
+      } else {
+        this.setzeRegel(stadt, g, { verkaufenUeber: 0, verkaufPreis: Math.round(basis * v.verkauf_ab_preisfaktor) });
+      }
+    }
+    return Object.keys(k.regeln).length;
+  }
+
+  // Alle Regeln und Sperren eines Kontors löschen
+  loescheRegeln(stadt) {
+    const k = this.kontor(stadt);
+    if (!k) return;
+    k.regeln = {};
+    k.sperren = {};
+  }
+
   // Täglicher Handel der Kontore nach ihren Regeln, höchstens handel_pro_tag Stück je Ware
   kontorHandel() {
     const proTag = this.bau.kontor.handel_pro_tag;
