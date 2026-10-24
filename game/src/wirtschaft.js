@@ -274,11 +274,13 @@ export class Haendler {
   optionen(von, tag, welt) {
     const p = this.D.p;
     const liste = [];
+    // Erreichbare, offene Häfen hängen nicht von der Ware ab: einmal vor der Schleife bestimmen
+    const ziele = welt.staedte.filter((nach) => nach !== von && welt.verbunden(von.zone, nach.zone) && !nach.gesperrt(tag));
     for (const g of Object.keys(von.bestand)) {
       if (von.bestand[g] < 5) continue;
       const kauf = von.kaufpreis(g);
-      for (const nach of welt.staedte) {
-        if (nach === von || !welt.verbunden(von.zone, nach.zone) || nach.gesperrt(tag) || !nach.handelt(g)) continue;
+      for (const nach of ziele) {
+        if (!nach.handelt(g)) continue;
         if (nach.geplanterVerkaufspreis(g) < kauf * (1 + p.MIN_ROI)) continue;
         // laderaum: nur gesetzt, wenn der freie Handel des Spielers diese Bewertung nutzt
         const { menge, kosten, erloes } = angebot(this.D, von, nach, g, this.geld, this.laderaum ?? Math.round(p.SHIP_CAP * welt.kurve("ki_fracht")));

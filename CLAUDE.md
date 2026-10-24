@@ -18,6 +18,7 @@ python3 tools/daten/bilanz.py                        # Datenbilanz je Zone (Ange
 node game/test/wirtschaft_test.mjs                   # Test der Spielwirtschaft (gleiche Checks, dauert rund eine Viertelstunde)
 NUR=zonen node game/test/wirtschaft_test.mjs         # nur ein Abschnitt (Teil des Titels)
 node tools/sim/spieler_bot.mjs 6000                  # Bot spielt 6000 Tage (Wachstum von Vermögen und Rang)
+node tools/sim/zeitsprung_mess.mjs 365               # Rechenzeit eines Spieltags je Teilsystem (Zeitsprünge, Ruckler)
 python tools/spielserver.py                          # Spiel starten (ohne Browser-Cache), dann http://localhost:8000/game/
 ```
 

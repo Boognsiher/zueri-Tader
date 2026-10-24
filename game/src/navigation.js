@@ -5,6 +5,7 @@
 
 const SCHRITT = 0.4; // Prüfabstand entlang einer Linie in Karteneinheiten
 const UFERABSTAND = 1.5; // wie weit die Hilfspunkte vom Ufer nach innen rücken
+const ROUTEN_MAX = 5000; // gemerkte Wege, danach wird der Speicher geleert
 
 function imPolygon([x, y], ufer) {
   let drin = false;
@@ -99,6 +100,7 @@ export class Navigation {
     this.nachbarn = null; // wird bei der ersten Suche berechnet
     this.komponente = null;
     this.vomStartMerk = null; // Sicht vom letzten Startpunkt (die Karte sucht von einem Schiff zu allen Städten)
+    this.routen = new Map(); // fertige Wege, meist von Stadt zu Stadt (Automatik, Zeitsprünge)
   }
 
   imWasser(p) {
@@ -119,8 +121,19 @@ export class Navigation {
     return true;
   }
 
-  // Kürzester Weg über Wasser als Punktliste, oder null, wenn das Ziel nicht erreichbar ist
+  // Kürzester Weg über Wasser als Punktliste, oder null, wenn das Ziel nicht erreichbar ist.
+  // Gleiche Start- und Zielpunkte kommen oft wieder, darum werden die Wege gemerkt.
   route(von, nach) {
+    const schluessel = `${von[0]},${von[1]}|${nach[0]},${nach[1]}`;
+    if (!this.routen.has(schluessel)) {
+      if (this.routen.size >= ROUTEN_MAX) this.routen.clear();
+      this.routen.set(schluessel, this.sucheRoute(von, nach));
+    }
+    const weg = this.routen.get(schluessel);
+    return weg && [...weg];
+  }
+
+  sucheRoute(von, nach) {
     if (!this.imWasser(nach)) return null;
     if (this.frei(von, nach)) return [von, nach];
     const k = this.knoten;

@@ -4,6 +4,7 @@
 // erscheint nicht in der Bilanz.
 
 const SCHLUESSEL = "zueri-trade.cheat";
+const HAEPPCHEN_MS = 300; // Rechenzeit am Stück beim Vorspulen
 
 function an() {
   try {
@@ -46,7 +47,8 @@ export function richteCheatsEin(spiel, ui, { knopf, menue, liste, setzeTempo }) 
   const status = liste.querySelector("#cheatstatus");
 
   let laeuft = false;
-  // In Häppchen vorspulen, damit der Browser dazwischen zeichnen kann
+  // In Häppchen von gut einer Viertelsekunde vorspulen: Dazwischen zeichnet der Browser einmal
+  // (Fortschritt, Karte). Häufigeres Zeichnen kostet bei langen Sprüngen mehr als das Rechnen.
   async function spule(tage) {
     if (laeuft) return;
     laeuft = true;
@@ -55,8 +57,11 @@ export function richteCheatsEin(spiel, ui, { knopf, menue, liste, setzeTempo }) 
     knoepfe.forEach((k) => (k.disabled = true));
     const start = performance.now();
     for (let t = 0; t < tage; ) {
-      const ende = Math.min(tage, t + 10);
-      for (; t < ende; t++) spiel.tagVoran();
+      const haeppchen = performance.now();
+      while (t < tage && performance.now() - haeppchen < HAEPPCHEN_MS) {
+        spiel.tagVoran();
+        t++;
+      }
       status.textContent = `Spule vor … ${t} von ${tage} Tagen (${spiel.datum()})`;
       await new Promise((r) => setTimeout(r, 0));
     }
