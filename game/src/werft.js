@@ -14,8 +14,11 @@ export class Werft {
     return this.daten.typ[id];
   }
 
+  // Werftstädte, dazu jede Stadt mit eigenem Kontor am Ende einer Verbindung: Dort entsteht beim
+  // Erschliessen das erste Kontor einer Zone, und ohne Schiff käme der Spieler sonst nie zu einer Werft
   istWerft(stadt) {
-    return this.daten.werften.includes(stadt.name);
+    if (this.daten.werften.includes(stadt.name)) return true;
+    return !!this.spiel.ausbau.kontor(stadt) && this.spiel.D.zonen.verbindungen.some((v) => v.von === stadt.name || v.nach === stadt.name);
   }
 
   // Anwesend: eigenes Schiff im Hafen oder eigenes Kontor
