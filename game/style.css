@@ -1,6 +1,7 @@
 /* Züri-Trade: Seekarte und Kontor auf Pergament (siehe docs/optik.md) */
 
 :root {
+  color-scheme: only light; /* kein automatisches Abdunkeln durch den Browser */
   --papier: #efe3c6;
   --papier-hell: #f6ecd4;
   --papier-dunkel: #dccaa0;
