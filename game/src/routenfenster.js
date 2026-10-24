@@ -91,7 +91,7 @@ export class Routenfenster {
     } else if (e.art === "frei") {
       html += `<p class="hilfe">Der Kapitän sucht in jedem Hafen das Geschäft mit dem höchsten Gewinn pro Tag, kauft, fährt hin und verkauft. Findet er länger nichts, wechselt er den Hafen.</p>
         <label class="einsatz">Einsatz pro Fahrt höchstens <input type="number" min="0" step="500" value="${e.einsatz}" data-feld="einsatz"> Gulden</label>
-        <label class="einsatz"><input type="checkbox" data-feld="auffuellen" ${e.auffuellen ? "checked" : ""}> <b>Kontore auffüllen:</b> In deinen Kontoren mit Einkaufsregel («kaufen bis») lädt das Schiff Ware bis zum Zielbestand ab. Fehlende Ware kauft es dort, wo sie billiger ist, und bringt sie hin, wenn das mehr bringt als das beste Geschäft. Einkaufslager («nur einkaufen») kaufen selbst und werden nicht beliefert.</label>
+        <label class="schalter"><input type="checkbox" data-feld="auffuellen" ${e.auffuellen ? "checked" : ""}><span><b>Kontore auffüllen:</b> In deinen Kontoren mit Einkaufsregel («kaufen bis») lädt das Schiff Ware bis zum Zielbestand ab. Fehlende Ware kauft es dort, wo sie billiger ist, und bringt sie hin, wenn das mehr bringt als das beste Geschäft. Einkaufslager («nur einkaufen») kaufen selbst und werden nicht beliefert.</span></label>
         <p class="hilfe">Liegt im Hafen eines deiner Kontore Ware, lädt der Kapitän zuerst von dort.</p>`;
     } else {
       html += `<p class="hilfe">Das Schiff fährt die Häfen der Reihe nach ab und beginnt danach von vorn. Menge leer = alles bzw. so viel wie passt. Preis leer = egal, beim Kaufen Höchstpreis, beim Verkaufen Mindestpreis. Reihenfolge in jedem Hafen: verkaufen, kaufen, ins Kontor entladen (auch eben Gekauftes), aus dem Kontor laden.</p><ol class="halte">`;

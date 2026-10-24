@@ -347,11 +347,17 @@ export class Oberflaeche {
     if (!schiff) {
       html += `<p class="steuerhilfe">Kein Schiff gewählt. Klick auf eine Stadt öffnet ihr Stadtfenster (Preise, Kontor, Betriebe). Ein Schiff wählst du per Klick in dieser Liste oder auf der Karte.</p>`;
     } else {
+      // Die Knöpfe stehen immer da und werden nur ausgegraut: So springen sie nicht, wenn ein
+      // Schiff anlegt oder ablegt
       const aktionen = [];
-      if (s.imHafen(schiff)) aktionen.push(`<button data-handeln>Handelsfenster öffnen</button>`);
-      if (schiff.fahrt) aktionen.push(`<button data-anhalten>Anhalten</button>`);
-      if (schiff.auto?.pausiert) aktionen.push(`<button data-aufnehmen="${s.schiffe.indexOf(schiff)}">▶ Automatik fortsetzen</button>`);
-      aktionen.push(`<button data-automatik>Automatik …</button>`);
+      const hafen = s.imHafen(schiff);
+      aktionen.push(`<button data-handeln ${hafen ? "" : 'disabled title="Nur im Hafen"'}>Handelsfenster öffnen</button>`);
+      aktionen.push(`<button data-anhalten ${schiff.fahrt ? "" : 'disabled title="Das Schiff fährt nicht"'}>Anhalten</button>`);
+      aktionen.push(
+        schiff.auto?.pausiert
+          ? `<button data-aufnehmen="${s.schiffe.indexOf(schiff)}">▶ Automatik fortsetzen</button>`
+          : `<button data-automatik>Automatik …</button>`,
+      );
       const praemie = s.risiko.praemie(schiff);
       aktionen.push(
         schiff.versichert
@@ -359,18 +365,21 @@ export class Oberflaeche {
           : `<button data-versicherung="an" aria-pressed="false" title="Ersetzt ${f(this.D.risiko.versicherung.erstattung * 100)} % von Ladungsverlust und Reparaturen nach Sturm und Havarie">Versichern: ${f(praemie)} Gulden/Tag</button>`,
       );
       aktionen.push(`<button data-abwaehlen title="Auch mit Esc oder einem Klick auf das gewählte Schiff">Abwählen</button>`);
-      // Flotten: andere eigene Schiffe im selben Hafen anschliessen, Flotte auflösen
-      if (s.imHafen(schiff)) {
-        for (const x of s.schiffe) {
-          if (x !== schiff && s.imHafen(x, schiff.ort)) aktionen.push(`<button data-zusammen="${s.schiffe.indexOf(x)}" title="Laderaum addiert sich, die Flotte fährt so schnell wie das langsamste Schiff">Mit «${esc(x.name)}» zur Flotte</button>`);
-        }
-        if (schiff.mitglieder) aktionen.push(`<button data-aufloesen>Flotte auflösen</button>`);
-      }
       html += `<div class="schiffsaktionen">${aktionen.join("")}</div>`;
       const haltung = s.kampf.daten(schiff).haltung;
       html += `<div class="haltung" role="group" aria-label="Kampfhaltung">Kampfhaltung: ${HALTUNGEN.map(
         ([h, text, hilfe]) => `<button data-haltung="${h}" aria-pressed="${h === haltung}" title="${esc(hilfe)}">${text}</button>`,
       ).join("")}</div>`;
+      // Flotten: andere eigene Schiffe im selben Hafen anschliessen, Flotte auflösen. Diese Knöpfe
+      // kommen und gehen, darum stehen sie unter den festen
+      const flotte = [];
+      if (hafen) {
+        for (const x of s.schiffe) {
+          if (x !== schiff && s.imHafen(x, schiff.ort)) flotte.push(`<button data-zusammen="${s.schiffe.indexOf(x)}" title="Laderaum addiert sich, die Flotte fährt so schnell wie das langsamste Schiff">Mit «${esc(x.name)}» zur Flotte</button>`);
+        }
+        if (schiff.mitglieder) flotte.push(`<button data-aufloesen>Flotte auflösen</button>`);
+      }
+      if (flotte.length) html += `<div class="schiffsaktionen">${flotte.join("")}</div>`;
     }
     if (schiff) html += `<p class="steuerhilfe">${
       automatik.aktiv(schiff)

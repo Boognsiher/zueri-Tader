@@ -455,6 +455,8 @@ button.klein { font-size: 0.85rem; padding: 0.05em 0.5em; }
 .modi label { border: 1px solid var(--rand); border-radius: 4px; padding: 0.15em 0.6em; cursor: pointer; background: var(--papier); }
 .modi label.aktiv { border-color: var(--holz); background: #fbf3df; font-weight: 600; }
 .einsatz input { width: 7rem; }
+.schalter { display: flex; gap: 0.4rem; align-items: baseline; margin: 0.4rem 0; }
+.schalter input { flex: none; margin: 0; }
 .halte { padding-left: 1.4rem; margin: 0.4rem 0; display: grid; gap: 0.4rem; }
 .halt { border: 1px solid var(--rand); border-radius: 5px; padding: 0.35rem 0.5rem; background: var(--papier); }
 .haltkopf { display: flex; align-items: center; gap: 0.4rem; }
