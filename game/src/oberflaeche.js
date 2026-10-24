@@ -661,6 +661,8 @@ export class Oberflaeche {
     if (stufe < a.bau.stufen_max) {
       html += `<div class="betriebknoepfe">${this.knopf("data-kontorausbau", `Ausbauen auf Stufe ${stufe + 1} (+${f(kb.lager)} Plätze): ${esc(this.kostentext(kb.ausbau.gulden, kb.ausbau))}`, a.pruefeKontorAusbau(stadt))}</div>`;
     }
+    const zurueck = a.erstattung(stufe > 1 ? kb.ausbau.gulden : kb.baukosten.gulden);
+    html += `<div class="betriebknoepfe">${this.knopf("data-kontorrueckbau", `${stufe > 1 ? `Zurückbauen auf Stufe ${stufe - 1}` : "Kontor abreissen"}: ${f(zurueck)} Gulden zurück`, a.pruefeKontorRueckbau(stadt))}</div>`;
     html += mengenwahl;
     // Alle Waren mit Markt hier, dazu was im Kontor oder Schiff liegt
     const waren = Object.keys(this.D.waren).filter((g) => stadt.handelt(g) || k.lager[g] || schiff?.ladung[g]);
@@ -796,7 +798,8 @@ export class Oberflaeche {
             <option value="markt" ${b.ziel === "markt" ? "selected" : ""}>Markt der Stadt</option>
             <option value="kontor" ${b.ziel === "kontor" ? "selected" : ""} ${k ? "" : "disabled"}>Kontor${k ? (t.art === "werkstatt" ? " (Zutaten aus dem Kontor, Ware ins Kontor)" : " (Ware ins Kontor)") : " (keins)"}</option></select></label>
             ${stufe < max ? this.knopf(`data-betrieb-ausbau="${b.nr}"`, `ausbauen auf Stufe ${stufe + 1}: ${esc(this.kostentext(a.baukosten(b.typ, stadt).gulden, a.baukosten(b.typ, stadt).material))}`, a.pruefeBetriebsausbau(b)) : ""}
-            <button data-betrieb-verkauf="${b.nr}">an die Stadt verkaufen: ${f(a.verkaufserloes(b))} Gulden</button></div>`;
+            <button data-betrieb-verkauf="${b.nr}">an die Stadt verkaufen: ${f(a.verkaufserloes(b))} Gulden</button>
+            ${stufe > 1 || b.gebaut ? this.knopf(`data-betrieb-rueckbau="${b.nr}"`, `${stufe > 1 ? `zurückbauen auf Stufe ${stufe - 1}` : "abreissen"}: ${f(a.erstattung(a.baukosten(b.typ, stadt).gulden))} Gulden zurück`, a.pruefeBetriebsrueckbau(b)) : ""}</div>`;
       } else {
         const pot = a.potenzial(b.typ, stadt) * stufe;
         html += `<div class="betriebinfo">gehört der Stadt · am Markt ${erwartet >= 0 ? "+" : "−"}${f(Math.abs(erwartet))} Gulden pro Tag${t.art === "werkstatt" ? ` · mit Eigenversorgung bis ${pot >= 0 ? "+" : "−"}${f(Math.abs(pot))} (Zutaten günstig gekauft, Ware teuer verkauft, ohne Fahrtkosten)` : ""}</div>
@@ -829,7 +832,8 @@ export class Oberflaeche {
       const grund = a.pruefeGebaeude(stadt, t.id);
       html += `<li class="betrieb ${stufe ? "eigen" : ""}"><div class="betriebkopf"><b>${esc(t.name)}</b> <span class="stufe">${stufe ? `Stufe ${stufe}/${max}` : "nicht gebaut"}</span> <span class="klein">Unterhalt ${t.unterhalt} Gulden pro Tag und Stufe</span></div>
         <div class="betriebinfo">${esc(t.text)}</div>
-        ${stufe < max ? `<div class="betriebknoepfe">${this.knopf(`data-gebaeude="${t.id}"`, `${stufe ? `ausbauen auf Stufe ${stufe + 1}` : "bauen"}: ${esc(this.kostentext(t.baukosten.gulden, t.baukosten))}`, grund, !stufe)}</div>` : ""}</li>`;
+        <div class="betriebknoepfe">${stufe < max ? this.knopf(`data-gebaeude="${t.id}"`, `${stufe ? `ausbauen auf Stufe ${stufe + 1}` : "bauen"}: ${esc(this.kostentext(t.baukosten.gulden, t.baukosten))}`, grund, !stufe) : ""}
+        ${stufe ? this.knopf(`data-gebaeude-rueckbau="${t.id}"`, `${stufe > 1 ? `zurückbauen auf Stufe ${stufe - 1}` : "abreissen"}: ${f(a.erstattung(t.baukosten.gulden))} Gulden zurück`, a.pruefeGebaeudeRueckbau(stadt, t.id)) : ""}</div></li>`;
     }
     html += `</ul><p class="ohnemarkt">Baumaterial muss im Kontor oder in einem deiner Schiffe hier liegen. Rohstoffbetriebe gehen nur, wo die Stadt den Rohstoff hat.</p>`;
     return html;
@@ -1297,6 +1301,15 @@ export class Oberflaeche {
       if (schiff) a.umlagern(schiff, d.umlagern, wunsch, d.richtung);
     } else if (d.kontorausbau !== undefined) {
       a.kontorAusbauen(stadt);
+    } else if (d.kontorrueckbau !== undefined) {
+      const k = a.kontor(stadt);
+      if ((k?.stufe ?? 1) > 1 || confirm(`Kontor in ${stadt.name} abreissen? Handelsregeln und Einstellungen gehen verloren.`)) a.kontorZurueckbauen(stadt);
+    } else if (d.betriebRueckbau) {
+      const b = a.betriebe.find((x) => x.nr === Number(d.betriebRueckbau));
+      if ((b.stufe ?? 1) > 1 || confirm(`${a.typ(b).name} in ${stadt.name} abreissen?`)) a.betriebZurueckbauen(b);
+    } else if (d.gebaeudeRueckbau) {
+      const t = a.gebaeudetypen[d.gebaeudeRueckbau];
+      if (a.gebaeudeStufe(stadt, t.id) > 1 || confirm(`${t.name} in ${stadt.name} abreissen?`)) a.gebaeudeZurueckbauen(stadt, t.id);
     } else if (d.regelnVorschlag !== undefined) {
       const n = a.schlageRegelnVor(stadt);
       klappZustand.set("kontorregeln", true);

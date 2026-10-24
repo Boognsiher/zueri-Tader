@@ -73,4 +73,4 @@ Die Entwürfe mit Kosten, Unterhalt und Wirkung stehen in `data/buildings.json`.
 - Wie werden Städte freigeschaltet (Ruf, Kauf, Lizenz, Kampagnenfortschritt)?
 - Wirkt ein Gebäude wie eine Kirche direkt auf die Zufriedenheit, oder nur über Waren? Im Entwurf gibt es einen direkten Bonus.
 - Bevölkerungswachstum: nach welcher Regel, mit welcher Obergrenze?
-- Kann der Spieler Gebäude abreissen oder nur herunterstufen?
+- ~~Kann der Spieler Gebäude abreissen oder nur herunterstufen?~~ Beides, entschieden am 24.10.2026 (siehe `docs/entscheidungen.md`)

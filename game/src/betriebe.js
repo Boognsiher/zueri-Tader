@@ -371,6 +371,100 @@ export class Ausbau {
     return b;
   }
 
+  // --- Rückbau ------------------------------------------------------------------------
+  // Eine Stufe zurück oder ganz abreissen. Der Spieler bekommt rueckbau_erstattung der Gulden
+  // zurück, die diese Stufe gekostet hat, Material nicht. Abgerissene Gebäude geben ihren
+  // Bauplatz frei. Gekaufte Stadtbetriebe lassen sich nur bis Stufe 1 zurückbauen (sonst verkaufen).
+  erstattung(gulden) {
+    return Math.round((gulden * this.bau.rueckbau_erstattung) / 100) * 100;
+  }
+
+  pruefeBetriebsrueckbau(b) {
+    const stadt = this.spiel.welt.stadt[b.stadt];
+    if (b.besitzer !== "spieler") return "Nur eigene Betriebe lassen sich zurückbauen.";
+    if ((b.stufe ?? 1) <= 1 && !b.gebaut) return "Ein gekaufter Betrieb lässt sich nicht abreissen, nur an die Stadt verkaufen.";
+    if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
+    return null;
+  }
+
+  betriebZurueckbauen(b) {
+    if (this.pruefeBetriebsrueckbau(b)) return false;
+    const stadt = this.spiel.welt.stadt[b.stadt];
+    const geld = this.erstattung(this.baukosten(b.typ, stadt).gulden);
+    this.spiel.gulden += geld;
+    this.spiel.buche("bauten", geld);
+    const name = this.typ(b).name;
+    if ((b.stufe ?? 1) > 1) {
+      b.stufe -= 1;
+      b.kaufpreis = Math.max(0, (b.kaufpreis ?? 0) - geld);
+      this.spiel.melde(`${name} in ${b.stadt} auf Stufe ${b.stufe} zurückgebaut (${geld} Gulden zurück).`);
+    } else {
+      this.betriebe.splice(this.betriebe.indexOf(b), 1);
+      this.spiel.melde(`${name} in ${b.stadt} abgerissen, der Bauplatz ist frei (${geld} Gulden zurück).`);
+    }
+    this.wendeKapazitaetAn();
+    return true;
+  }
+
+  pruefeGebaeudeRueckbau(stadt, id) {
+    const stufe = this.gebaeudeStufe(stadt, id);
+    const t = this.gebaeudetypen[id];
+    if (!stufe) return "Nicht gebaut.";
+    if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
+    // Ohne die Bauplätze der Kirche müssen die übrigen Gebäude noch Platz haben (ein Abriss gibt einen Platz frei)
+    if (t.wirkung === "bauplatz" && this.freiePlaetze(stadt) + (stufe === 1 ? 1 : 0) < t.wert_pro_stufe) return "Die Bauplätze sind belegt, erst ein anderes Gebäude abreissen.";
+    return null;
+  }
+
+  gebaeudeZurueckbauen(stadt, id) {
+    if (this.pruefeGebaeudeRueckbau(stadt, id)) return false;
+    const t = this.gebaeudetypen[id];
+    const geld = this.erstattung(t.baukosten.gulden);
+    this.spiel.gulden += geld;
+    this.spiel.buche("bauten", geld);
+    const g = this.gebaeude[stadt.name];
+    g[id] -= 1;
+    if (!g[id]) delete g[id];
+    this.wendeGebaeudeAn();
+    this.spiel.melde(g[id] ? `${t.name} in ${stadt.name} auf Stufe ${g[id]} zurückgebaut (${geld} Gulden zurück).` : `${t.name} in ${stadt.name} abgerissen, der Bauplatz ist frei (${geld} Gulden zurück).`);
+    return true;
+  }
+
+  pruefeKontorRueckbau(stadt) {
+    const kontor = this.kontor(stadt);
+    if (!kontor) return "Hier hast du kein Kontor.";
+    const stufe = kontor.stufe ?? 1;
+    if (stufe > 1) {
+      if (this.lagerMenge(kontor) > this.bau.kontor.lager * (stufe - 1)) return "Zu viel Ware im Lager für die kleinere Stufe.";
+      return null;
+    }
+    if (this.lagerMenge(kontor) > 0) return "Erst das Lager leeren.";
+    if (this.spiel.zonen.unterwegs.some((l) => l.nach === stadt.name)) return "Über eine Verbindung ist noch Ware zu diesem Kontor unterwegs.";
+    return null;
+  }
+
+  kontorZurueckbauen(stadt) {
+    if (this.pruefeKontorRueckbau(stadt)) return false;
+    const kontor = this.kontor(stadt);
+    const kb = this.bau.kontor;
+    if ((kontor.stufe ?? 1) > 1) {
+      const geld = this.erstattung(kb.ausbau.gulden);
+      this.spiel.gulden += geld;
+      this.spiel.buche("bauten", geld);
+      kontor.stufe -= 1;
+      this.spiel.melde(`Kontor in ${stadt.name} auf Stufe ${kontor.stufe} zurückgebaut (${geld} Gulden zurück).`);
+    } else {
+      const geld = this.erstattung(kb.baukosten.gulden);
+      this.spiel.gulden += geld;
+      this.spiel.buche("bauten", geld);
+      delete this.kontore[stadt.name];
+      // Betriebe, die ins Kontor geliefert haben, gehen wieder an den Markt
+      for (const b of this.betriebeIn(stadt)) if (b.ziel === "kontor") b.ziel = "markt";
+      this.spiel.melde(`Kontor in ${stadt.name} abgerissen (${geld} Gulden zurück).`);
+    }
+    return true;
+  }
+
   // --- Stadtgebäude ------------------------------------------------------------------
   pruefeGebaeude(stadt, id) {
     const stufe = this.gebaeudeStufe(stadt, id);

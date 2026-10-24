@@ -605,6 +605,57 @@ if (abschnitt("Stufen, Stadtgebäude, Kontorhandel")) {
     geladen.ausbau.regel(zuerich, "Rohseide").kaufenBis === 300 && geladen.welt.stadt["Zürich"].prod.Korn === zuerich.prod.Korn);
 }
 
+if (abschnitt("Rückbau")) {
+  const spiel = new Spiel(D, 72);
+  const a = spiel.ausbau;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  spiel.gulden = 500000;
+  spiel.kaufen(spiel.schiffe[0], "Holz", 40);
+  a.kontorBauen(zuerich);
+  const k = a.kontor(zuerich);
+  k.lager.Holz = { menge: 300, einstand: 30 };
+  k.lager.Werkzeug = { menge: 100, einstand: 120 };
+  const frei = a.freiePlaetze(zuerich);
+
+  // Neu gebauter Betrieb: Stufe zurück, dann abreissen, der Bauplatz wird frei
+  const typ = a.bau.betriebe.find((t) => t.art === "werkstatt").id;
+  const b = a.bauen(zuerich, typ);
+  a.betriebAusbauen(b);
+  const g0 = spiel.gulden;
+  pruefe("Betrieb von Stufe 2 auf 1 zurückbauen", a.betriebZurueckbauen(b) && b.stufe === 1);
+  pruefe(`Rückbau bringt ${D.bau.rueckbau_erstattung * 100} % der Gulden zurück (${spiel.gulden - g0})`, spiel.gulden - g0 === a.erstattung(a.baukosten(typ, zuerich).gulden));
+  pruefe("Betrieb abreissen gibt den Bauplatz frei", a.betriebZurueckbauen(b) && !a.betriebe.includes(b) && a.freiePlaetze(zuerich) === frei);
+
+  // Gekaufter Stadtbetrieb lässt sich nicht abreissen
+  const kornhof = a.betriebeIn(zuerich).find((x) => x.typ === "kornhof");
+  a.kaufen(kornhof);
+  pruefe("Gekaufter Betrieb auf Stufe 1 lässt sich nicht abreissen", a.pruefeBetriebsrueckbau(kornhof) !== null);
+
+  // Stadtgebäude: Stufe zurück, abreissen, Wirkung weg
+  a.baueGebaeude(zuerich, "spital");
+  a.baueGebaeude(zuerich, "spital");
+  a.gebaeudeZurueckbauen(zuerich, "spital");
+  pruefe("Spital auf Stufe 1 zurückgebaut, Zufriedenheit sinkt mit", a.gebaeudeStufe(zuerich, "spital") === 1 && zuerich.zufriedenheitBonus === a.bau.stadtgebaeude.find((t) => t.id === "spital").wert_pro_stufe);
+  a.gebaeudeZurueckbauen(zuerich, "spital");
+  pruefe("Spital abgerissen: Bauplatz frei, keine Wirkung", a.gebaeudeStufe(zuerich, "spital") === 0 && a.freiePlaetze(zuerich) === frei && zuerich.zufriedenheitBonus === 0);
+
+  // Kirche: Stufe 1 gleicht ihren eigenen Platz aus, Stufe 2 nur zurück, wenn ihr Bauplatz frei ist
+  a.baueGebaeude(zuerich, "kirche");
+  a.baueGebaeude(zuerich, "kirche");
+  while (a.freiePlaetze(zuerich) > 0 && (a.baueGebaeude(zuerich, "brunnen") || a.bauen(zuerich, typ)));
+  pruefe("Kirche Stufe 2 lässt sich nicht zurückbauen, solange ihr Bauplatz belegt ist", a.freiePlaetze(zuerich) === 0 && a.pruefeGebaeudeRueckbau(zuerich, "kirche") !== null);
+
+  // Kontor: Stufe nur zurück, wenn die Ware Platz hat; abreissen nur leer
+  k.lager = { Holz: { menge: 100, einstand: 30 }, Werkzeug: { menge: 20, einstand: 120 } };
+  pruefe("Kontor auf Stufe 2 ausbauen", a.kontorAusbauen(zuerich) && k.stufe === 2);
+  k.lager = { Holz: { menge: a.bau.kontor.lager + 50, einstand: 30 } };
+  pruefe("Kontor-Rückbau verweigert, wenn die Ware nicht ins kleinere Lager passt", a.pruefeKontorRueckbau(zuerich) !== null);
+  k.lager = {};
+  pruefe("Kontor auf Stufe 1 zurückbauen", a.kontorZurueckbauen(zuerich) && k.stufe === 1);
+  const grundAbriss = a.pruefeKontorRueckbau(zuerich);
+  pruefe(`Leeres Kontor abreissen${grundAbriss ? ` (${grundAbriss})` : ""}`, a.kontorZurueckbauen(zuerich) && !a.kontor(zuerich));
+}
+
 // --- 10. Bevölkerung, Versorgungsgebäude, Kontor als Anwesenheit, Sperren, Bilanz -------
 if (abschnitt("Bevölkerung, Versorgung, Kontor, Bilanz")) {
   const spiel = new Spiel(D, 81);
@@ -1078,6 +1129,8 @@ if (abschnitt("Zonen")) {
   const geld0 = spiel.gulden;
   pruefe("Mit Rang und Kontor ist Erschliessen möglich", zo.pruefeErschliessen("walensee") === null);
   pruefe("Der See wird erschlossen: Gebühr gezahlt, Kontor in Weesen", zo.erschliesse("walensee") && zo.offen("walensee") && !!spiel.ausbau.kontor(weesen) && spiel.gulden === geld0 - D.zonen.zonen.find((z) => z.id === "walensee").erschliessung);
+  const schiffTyp = D.schiffe.typen.find((t) => (t.medium ?? "wasser") === "wasser" && spiel.werft.neuBaubar(t) && !t.kampfschiff).id;
+  pruefe(`Im neuen See lässt sich am Kontor ein Schiff kaufen (Weesen hat sonst keine Werft)`, spiel.werft.pruefeNeukauf(weesen, schiffTyp) === null);
 
   // Fracht: Kontor Schmerikon -> Weesen
   const v = zo.verbindung("linth");
