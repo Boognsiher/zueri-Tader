@@ -53,6 +53,7 @@ export function speichere(spiel) {
         typ: s.typ,
         gebraucht: s.gebraucht,
         baujahr: s.baujahr,
+        bautag: s.bautag,
         pos: s.pos,
         ort: nr(s.ort),
         fahrt: s.fahrt ? { weg: s.fahrt.weg, start: s.fahrt.start, ende: s.fahrt.ende, ziel: nr(s.fahrt.ziel), ...(s.fahrt.jagd ? { jagd: true } : {}) } : null,
@@ -120,6 +121,7 @@ export function lade(D, stand) {
     typ: z.typ ?? D.schiffe.startschiff, // Spielstände vor dem Bootshandel
     gebraucht: z.gebraucht ?? false,
     baujahr: z.baujahr ?? spiel.jahr(), // ältere Spielstände: Schiffe gelten als neu
+    bautag: z.bautag ?? spiel.tag, // Spielstände vor dem schnelleren Kalender: Alter beginnt neu
     pos: z.pos,
     ort: stadt(z.ort),
     fahrt: z.fahrt ? { ...z.fahrt, ziel: stadt(z.fahrt.ziel) } : null,

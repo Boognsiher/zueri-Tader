@@ -42,7 +42,7 @@ Offen: Historische Machbarkeit (Flussläufe und Schiffbarkeit im 17. Jahrhundert
 
 ## Epochenwandel vom Schiff zu Schiene und Strasse (umgesetzt, erste Fassung)
 
-Das Spiel wandelt sich bis 2026, das Handelsprinzip bleibt. Alle sechs Schritte sind im Spiel, die Zahlen sind Startwerte. Zeitrahmen: bei rund 2750 Spieltagen pro Stunde sind 1650 bis 2026 etwa **50 Stunden** (Freischaltungen nach Kalenderjahr, siehe `data/ziel.json` und `data/zonen.json`).
+Das Spiel wandelt sich bis 2026, das Handelsprinzip bleibt. Alle sechs Schritte sind im Spiel, die Zahlen sind Startwerte. Zeitrahmen: Ein Spieltag zählt 4 Kalendertage (`data/epochen.json`). Bei mittlerem Tempo (rund 3300 Spieltage pro Stunde) ist alles nach etwa **5 Stunden** frei (1830), 1650 bis 2026 dauern rund 10 Stunden (Freischaltungen nach Kalenderjahr, siehe `data/ziel.json` und `data/zonen.json`).
 
 1. **Schiffsentwicklung** (`data/schiffe.json`): Segelschiffe, Raddampfer (1835), Schraubendampfer (1880), Motorschiff (1925), Containerschiff (1975), Landfahrzeuge (Fuhrwerk, Frachtwagen, Güterzug, Lastwagen, Sattelzug) und Kriegsschiffe der Stände mit Nachfolgern. Schiffe haben ein Baujahr: Wertverlust, höherer Unterhalt, mehr Havarien. Die Flotte muss erneuert werden.
 2. **Epochen in der Wirtschaft** (`data/epochen.json`): Die Städte wachsen (Wohnraum bis 22-fach), die KI-Händler erneuern ihre Flotten, und Bahn und Lastwagen **gleichen die Lager innerhalb einer Zone aus** (bis 1990 ganz). Damit lohnt sich der Schiffshandel auf den Seen immer weniger, nur der Handel zwischen den Zonen bleibt. Neue Zonen: **Mittelrhein** (Strassburg, Mannheim, Mainz, Köln), **Niederrhein** (Düsseldorf, Duisburg, Arnheim, Rotterdam, Amsterdam) und **Rhône** (Lyon, Valence, Avignon, Marseille). Der Rhein ist der Strom, auf dem der Schiffsverkehr wichtig bleibt (Verbindungen Basel–Strassburg, Köln–Düsseldorf, Genf–Lyon).
@@ -56,7 +56,7 @@ Offen: Länge und Ziel des Endgames (nach «Herr des Sees» 1830 gibt es kein we
 ## Vorgeschlagene Reihenfolge
 
 1. **Kapitäne mit Stufen** und **Risiko-Ereignisse** für Schiffe: erste Fassungen im Spiel. Offen: Ereignisse für Betriebe und Kontore (Brand, Verderb, Diebstahl), Schmuggler und Zollkontrolle, sobald es Zoll gibt.
-2. **Spielziel:** Rang und Ratssitz in Städten, im Spiel. Freischaltung von Rängen, Seen und Bahn nach Rang, Ratssitzen und Kalenderjahr, abgestimmt auf rund 25 Stunden (siehe `docs/entscheidungen.md`). Offen: mit echtem Spielen prüfen, wie viele Spieltage pro Stunde vergehen (Feld «Ansehen») und `ab_jahr` in `data/ziel.json` und `data/zonen.json` danach schieben; Freischaltung weiterer Schiffstypen und Gebäude.
+2. **Spielziel:** Rang und Ratssitz in Städten, im Spiel. Freischaltung von Rängen, Seen und Bahn nach Rang, Ratssitzen und Kalenderjahr, abgestimmt auf rund 5 Stunden (siehe `docs/entscheidungen.md`, Kalender 4 Tage pro Spieltag). Offen: mit echtem Spielen prüfen, wie viele Spieltage pro Stunde vergehen (Feld «Ansehen») und `ab_jahr` in `data/ziel.json` und `data/zonen.json` danach schieben; Freischaltung weiterer Schiffstypen und Gebäude.
 3. **Zoll und Verträge** auf der bestehenden Karte (Zölle zwischen den Ständen), zuerst in der Simulation.
 4. **Walensee als zweite Karte** mit Flussstädten als Zoll- und Handelstor.
 

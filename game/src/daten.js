@@ -63,6 +63,7 @@ function aufbereiten(roh) {
     zoll: roh.zoll,
     zonen: roh.zonen,
     epochen: roh.epochen,
+    kalender: roh.epochen.kalendertage_je_spieltag ?? 1, // Kalendertage pro Spieltag
     schiffe: { ...roh.schiffe, typ: Object.fromEntries(roh.schiffe.typen.map((t) => [t.id, t])) },
     fraktionen: {
       ...roh.fraktionen,

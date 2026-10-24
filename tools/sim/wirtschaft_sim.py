@@ -53,6 +53,7 @@ DISTANZEN = {}    # (Stadt, Stadt) -> Weglaenge ueber Wasser (karte.json, tools/
 ZONEN = {}        # Zone -> {Ware: Preisfaktor} (zonen.json)
 ZONEN_ART = {}    # Zone -> see, fluss oder land (zonen.json)
 KURVEN = {}       # Epochenkurven (epochen.json)
+KALENDER = 1      # Kalendertage pro Spieltag (epochen.json)
 EP_FRACHT = 1.0   # Laderaum der KI-Schiffe heute (ki_fracht)
 EP_TEMPO = 1.0    # Tempo der KI-Schiffe heute (ki_tempo)
 EP_NETZ = 1.0     # Tempo in Landzonen heute (netz_tempo)
@@ -67,7 +68,7 @@ def _read(data_dir, name):
 
 def load_data(data_dir=DEFAULT_DATA_DIR):
     """Liest data/*.json in die Modulvariablen."""
-    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN, ZONEN, ZONEN_ART, KURVEN
+    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN, ZONEN, ZONEN_ART, KURVEN, KALENDER
     GOODS = {n: v["basispreis"] for n, v in _read(data_dir, "goods.json")["waren"].items()}
     RECIPES = _read(data_dir, "recipes.json")["rezepte"]
     c = _read(data_dir, "consumption.json")
@@ -82,6 +83,7 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
     ZONEN = {z["id"]: z.get("preisfaktor", {}) for z in _read(data_dir, "zonen.json")["zonen"]}   # Preisniveau je Zone und Ware
     ZONEN_ART = {z["id"]: z.get("art", "see") for z in _read(data_dir, "zonen.json")["zonen"]}
     KURVEN = _read(data_dir, "epochen.json")["kurven"]
+    KALENDER = _read(data_dir, "epochen.json").get("kalendertage_je_spieltag", 1)
     DISTANZEN = {}
     for paar, d in _read(data_dir, "karte.json")["distanzen"].items():
         a, b = paar.split("|")
@@ -500,7 +502,7 @@ def run(args):
         writer.writerow(["tag", "stadt", "ware", "preis", "bestand"])
 
     for day in range(args.days):
-        year = args.jahr + max(0, day - WARMUP) / 365.25
+        year = args.jahr + max(0, day - WARMUP) * KALENDER / 365.25
         set_epoch(cities, year)
         stats.on = day >= WARMUP
         if day == WARMUP:

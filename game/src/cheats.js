@@ -27,12 +27,14 @@ export function richteCheatsEin(spiel, ui, { knopf, menue, liste, setzeTempo }) 
   });
   zeige();
 
+  // Ein Spieltag zählt spiel.D.kalender Kalendertage: Sprünge in Jahren rechnen auf Spieltage um
+  const jahre = (n) => Math.round((n * 365.25) / spiel.D.kalender);
   liste.innerHTML = `
-    <p class="klein">Zeit vorspulen (das Spiel hält dafür an)</p>
+    <p class="klein">Zeit vorspulen in Spieltagen bzw. Kalenderjahren (das Spiel hält dafür an)</p>
     <div class="cheatknoepfe">
       <button data-cheat-tage="1">+1 Tag</button><button data-cheat-tage="7">+7 Tage</button>
-      <button data-cheat-tage="30">+30 Tage</button><button data-cheat-tage="365">+1 Jahr</button>
-      <button data-cheat-tage="3650">+10 Jahre</button>
+      <button data-cheat-tage="30">+30 Tage</button><button data-cheat-tage="${jahre(1)}">+1 Jahr</button>
+      <button data-cheat-tage="${jahre(10)}">+10 Jahre</button><button data-cheat-tage="${jahre(50)}">+50 Jahre</button>
     </div>
     <p class="klein">Geld</p>
     <div class="cheatknoepfe"><button data-cheat-gulden="10000">+10'000</button><button data-cheat-gulden="100000">+100'000</button><button data-cheat-gulden="1000000">+1 Mio.</button></div>

@@ -69,15 +69,19 @@ export class Spiel {
     return this.welt.tag - this.starttag;
   }
 
+  // Kalenderdatum zu einem Spieltag: Ein Spieltag zählt D.kalender Kalendertage (epochen.json)
+  kalender(tag = this.tag) {
+    const [j, m, t] = this.D.spiel.start.datum;
+    return new Date(Date.UTC(j, m - 1, t + Math.floor(tag * (this.D.kalender ?? 1))));
+  }
+
   // Kalenderjahr (für Freischaltungen nach Jahren)
   jahr(tag = this.tag) {
-    const [j, m, t] = this.D.spiel.start.datum;
-    return new Date(Date.UTC(j, m - 1, t + tag)).getUTCFullYear();
+    return this.kalender(tag).getUTCFullYear();
   }
 
   datum(tag = this.tag) {
-    const [j, m, t] = this.D.spiel.start.datum;
-    const d = new Date(Date.UTC(j, m - 1, t + tag));
+    const d = this.kalender(tag);
     return `${d.getUTCDate()}. ${MONATE[d.getUTCMonth()]} ${d.getUTCFullYear()}`;
   }
 
@@ -93,8 +97,7 @@ export class Spiel {
 
   // Monatsschlüssel wie "1650-04" zum Spieltag
   monat(tag = this.tag) {
-    const [j, m, t] = this.D.spiel.start.datum;
-    const d = new Date(Date.UTC(j, m - 1, t + tag));
+    const d = this.kalender(tag);
     return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
   }
 
@@ -125,7 +128,7 @@ export class Spiel {
     // ort = Hafen, in dem das Schiff liegt (null auf See), fahrt = laufende Fahrt oder null
     // auto = automatischer Handel (automatik.js) oder null
     // kampf = Kampfhaltung, Schaden und Jagd (kampf.js)
-    const schiff = { name, typ: typId, gebraucht, baujahr: this.jahr() - (alter ?? 0), pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null, kampf: neueKampfdaten(t.kampfschiff) };
+    const schiff = { name, typ: typId, gebraucht, baujahr: this.jahr() - (alter ?? 0), bautag: this.tag - 365 * (alter ?? 0), pos: [...stadt.pos], ort: stadt, fahrt: null, ladung: {}, auto: null, kampf: neueKampfdaten(t.kampfschiff) };
     this.schiffe.push(schiff);
     return schiff;
   }
@@ -154,9 +157,10 @@ export class Spiel {
     return this.schiffstyp(schiff).laderaum;
   }
 
-  // Alter eines Schiffs (oder Flottenmitglieds) in Jahren
+  // Alter eines Schiffs (oder Flottenmitglieds) in Jahren: nach Spieltagen (365 = 1 Jahr), nicht nach dem
+  // Kalender, der schneller läuft. bautag = Spieltag des Baus, baujahr nur für die Anzeige
   alter(schiff) {
-    return Math.max(0, this.jahr() - (schiff.baujahr ?? this.jahr()));
+    return Math.max(0, Math.floor((this.tag - (schiff.bautag ?? this.tag)) / 365));
   }
 
   // Wert eines Schiffs als Anteil des Neuwerts: verliert mit dem Alter, aber nicht unter wert_min
@@ -192,7 +196,7 @@ export class Spiel {
   // b schliesst sich a an; Ladung wird zusammengelegt, Automatik endet
   zusammenlegen(a, b) {
     if (this.pruefeZusammenlegen(a, b)) return false;
-    const mitglied = (s) => (s.mitglieder ? s.mitglieder : [{ name: s.name, typ: s.typ, gebraucht: s.gebraucht, baujahr: s.baujahr }]);
+    const mitglied = (s) => (s.mitglieder ? s.mitglieder : [{ name: s.name, typ: s.typ, gebraucht: s.gebraucht, baujahr: s.baujahr, bautag: s.bautag }]);
     a.mitglieder = [...mitglied(a), ...mitglied(b)];
     a.typ = "flotte";
     a.gebraucht = false;
@@ -222,7 +226,7 @@ export class Spiel {
     if (this.pruefeAufloesen(flotte)) return null;
     const ladung = Object.entries(flotte.ladung).map(([g, p]) => ({ g, ...p }));
     const neu = flotte.mitglieder.map((m) => ({
-      name: m.name, typ: m.typ, gebraucht: m.gebraucht, baujahr: m.baujahr, pos: [...flotte.pos], ort: flotte.ort, fahrt: null, ladung: {}, auto: null,
+      name: m.name, typ: m.typ, gebraucht: m.gebraucht, baujahr: m.baujahr, bautag: m.bautag, pos: [...flotte.pos], ort: flotte.ort, fahrt: null, ladung: {}, auto: null,
       kampf: neueKampfdaten(this.D.schiffe.typ[m.typ].kampfschiff),
     }));
     // Schaden nach Rumpf verteilen

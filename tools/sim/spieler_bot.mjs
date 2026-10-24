@@ -114,7 +114,7 @@ for (let tag = 1; tag <= TAGE; tag++) {
   const z = spiel.ziel;
   if (z.rangIndex !== letzterRang || tag % 250 === 0) {
     letzterRang = z.rangIndex;
-    console.log(`${String(tag).padStart(5)} ${(1650 + tag / 365).toFixed(1)} ${f(spiel.gulden).padStart(10)} ${f(z.vermoegen()).padStart(11)} ${String(spiel.schiffe.length).padStart(5)} ${String(a.eigene().length).padStart(6)} ${String(z.sitze.length).padStart(5)} ${String(spiel.zonen.erschlossen.length).padStart(4)}  ${z.rang.name}`);
+    console.log(`${String(tag).padStart(5)} ${spiel.welt.jahr().toFixed(1)} ${f(spiel.gulden).padStart(10)} ${f(z.vermoegen()).padStart(11)} ${String(spiel.schiffe.length).padStart(5)} ${String(a.eigene().length).padStart(6)} ${String(z.sitze.length).padStart(5)} ${String(spiel.zonen.erschlossen.length).padStart(4)}  ${z.rang.name}`);
   }
 }
 console.log(`fertig in ${((Date.now() - t0) / 1000).toFixed(0)} s`);

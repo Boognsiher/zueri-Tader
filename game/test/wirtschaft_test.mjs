@@ -49,7 +49,8 @@ function abschnitt(name) {
 // Springt im Kalender auf den 1. Januar des Jahres (Freischaltungen hängen am Jahr)
 function insJahr(spiel, jahr) {
   const [j, m, t] = spiel.D.spiel.start.datum;
-  spiel.starttag = spiel.welt.tag - Math.round((Date.UTC(jahr, 0, 1) - Date.UTC(j, m - 1, t)) / 86400000);
+  // Ein Spieltag zählt D.kalender Kalendertage (epochen.json)
+  spiel.starttag = spiel.welt.tag - Math.ceil((Date.UTC(jahr, 0, 1) - Date.UTC(j, m - 1, t)) / 86400000 / spiel.D.kalender);
   return spiel;
 }
 
@@ -498,7 +499,10 @@ if (abschnitt("Eigenversorgung")) {
   let kette = 0;
   let markt = 0;
   let werkstattMarkt = 0;
-  for (const seed of [61, 62]) {
+  // Zehn Seeds: Ein einzelner Lauf streut stark (freier Handel 95 bis 261 Gulden/Tag), mit zwei Seeds
+  // kippte das Ergebnis schon bei 2 % grösseren KI-Schiffen
+  const seeds = [61, 62, 63, 64, 65, 66, 67, 68, 69, 70];
+  for (const seed of seeds) {
     const a = aufbau(seed);
     a.s.ladung.Holz = { menge: 20, einstand: 60 }; // Baumaterial fürs Kontor, unabhängig vom Holzvorrat am Markt
     a.sp.ausbau.kontorBauen(a.stadt);
@@ -520,9 +524,9 @@ if (abschnitt("Eigenversorgung")) {
       a.sp.tagVoran();
       b.sp.tagVoran();
     }
-    kette += (a.sp.gulden + a.sp.warenwert() - startA) / 360 / 2;
-    markt += (b.sp.gulden + b.sp.warenwert() - startB) / 360 / 2;
-    werkstattMarkt += b.b.summe / 360 / 2;
+    kette += (a.sp.gulden + a.sp.warenwert() - startA) / 360 / seeds.length;
+    markt += (b.sp.gulden + b.sp.warenwert() - startB) / 360 / seeds.length;
+    werkstattMarkt += b.b.summe / 360 / seeds.length;
   }
   pruefe(`Werkstatt mit Marktversorgung trägt sich kaum (${werkstattMarkt.toFixed(0)} Gulden/Tag)`, werkstattMarkt < 60);
   pruefe(`Trotte Wädenswil mit Kontor und Route: ${kette.toFixed(0)} Gulden/Tag, Markt + freier Handel: ${markt.toFixed(0)} (Ziel: Kette mindestens 15 % besser)`, kette >= markt * 1.15);
@@ -1266,11 +1270,13 @@ if (abschnitt("Schiffsentwicklung")) {
   // Alter: Wert, Unterhalt, Havarie
   const neu = w.verkaufserloes(dampfer);
   const unterhaltNeu = spiel.unterhalt(dampfer);
-  insJahr(spiel, 1900);
+  // Schiffe altern nach Spieltagen (365 = 1 Jahr), nicht nach dem schnelleren Kalender
+  dampfer.bautag = spiel.tag - 365 * 20;
+  pruefe(`Alter nach Spieltagen: 20 x 365 Spieltage = ${spiel.alter(dampfer)} Jahre`, spiel.alter(dampfer) === 20);
   pruefe(`Mit dem Alter sinken Verkaufserlös (${neu} -> ${w.verkaufserloes(dampfer)}) und steigt der Unterhalt (${unterhaltNeu.toFixed(1)} -> ${spiel.unterhalt(dampfer).toFixed(1)})`, w.verkaufserloes(dampfer) < neu && spiel.unterhalt(dampfer) > unterhaltNeu);
-  insJahr(spiel, 1840 + D.schiffe.alter.alt_ab_jahre);
+  dampfer.bautag = spiel.tag - 365 * D.schiffe.alter.alt_ab_jahre;
   pruefe("Ein altes Schiff hat öfter Havarien", spiel.istAlt(dampfer) && spiel.risiko.altHavarie(dampfer) === D.schiffe.alter.havarie_faktor_alt);
-  insJahr(spiel, 1650 + 400);
+  dampfer.bautag = spiel.tag - 365 * 400;
   pruefe("Wert und Unterhalt haben Grenzen", spiel.alterswert(dampfer) === D.schiffe.alter.wert_min && spiel.altersfaktorUnterhalt(dampfer) === D.schiffe.alter.unterhalt_max);
   // Gebrauchtmarkt: nur Typen der Zeit
   insJahr(spiel, 1650);
@@ -1342,13 +1348,20 @@ if (abschnitt("Kanäle")) {
 
 // --- 21. Epochen: Wohnraum, Ausgleich, KI-Flotten --------------------------------
 if (abschnitt("Epochen")) {
+  {
+    // Spieldauer: Bei mittlerem Tempo ist 1830 (letzte Zone, höchster Rang) nach rund 5 Stunden erreicht
+    const sp = new Spiel(D, 5);
+    const tageIn5h = (5 * 3600 * 1000) / D.spiel.tageslaenge_ms[2];
+    const letztes = Math.max(...D.zonen.zonen.map((z) => z.ab_jahr), ...D.ziel.raenge.map((r) => r.ab_jahr));
+    pruefe(`Mittleres Tempo: nach 5 Stunden (${Math.round(tageIn5h)} Spieltage) ist ${sp.jahr(Math.round(tageIn5h))}, alles frei ab ${letztes}`, Math.abs(sp.jahr(Math.round(tageIn5h)) - letztes) <= 5);
+  }
   const welt = new Welt(D, 6);
   for (let t = 0; t < 120; t++) welt.naechsterTag();
   pruefe("1650: Die Kurven stehen (fast) auf dem Anfangswert", welt.kurve("wohnraum") < 1.01 && welt.kurve("ausgleich_see") === 0 && welt.kurve("ki_fracht") < 1.01);
   const zurich = welt.stadt["Zürich"];
   pruefe("Der Wohnraum wächst mit den Jahrhunderten", (() => {
     const z0 = zurich.wohnraum();
-    welt.tagNull = welt.tag - Math.round(300 * 365.25); // 300 Jahre später
+    welt.tagNull = welt.tag - Math.round((300 * 365.25) / D.kalender); // 300 Jahre später
     return zurich.wohnraum() > z0 * 3;
   })());
   // Ausgleich: Preisgefälle zwischen den Städten eines Sees schrumpft
@@ -1359,7 +1372,7 @@ if (abschnitt("Epochen")) {
   staedte[0].bestand.Korn *= 0.2;
   staedte[1].bestand.Korn *= 3;
   const vorher = gefaelle();
-  w2.tagNull = w2.tag - Math.round(300 * 365.25);
+  w2.tagNull = w2.tag - Math.round((300 * 365.25) / D.kalender);
   for (let t = 0; t < 6; t++) w2.landverkehr();
   pruefe(`Bahn und Lastwagen gleichen die Preise innerhalb eines Sees aus (Gefälle ${vorher.toFixed(2)} -> ${gefaelle().toFixed(2)})`, gefaelle() < vorher * 0.6);
   const summe = (zone) => w2.staedte.filter((x) => x.zone === zone).reduce((x, c) => x + c.bestand.Korn, 0);
@@ -1368,7 +1381,7 @@ if (abschnitt("Epochen")) {
   w2.landverkehr();
   pruefe("Der Ausgleich schiebt Ware nur innerhalb einer Zone (die Summe je Zone bleibt)", Math.abs(summe("zuerichsee") - zuerichVorher) < 1e-6 && Math.abs(summe("walensee") - walenVorher) < 1e-6);
   pruefe("Die KI-Flotte ist 2000 grösser und schneller als 1650", (() => {
-    w2.tagNull = w2.tag - Math.round(350 * 365.25);
+    w2.tagNull = w2.tag - Math.round((350 * 365.25) / D.kalender);
     return w2.kurve("ki_fracht") > 5 && w2.kurve("ki_tempo") > 2.5;
   })());
 }

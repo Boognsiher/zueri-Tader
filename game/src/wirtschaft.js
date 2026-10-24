@@ -400,8 +400,9 @@ export class Welt {
   }
 
   // Jahr (mit Bruchteil) und Epochenkurven (data/epochen.json)
+  // Ein Spieltag zählt D.kalender Kalendertage (epochen.json): Epochen laufen schneller als die Wirtschaft
   jahr() {
-    return this.startjahr + Math.max(0, this.tag - this.tagNull) / 365.25;
+    return this.startjahr + (Math.max(0, this.tag - this.tagNull) * (this.D.kalender ?? 1)) / 365.25;
   }
 
   kurve(name) {
