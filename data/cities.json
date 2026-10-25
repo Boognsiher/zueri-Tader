@@ -10,6 +10,7 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
+        "Korn": 86,
         "Rohseide": 40,
         "Zucker": 14
       },
@@ -30,7 +31,7 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
-        "Korn": 38,
+        "Fisch": 23,
         "Holz": 50,
         "Baumwolle": 37
       },
@@ -45,7 +46,7 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
-        "Fisch": 29,
+        "Fisch": 25,
         "Baumwolle": 51
       },
       "werkstaetten": {
@@ -62,7 +63,8 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
-        "Korn": 46,
+        "Korn": 36,
+        "Holz": 35,
         "Käse": 8
       },
       "werkstaetten": {
@@ -78,7 +80,6 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
-        "Fisch": 13,
         "Trauben": 59,
         "Zucker": 12
       },
@@ -97,7 +98,7 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
-        "Korn": 84,
+        "Korn": 65,
         "Rohseide": 32,
         "Käse": 10
       },
@@ -112,8 +113,7 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
-        "Korn": 84,
-        "Holz": 35,
+        "Korn": 65,
         "Trauben": 48,
         "Gewürze": 8
       },
@@ -131,7 +131,7 @@
       ],
       "zone": "zuerichsee",
       "produktion": {
-        "Fisch": 40,
+        "Fisch": 34,
         "Gewürze": 10
       },
       "werkstaetten": {}
@@ -145,7 +145,8 @@
       ],
       "zone": "walensee",
       "produktion": {
-        "Korn": 30,
+        "Korn": 25,
+        "Fisch": 9,
         "Holz": 7,
         "Zucker": 7,
         "Gewürze": 5
@@ -167,8 +168,6 @@
       ],
       "zone": "walensee",
       "produktion": {
-        "Korn": 8,
-        "Fisch": 4,
         "Käse": 2,
         "Trauben": 22
       },
@@ -185,7 +184,8 @@
       ],
       "zone": "walensee",
       "produktion": {
-        "Fisch": 8,
+        "Korn": 19,
+        "Fisch": 6,
         "Holz": 7,
         "Trauben": 10,
         "Eisenerz": 6
@@ -203,8 +203,8 @@
       ],
       "zone": "walensee",
       "produktion": {
-        "Korn": 35,
-        "Fisch": 12,
+        "Korn": 29,
+        "Fisch": 9,
         "Holz": 11,
         "Käse": 3
       },
@@ -224,7 +224,7 @@
       "produktion": {
         "Korn": 47,
         "Fisch": 11,
-        "Holz": 18,
+        "Holz": 12,
         "Gewürze": 4,
         "Trauben": 29,
         "Eisenerz": 4
@@ -244,7 +244,6 @@
       "zone": "hochrhein",
       "produktion": {
         "Fisch": 8,
-        "Holz": 13,
         "Käse": 5,
         "Eisenerz": 6
       },
@@ -263,7 +262,7 @@
       "zone": "hochrhein",
       "produktion": {
         "Korn": 26,
-        "Holz": 16,
+        "Holz": 10,
         "Käse": 4,
         "Zucker": 6,
         "Trauben": 30,
@@ -284,6 +283,7 @@
       "produktion": {
         "Korn": 66,
         "Fisch": 27,
+        "Holz": 25,
         "Zucker": 8,
         "Gewürze": 5,
         "Baumwolle": 25
@@ -306,7 +306,9 @@
       ],
       "zone": "bodensee",
       "produktion": {
-        "Korn": 66,
+        "Korn": 62,
+        "Fisch": 18,
+        "Holz": 22,
         "Zucker": 8
       },
       "import": {
@@ -327,8 +329,7 @@
       ],
       "zone": "bodensee",
       "produktion": {
-        "Fisch": 7,
-        "Holz": 8,
+        "Trauben": 44,
         "Baumwolle": 33
       },
       "werkstaetten": {
@@ -344,9 +345,8 @@
       ],
       "zone": "bodensee",
       "produktion": {
-        "Korn": 17,
-        "Fisch": 17,
-        "Holz": 15
+        "Fisch": 13,
+        "Holz": 7
       },
       "werkstaetten": {
         "Tuch": 14
@@ -361,9 +361,8 @@
       ],
       "zone": "bodensee",
       "produktion": {
-        "Korn": 33,
-        "Fisch": 12,
-        "Holz": 22,
+        "Korn": 31,
+        "Holz": 10,
         "Käse": 4
       },
       "werkstaetten": {
@@ -380,9 +379,10 @@
       ],
       "zone": "bodensee",
       "produktion": {
-        "Holz": 10,
+        "Korn": 26,
+        "Fisch": 10,
         "Käse": 7,
-        "Trauben": 28
+        "Baumwolle": 24
       },
       "werkstaetten": {
         "Werkzeug": 7
@@ -397,12 +397,12 @@
       ],
       "zone": "bodensee",
       "produktion": {
-        "Korn": 47,
-        "Fisch": 18,
+        "Korn": 44,
+        "Fisch": 13,
+        "Holz": 16,
         "Zucker": 8,
         "Gewürze": 11,
-        "Trauben": 42,
-        "Baumwolle": 24
+        "Trauben": 26
       },
       "werkstaetten": {
         "Seide": 13
@@ -417,7 +417,8 @@
       ],
       "zone": "genfersee",
       "produktion": {
-        "Korn": 63,
+        "Korn": 58,
+        "Fisch": 23,
         "Holz": 30,
         "Zucker": 15,
         "Gewürze": 10
@@ -441,8 +442,7 @@
       ],
       "zone": "genfersee",
       "produktion": {
-        "Korn": 28,
-        "Fisch": 14,
+        "Fisch": 10,
         "Trauben": 24,
         "Rohseide": 20
       },
@@ -460,8 +460,8 @@
       ],
       "zone": "genfersee",
       "produktion": {
-        "Korn": 55,
-        "Fisch": 24,
+        "Korn": 49,
+        "Fisch": 16,
         "Holz": 11,
         "Käse": 3,
         "Rohseide": 20
@@ -479,7 +479,7 @@
       ],
       "zone": "genfersee",
       "produktion": {
-        "Fisch": 11,
+        "Korn": 39,
         "Holz": 8,
         "Käse": 7,
         "Trauben": 37
@@ -498,8 +498,8 @@
       ],
       "zone": "mittelrhein",
       "produktion": {
-        "Korn": 64,
-        "Fisch": 26,
+        "Korn": 50,
+        "Fisch": 17,
         "Holz": 15,
         "Trauben": 35
       },
@@ -517,8 +517,6 @@
       ],
       "zone": "mittelrhein",
       "produktion": {
-        "Korn": 27,
-        "Fisch": 9,
         "Zucker": 6,
         "Trauben": 24,
         "Baumwolle": 26,
@@ -538,8 +536,8 @@
       ],
       "zone": "mittelrhein",
       "produktion": {
-        "Korn": 51,
-        "Fisch": 12,
+        "Korn": 40,
+        "Fisch": 8,
         "Holz": 14,
         "Baumwolle": 25
       },
@@ -557,6 +555,8 @@
       ],
       "zone": "mittelrhein",
       "produktion": {
+        "Korn": 52,
+        "Fisch": 22,
         "Holz": 18,
         "Zucker": 8,
         "Gewürze": 10,
@@ -581,8 +581,8 @@
       "zone": "niederrhein",
       "produktion": {
         "Korn": 43,
-        "Fisch": 25,
-        "Holz": 20,
+        "Fisch": 18,
+        "Holz": 15,
         "Rohseide": 29
       },
       "werkstaetten": {
@@ -600,8 +600,8 @@
       "zone": "niederrhein",
       "produktion": {
         "Korn": 51,
-        "Fisch": 12,
-        "Holz": 20
+        "Fisch": 9,
+        "Holz": 15
       },
       "werkstaetten": {
         "Tuch": 17,
@@ -617,8 +617,6 @@
       ],
       "zone": "niederrhein",
       "produktion": {
-        "Fisch": 10,
-        "Holz": 5,
         "Käse": 8,
         "Baumwolle": 31
       },
@@ -636,8 +634,8 @@
       "zone": "niederrhein",
       "produktion": {
         "Korn": 42,
-        "Fisch": 23,
-        "Holz": 25,
+        "Fisch": 16,
+        "Holz": 19,
         "Zucker": 11,
         "Gewürze": 6,
         "Rohseide": 30,
@@ -657,6 +655,8 @@
       "zone": "niederrhein",
       "produktion": {
         "Korn": 73,
+        "Fisch": 27,
+        "Holz": 21,
         "Käse": 6,
         "Zucker": 10,
         "Gewürze": 8
@@ -680,8 +680,8 @@
       "zone": "rhone",
       "produktion": {
         "Korn": 60,
-        "Fisch": 22,
-        "Holz": 22,
+        "Fisch": 15,
+        "Holz": 15,
         "Trauben": 22
       },
       "werkstaetten": {
@@ -699,8 +699,6 @@
       ],
       "zone": "rhone",
       "produktion": {
-        "Fisch": 5,
-        "Holz": 10,
         "Trauben": 35,
         "Rohseide": 19
       },
@@ -719,8 +717,8 @@
       "zone": "rhone",
       "produktion": {
         "Korn": 20,
-        "Fisch": 17,
-        "Holz": 13,
+        "Fisch": 12,
+        "Holz": 9,
         "Rohseide": 19,
         "Baumwolle": 23
       },
@@ -738,6 +736,8 @@
       "zone": "rhone",
       "produktion": {
         "Korn": 53,
+        "Fisch": 17,
+        "Holz": 21,
         "Zucker": 13,
         "Gewürze": 9,
         "Baumwolle": 23
@@ -760,7 +760,9 @@
       ],
       "zone": "mittelland",
       "produktion": {
-        "Korn": 94,
+        "Korn": 88,
+        "Fisch": 18,
+        "Holz": 28,
         "Zucker": 18
       },
       "import": {
@@ -781,9 +783,9 @@
       ],
       "zone": "mittelland",
       "produktion": {
-        "Korn": 29,
-        "Fisch": 12,
-        "Holz": 15,
+        "Korn": 28,
+        "Fisch": 10,
+        "Holz": 6,
         "Eisenerz": 6
       },
       "werkstaetten": {
@@ -799,8 +801,8 @@
       ],
       "zone": "mittelland",
       "produktion": {
-        "Fisch": 14,
-        "Holz": 22,
+        "Fisch": 10,
+        "Holz": 9,
         "Eisenerz": 7
       },
       "werkstaetten": {
@@ -816,11 +818,7 @@
         36.0
       ],
       "zone": "mittelland",
-      "produktion": {
-        "Korn": 10,
-        "Fisch": 5,
-        "Holz": 9
-      },
+      "produktion": {},
       "werkstaetten": {
         "Tuch": 9,
         "Werkzeug": 6
@@ -835,11 +833,12 @@
       ],
       "zone": "mittelland",
       "produktion": {
-        "Korn": 47,
-        "Fisch": 29,
+        "Korn": 45,
+        "Fisch": 22,
+        "Holz": 18,
         "Käse": 7,
         "Gewürze": 12,
-        "Baumwolle": 32
+        "Baumwolle": 31
       },
       "werkstaetten": {
         "Wein": 18,
@@ -855,9 +854,9 @@
       ],
       "zone": "mittelland",
       "produktion": {
-        "Holz": 15,
+        "Korn": 19,
         "Käse": 5,
-        "Baumwolle": 31
+        "Baumwolle": 32
       },
       "werkstaetten": {}
     },
@@ -870,6 +869,9 @@
       ],
       "zone": "nordost",
       "produktion": {
+        "Korn": 45,
+        "Fisch": 14,
+        "Holz": 18,
         "Gewürze": 8
       },
       "import": {
@@ -891,9 +893,9 @@
       ],
       "zone": "nordost",
       "produktion": {
-        "Korn": 52,
-        "Fisch": 18,
-        "Holz": 14,
+        "Korn": 36,
+        "Fisch": 13,
+        "Holz": 9,
         "Zucker": 11,
         "Baumwolle": 17
       },
@@ -911,9 +913,9 @@
       ],
       "zone": "nordost",
       "produktion": {
-        "Korn": 31,
-        "Fisch": 9,
-        "Holz": 10,
+        "Korn": 22,
+        "Fisch": 7,
+        "Holz": 7,
         "Baumwolle": 23
       },
       "werkstaetten": {
@@ -929,9 +931,9 @@
       ],
       "zone": "nordost",
       "produktion": {
-        "Korn": 17,
-        "Fisch": 6,
-        "Holz": 8,
+        "Korn": 11,
+        "Fisch": 4,
+        "Holz": 5,
         "Käse": 3
       },
       "werkstaetten": {
@@ -948,9 +950,6 @@
       ],
       "zone": "nordost",
       "produktion": {
-        "Korn": 14,
-        "Fisch": 5,
-        "Holz": 7,
         "Käse": 5
       },
       "werkstaetten": {
@@ -966,7 +965,9 @@
       ],
       "zone": "westschweiz",
       "produktion": {
-        "Korn": 37,
+        "Korn": 35,
+        "Fisch": 12,
+        "Holz": 11,
         "Käse": 5
       },
       "import": {
@@ -987,9 +988,9 @@
       ],
       "zone": "westschweiz",
       "produktion": {
-        "Korn": 26,
-        "Fisch": 11,
-        "Holz": 14,
+        "Korn": 25,
+        "Fisch": 9,
+        "Holz": 11,
         "Zucker": 11
       },
       "werkstaetten": {
@@ -1006,8 +1007,7 @@
       ],
       "zone": "westschweiz",
       "produktion": {
-        "Fisch": 7,
-        "Holz": 5,
+        "Korn": 20,
         "Trauben": 23,
         "Eisenerz": 5
       },
@@ -1024,9 +1024,8 @@
       ],
       "zone": "westschweiz",
       "produktion": {
-        "Korn": 17,
-        "Fisch": 8,
-        "Holz": 11,
+        "Fisch": 7,
+        "Holz": 9,
         "Gewürze": 8,
         "Eisenerz": 4
       },
@@ -1045,8 +1044,8 @@
       "zone": "westschweiz",
       "produktion": {
         "Korn": 31,
-        "Fisch": 11,
-        "Holz": 8,
+        "Fisch": 9,
+        "Holz": 7,
         "Käse": 3,
         "Trauben": 23
       },
@@ -1063,7 +1062,9 @@
       ],
       "zone": "alpen",
       "produktion": {
-        "Korn": 27,
+        "Korn": 25,
+        "Fisch": 8,
+        "Holz": 11,
         "Käse": 3,
         "Rohseide": 12,
         "Eisenerz": 4
@@ -1085,9 +1086,8 @@
       ],
       "zone": "alpen",
       "produktion": {
-        "Korn": 18,
-        "Fisch": 8,
-        "Holz": 10,
+        "Fisch": 7,
+        "Holz": 8,
         "Käse": 3
       },
       "werkstaetten": {
@@ -1104,8 +1104,9 @@
       ],
       "zone": "alpen",
       "produktion": {
-        "Fisch": 9,
-        "Holz": 7,
+        "Korn": 22,
+        "Fisch": 8,
+        "Holz": 6,
         "Trauben": 19,
         "Rohseide": 13,
         "Eisenerz": 3
@@ -1123,9 +1124,9 @@
       ],
       "zone": "alpen",
       "produktion": {
-        "Korn": 26,
-        "Fisch": 9,
-        "Holz": 7,
+        "Korn": 25,
+        "Fisch": 8,
+        "Holz": 6,
         "Zucker": 9,
         "Gewürze": 6
       },
@@ -1143,9 +1144,7 @@
       ],
       "zone": "alpen",
       "produktion": {
-        "Korn": 21,
-        "Fisch": 5,
-        "Holz": 7,
+        "Korn": 20,
         "Trauben": 19
       },
       "werkstaetten": {
