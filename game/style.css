@@ -371,7 +371,8 @@ dialog.fenster .schiffkauf { font-size: 1rem; padding: 0.2em 0.6em; }
   dialog.fenster { position: fixed; inset: 0.5rem; width: auto; max-height: calc(100vh - 1rem); max-height: calc(100dvh - 1rem); overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
 }
 @media (max-width: 600px) {
-  .markt th:nth-child(2), .markt td:nth-child(2) { display: none; }
+  /* Nur am Markt fällt das Stadtlager weg; im Kontor ist die zweite Spalte dein Bestand, in der Bauliste die Kosten */
+  .marktliste th:nth-child(2), .marktliste td:nth-child(2) { display: none; }
   .markt .ware small { white-space: normal; }
   .markt .aktionen { width: 4.6rem; }
   dialog.fenster { padding: 0.5rem 0.6rem; }

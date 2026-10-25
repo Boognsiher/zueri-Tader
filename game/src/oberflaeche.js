@@ -512,7 +512,7 @@ export class Oberflaeche {
     const welt = s.welt;
     const farbe = D.spiel.preisfarbe;
     const wunsch = this.menge === "max" ? Infinity : Number(this.menge);
-    let html = `<table class="markt"><thead><tr><th title="darunter: bestes Gebot in einer anderen Stadt">Ware</th>
+    let html = `<table class="markt marktliste"><thead><tr><th title="darunter: bestes Gebot in einer anderen Stadt">Ware</th>
       <th>Lager</th><th>Kauf</th><th>Verkauf</th>${schiff ? "<th>Laderaum</th><th></th>" : ""}</tr></thead><tbody>`;
     const ohneMarkt = [];
     for (const g of Object.keys(D.waren)) {
