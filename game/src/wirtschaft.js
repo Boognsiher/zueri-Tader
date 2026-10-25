@@ -149,7 +149,7 @@ export class Stadt {
     const f = this.faktor();
     // Produktion wächst mit der Bevölkerung (mehr Arbeitskräfte)
     for (const [g, a] of Object.entries(this.prod)) {
-      const q = a * f * Stadt.faktor(this.prodFaktor, g, tag);
+      const q = a * f * Stadt.faktor(this.prodFaktor, g, tag) * (this.welt?.saison(g) ?? 1);
       this.bestand[g] += q;
       if (st) addiere(st.produziert, g, q);
     }
@@ -408,6 +408,12 @@ export class Welt {
 
   kurve(name) {
     return kurve(this.D, name, this.jahr());
+  }
+
+  // Jahreszeit: Faktor auf die Produktion einer Ware im aktuellen Kalendermonat (goods.json)
+  saison(g, jahr = this.jahr()) {
+    const f = this.D.jahreszeit?.[g];
+    return f ? f[Math.floor((jahr % 1) * 12) % 12] : 1;
   }
 
   // Anzahl KI-Händler einer Zone: AI_SHIPS_PER_1000 je 1000 Einwohner der Zone. Die Händler bleiben

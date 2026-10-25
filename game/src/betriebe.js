@@ -52,6 +52,7 @@ export class Ausbau {
     this.basis = Object.fromEntries(this.D.staedte.map((s) => [s.name, s]));
     this.kontore = {}; // Stadtname -> { stufe, lager: { Ware: {menge, einstand} }, regeln: { Ware: Regel } }
     this.gebaeude = {}; // Stadtname -> { Gebäude-ID: Stufe }
+    this.speicher = {}; // Stadtname -> { Ware: {menge, einstand} } (Kornspeicher)
     this.betriebe = [];
     for (const cfg of this.D.staedte) {
       for (const t of this.bau.betriebe) {
@@ -433,6 +434,7 @@ export class Ausbau {
     const g = this.gebaeude[stadt.name];
     g[id] -= 1;
     if (!g[id]) delete g[id];
+    if (t.wirkung === "speicher") this.raeumeSpeicher(stadt, t);
     this.wendeGebaeudeAn();
     this.spiel.melde(g[id] ? `${t.name} in ${stadt.name} auf Stufe ${g[id]} zurückgebaut (${geld} Gulden zurück).` : `${t.name} in ${stadt.name} abgerissen, der Bauplatz ist frei (${geld} Gulden zurück).`);
     return true;
@@ -500,6 +502,80 @@ export class Ausbau {
       stadt.zufriedenheitBonus = this.gebaeudeWirkung(stadt, "zufriedenheit");
       stadt.wohnraumBonus = this.gebaeudeWirkung(stadt, "wohnraum");
     }
+  }
+
+  // --- Kornspeicher -------------------------------------------------------------------
+  // Kauft in der Erntezeit, verkauft den Vorrat bis zur nächsten Ernte gleichmässig (Jahreszeiten in goods.json)
+  speicherBestand(stadt, t) {
+    return this.speicher[stadt.name ?? stadt]?.[t.ware] ?? null;
+  }
+
+  speicherKapazitaet(stadt, t) {
+    return this.gebaeudeStufe(stadt, t.id) * t.wert_pro_stufe;
+  }
+
+  // Spieltage bis zur nächsten Ernte (Jahreszeitfaktor über 1)
+  tageBisErnte(g) {
+    const welt = this.spiel.welt;
+    const jahr = welt.jahr();
+    for (let d = 1; d < 400; d++) if (welt.saison(g, jahr + (d * this.D.kalender) / 365.25) > 1) return d;
+    return 1;
+  }
+
+  // Ware aus dem Speicher am Markt verkaufen, höchstens menge Stück, nicht unter preisgrenze
+  speicherVerkaufen(stadt, g, p, menge, preisgrenze = 0) {
+    let kasse = 0;
+    let n = 0;
+    for (; n < menge && p.menge >= 1; n++) {
+      const preis = this.verkaufspreis(stadt, g);
+      if (preis < preisgrenze) break;
+      kasse += preis;
+      stadt.bestand[g] += 1;
+      p.menge -= 1;
+    }
+    return { n, kasse };
+  }
+
+  // Nach einem Rückbau: was nicht mehr ins Lager passt, geht an den Markt
+  raeumeSpeicher(stadt, t) {
+    const p = this.speicherBestand(stadt, t);
+    if (!p) return;
+    const v = this.speicherVerkaufen(stadt, t.ware, p, Math.ceil(p.menge - this.speicherKapazitaet(stadt, t)));
+    this.spiel.gulden += v.kasse;
+    this.spiel.buche("betriebe", v.kasse);
+    if (p.menge < 1) delete this.speicher[stadt.name][t.ware];
+  }
+
+  speicherTag() {
+    let kasse = 0;
+    for (const t of this.bau.stadtgebaeude.filter((x) => x.wirkung === "speicher")) {
+      const faktor = this.spiel.welt.saison(t.ware);
+      for (const name of Object.keys(this.gebaeude)) {
+        const stufe = this.gebaeudeStufe(name, t.id);
+        if (!stufe) continue;
+        const stadt = this.spiel.welt.stadt[name];
+        const p = ((this.speicher[name] ??= {})[t.ware] ??= { menge: 0, einstand: 0 });
+        const grund = stadt.basispreis(t.ware);
+        if (faktor > 1) {
+          const frei = Math.floor(this.speicherKapazitaet(stadt, t) - p.menge);
+          let n = 0;
+          for (; n < Math.min(frei, t.handel_pro_tag * stufe); n++) {
+            const preis = this.kaufpreis(stadt, t.ware);
+            if (preis > grund * t.kauf_bis_preisfaktor || stadt.bestand[t.ware] < 3 || this.spiel.gulden + kasse < preis) break;
+            stadt.bestand[t.ware] -= 1;
+            kasse -= preis;
+            p.einstand = (p.einstand * p.menge + preis) / (p.menge + 1);
+            p.menge += 1;
+          }
+        } else if (p.menge >= 1) {
+          // Zwischen den Ernten: Vorrat gleichmässig bis zur nächsten Ernte verkaufen
+          const menge = Math.min(t.handel_pro_tag * stufe, Math.ceil(p.menge / this.tageBisErnte(t.ware)));
+          kasse += this.speicherVerkaufen(stadt, t.ware, p, menge, grund * t.verkauf_ab_preisfaktor).kasse;
+        }
+      }
+    }
+    this.spiel.gulden += kasse;
+    this.spiel.buche("betriebe", kasse);
   }
 
   // --- Kontor ------------------------------------------------------------------------
@@ -731,7 +807,7 @@ export class Ausbau {
       let menge = 0;
       let kosten = unterhalt;
       if (t.art === "produktion") {
-        menge = leistung * Stadt.faktor(stadt.prodFaktor, t.ware, tag);
+        menge = leistung * Stadt.faktor(stadt.prodFaktor, t.ware, tag) * spiel.welt.saison(t.ware);
       } else {
         // Zutaten: bei Versorgung über das Kontor nur von dort, sonst vom Markt.
         // Eigenversorgung braucht weniger Zutaten (eigenversorgung.zutaten_faktor)
@@ -793,12 +869,13 @@ export class Ausbau {
     spiel.buche("gebaeudeUnterhalt", -gebaeudeUnterhalt);
     spiel.gulden += kasseGesamt - kontorUnterhalt - gebaeudeUnterhalt;
     this.kontorHandel();
+    this.speicherTag();
     return kasseGesamt;
   }
 
   // --- Speichern ------------------------------------------------------------------
   zustand() {
-    return { kontore: this.kontore, betriebe: this.betriebe, gebaeude: this.gebaeude };
+    return { kontore: this.kontore, betriebe: this.betriebe, gebaeude: this.gebaeude, speicher: this.speicher };
   }
 
   laden(z) {
@@ -812,6 +889,7 @@ export class Ausbau {
     this.betriebe = z.betriebe;
     for (const b of this.betriebe) b.stufe ??= 1;
     this.gebaeude = z.gebaeude ?? {};
+    this.speicher = z.speicher ?? {};
     this.wendeKapazitaetAn();
     this.wendeGebaeudeAn();
   }

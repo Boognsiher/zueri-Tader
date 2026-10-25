@@ -23,9 +23,11 @@ function aufbereiten(roh) {
 
   const waren = {};
   const gruppen = {};
+  const jahreszeit = {}; // Ware -> 12 Monatsfaktoren auf die Produktion
   for (const [name, eintrag] of Object.entries(roh.goods.waren)) {
     waren[name] = eintrag.basispreis;
     gruppen[name] = eintrag.gruppe;
+    if (eintrag.jahreszeit) jahreszeit[name] = eintrag.jahreszeit;
   }
 
   const seeteil = {};
@@ -48,6 +50,7 @@ function aufbereiten(roh) {
     p,
     waren,
     gruppen,
+    jahreszeit,
     rezepte: roh.recipes.rezepte,
     verbrauch: roh.consumption.verbrauch_pro_1000_einwohner_und_tag,
     grundbedarf: roh.consumption.grundbedarf,

@@ -834,12 +834,21 @@ export class Oberflaeche {
       const stufe = a.gebaeudeStufe(stadt, t.id);
       const grund = a.pruefeGebaeude(stadt, t.id);
       html += `<li class="betrieb ${stufe ? "eigen" : ""}"><div class="betriebkopf"><b>${esc(t.name)}</b> <span class="stufe">${stufe ? `Stufe ${stufe}/${max}` : "nicht gebaut"}</span> <span class="klein">Unterhalt ${t.unterhalt} Gulden pro Tag und Stufe</span></div>
-        <div class="betriebinfo">${esc(t.text)}</div>
+        <div class="betriebinfo">${esc(t.text)}</div>${t.wirkung === "speicher" && stufe ? this.speicherZeile(stadt, t) : ""}
         <div class="betriebknoepfe">${stufe < max ? this.knopf(`data-gebaeude="${t.id}"`, `${stufe ? `ausbauen auf Stufe ${stufe + 1}` : "bauen"}: ${esc(this.kostentext(t.baukosten.gulden, t.baukosten))}`, grund, !stufe) : ""}
         ${stufe ? this.knopf(`data-gebaeude-rueckbau="${t.id}"`, `${stufe > 1 ? `zurückbauen auf Stufe ${stufe - 1}` : "abreissen"}: ${f(a.erstattung(t.baukosten.gulden))} Gulden zurück`, a.pruefeGebaeudeRueckbau(stadt, t.id)) : ""}</div></li>`;
     }
     html += `</ul><p class="ohnemarkt">Baumaterial muss im Kontor oder in einem deiner Schiffe hier liegen. Rohstoffbetriebe gehen nur, wo die Stadt den Rohstoff hat.</p>`;
     return html;
+  }
+
+  // Kornspeicher: Vorrat und was er gerade tut (Erntezeit, Winter)
+  speicherZeile(stadt, t) {
+    const a = this.spiel.ausbau;
+    const p = a.speicherBestand(stadt, t);
+    const faktor = this.spiel.welt.saison(t.ware);
+    const tut = faktor > 1 ? "Erntezeit: kauft ein" : `verkauft bis zur nächsten Ernte, noch ${a.tageBisErnte(t.ware)} Tage`;
+    return `<div class="betriebinfo"><b>Vorrat:</b> ${f(p?.menge ?? 0)} von ${f(a.speicherKapazitaet(stadt, t))} ${esc(t.ware)}${p?.menge >= 1 ? ` (Einstand ${f(p.einstand)})` : ""} · ${tut}</div>`;
   }
 
   // Werft: neue Schiffe (nur in Werftstädten), gebrauchte Angebote, eigene Schiffe verkaufen

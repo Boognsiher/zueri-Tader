@@ -360,7 +360,8 @@ if (abschnitt("Automatischer Handel")) {
   starteRoute(rk, s6, [{ stadt: "Horgen", auftraege: [{ art: "kaufen", ware: "Holz", menge: 50, preis: null }] }, { stadt: "Zürich", auftraege: [] }]);
   pruefe("Route: «kaufen» nimmt zuerst aus dem Kontor, den Rest am Markt", s6.ladung.Holz?.menge === 50 && !rk.ausbau.kontor(h2).lager.Holz && gulden0 - rk.gulden < 50 * 40);
 
-  // Kontore auffüllen: Das Kontor in Wädenswil kauft nicht selbst (Höchstpreis 1), das Schiff bringt Holz bis 80
+  // Kontore auffüllen: Das Kontor in Wädenswil kauft nicht selbst (Höchstpreis 1), das Schiff bringt Holz bis 80.
+  // 60 Tage: Seit der Spezialisierung (25.10.2026) liegt Holz nicht mehr in Lachen, die erste Lieferung dauert länger
   for (const an of [false, true]) {
     const af = new Spiel(D, 5);
     af.gulden = 40000;
@@ -368,7 +369,7 @@ if (abschnitt("Automatischer Handel")) {
     af.ausbau.kontore["Wädenswil"] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
     af.ausbau.setzeRegel(wd, "Holz", { kaufenBis: 80, kaufPreis: 1 });
     starteFrei(af, af.schiffe[0], 5000, { auffuellen: an });
-    for (let t = 0; t < 40; t++) af.tagVoran();
+    for (let t = 0; t < 60; t++) af.tagVoran();
     const holz = af.ausbau.kontor(wd).lager.Holz?.menge ?? 0;
     if (an) pruefe(`Freier Handel mit «Kontore auffüllen» beliefert das Kontor (${holz} von 80 Holz)`, holz === 80);
     else pruefe("Ohne «Kontore auffüllen» liefert der freie Handel nichts ins Kontor", holz === 0);
@@ -1385,6 +1386,63 @@ if (abschnitt("Epochen")) {
     w2.tagNull = w2.tag - Math.round((350 * 365.25) / D.kalender);
     return w2.kurve("ki_fracht") > 5 && w2.kurve("ki_tempo") > 2.5;
   })());
+}
+
+// --- 22. Jahreszeiten und Kornspeicher ---------------------------------------
+// Setzt den Kalender der Welt auf einen Bruchteil des Jahres (0 = 1. Januar)
+function inMonat(welt, bruchteil) {
+  const jetzt = welt.jahr() % 1;
+  const tage = Math.round((((bruchteil - jetzt + 1) % 1) * 365.25) / welt.D.kalender);
+  welt.tagNull -= tage;
+  return welt;
+}
+if (abschnitt("Jahreszeiten und Kornspeicher")) {
+  // Korn: am Ende des Winters knapp und teurer als nach der Ernte (über drei Jahre gemittelt). Die Vorräte
+  // sinken von Januar bis Mai (Faktor unter 1) und sind im Frühsommer am kleinsten, im Herbst am grössten.
+  const w = new Welt(D, 4);
+  const preise = { winter: [], sommer: [] };
+  const zuerichsee = w.staedte.filter((s) => s.zone === "zuerichsee");
+  for (let t = 0; t < 60 + 3 * 92; t++) {
+    w.naechsterTag();
+    if (t < 60) continue;
+    const monat = Math.floor((w.jahr() % 1) * 12);
+    const p = zuerichsee.reduce((a, s) => a + s.mittelpreis("Korn") / s.basispreis("Korn"), 0) / zuerichsee.length;
+    if (monat >= 3 && monat <= 5) preise.winter.push(p);
+    if (monat >= 8 && monat <= 10) preise.sommer.push(p);
+  }
+  const mittel = (l) => l.reduce((a, b) => a + b, 0) / l.length;
+  pruefe(`Korn ist vor der Ernte (April bis Juni) teurer als danach (${(100 * mittel(preise.winter)).toFixed(0)} % gegen ${(100 * mittel(preise.sommer)).toFixed(0)} % vom Grundpreis)`, mittel(preise.winter) > mittel(preise.sommer) * 1.1);
+  pruefe("Waren ohne Jahreszeit produzieren gleichmässig", w.saison("Holz") === 1);
+
+  // Kornspeicher: kauft in der Erntezeit, verkauft im Winter, gibt beim Abriss den Rest an den Markt
+  const spiel = ohneRisiko(new Spiel(D, 23));
+  const a = spiel.ausbau;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  const t = a.gebaeudetypen.kornspeicher;
+  spiel.gulden = 100000;
+  for (let i = 0; i < 5; i++) spiel.tagVoran();
+  a.gebaeude["Zürich"] = { kornspeicher: 1 };
+  inMonat(spiel.welt, 7.5 / 12);
+  zuerich.bestand.Korn = zuerich.ziel.Korn * 2; // reichlich Korn nach der Ernte
+  const geld0 = spiel.gulden;
+  for (let i = 0; i < 5; i++) spiel.tagVoran();
+  const vorrat = a.speicherBestand(zuerich, t);
+  pruefe(`In der Erntezeit kauft der Speicher Korn (${vorrat?.menge.toFixed(0)} Korn, Einstand ${vorrat?.einstand.toFixed(1)})`, vorrat?.menge > 0 && spiel.gulden < geld0 && vorrat.einstand <= zuerich.basispreis("Korn") * t.kauf_bis_preisfaktor * (1 + D.p.SPREAD));
+  pruefe("Der Speicher läuft nicht über", vorrat.menge <= a.speicherKapazitaet(zuerich, t));
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Speichern und Laden behält den Vorrat", Math.abs(geladen.ausbau.speicherBestand(zuerich, t).menge - vorrat.menge) < 1e-9);
+  inMonat(spiel.welt, 0.5 / 12);
+  pruefe(`Im Januar dauert es noch ${a.tageBisErnte("Korn")} Spieltage bis zur Ernte`, a.tageBisErnte("Korn") > 5);
+  zuerich.bestand.Korn = zuerich.ziel.Korn * 0.4; // Winter: Korn ist knapp
+  const imWinter = vorrat.menge;
+  const geld1 = spiel.gulden;
+  spiel.tagVoran();
+  pruefe(`Im Winter verkauft der Speicher verteilt bis zur Ernte (${(imWinter - vorrat.menge).toFixed(0)} von ${imWinter.toFixed(0)} Korn am ersten Tag)`, vorrat.menge < imWinter && imWinter - vorrat.menge <= Math.ceil(imWinter / 5) + 1);
+  pruefe("Der Verkauf bringt Geld", spiel.gulden > geld1 - 200);
+  const rest = vorrat.menge;
+  const geld2 = spiel.gulden;
+  pruefe("Kornspeicher abreissen", a.gebaeudeZurueckbauen(zuerich, "kornspeicher"));
+  pruefe(`Beim Abriss geht der Vorrat an den Markt (${rest.toFixed(0)} Korn)`, !a.speicherBestand(zuerich, t) && spiel.gulden > geld2 + rest * zuerich.basispreis("Korn") * 0.3);
 }
 
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");

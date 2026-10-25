@@ -54,6 +54,8 @@ ZONEN = {}        # Zone -> {Ware: Preisfaktor} (zonen.json)
 ZONEN_ART = {}    # Zone -> see, fluss oder land (zonen.json)
 KURVEN = {}       # Epochenkurven (epochen.json)
 KALENDER = 1      # Kalendertage pro Spieltag (epochen.json)
+JAHRESZEIT = {}   # Ware -> 12 Monatsfaktoren auf die Produktion (goods.json)
+SAISON = {}       # Ware -> Faktor im aktuellen Monat
 EP_FRACHT = 1.0   # Laderaum der KI-Schiffe heute (ki_fracht)
 EP_TEMPO = 1.0    # Tempo der KI-Schiffe heute (ki_tempo)
 EP_NETZ = 1.0     # Tempo in Landzonen heute (netz_tempo)
@@ -68,8 +70,9 @@ def _read(data_dir, name):
 
 def load_data(data_dir=DEFAULT_DATA_DIR):
     """Liest data/*.json in die Modulvariablen."""
-    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN, ZONEN, ZONEN_ART, KURVEN, KALENDER
+    global GOODS, RECIPES, CONSUMPTION, BASIC, COMFORT, CITIES, EVENTS, DISTANZEN, ZONEN, ZONEN_ART, KURVEN, KALENDER, JAHRESZEIT
     GOODS = {n: v["basispreis"] for n, v in _read(data_dir, "goods.json")["waren"].items()}
+    JAHRESZEIT = {n: v["jahreszeit"] for n, v in _read(data_dir, "goods.json")["waren"].items() if "jahreszeit" in v}
     RECIPES = _read(data_dir, "recipes.json")["rezepte"]
     c = _read(data_dir, "consumption.json")
     CONSUMPTION = c["verbrauch_pro_1000_einwohner_und_tag"]
@@ -200,7 +203,7 @@ class City:
         f = self.scale()
         # Produktion / Import (waechst mit der Bevoelkerung: mehr Arbeitskraefte)
         for g, a in self.prod.items():
-            q = a * f * self._mult(self.prod_mult, g, day)
+            q = a * f * self._mult(self.prod_mult, g, day) * SAISON.get(g, 1.0)
             self.stock[g] += q
             stats.produced[g] += q
         # Werkstaetten
@@ -455,8 +458,10 @@ def ai_target(cities, args, zone):
 
 
 def set_epoch(cities, year):
-    """Epochenfaktoren fuer das Jahr setzen (wohnraum, ki_fracht, ki_tempo)."""
-    global EP_FRACHT, EP_TEMPO, EP_NETZ
+    """Epochenfaktoren fuer das Jahr setzen (wohnraum, ki_fracht, ki_tempo) und die Jahreszeit."""
+    global EP_FRACHT, EP_TEMPO, EP_NETZ, SAISON
+    monat = int((year % 1) * 12) % 12
+    SAISON = {g: f[monat] for g, f in JAHRESZEIT.items()}
     EP_FRACHT = kurve("ki_fracht", year)
     EP_TEMPO = kurve("ki_tempo", year)
     EP_NETZ = kurve("netz_tempo", year)
