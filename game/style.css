@@ -475,7 +475,14 @@ button.klein { font-size: 0.85rem; padding: 0.05em 0.5em; }
 
 /* --- Flotte: Automatik-Symbol, Werft ------------------------------------------- */
 .schiffzeile { display: flex; align-items: stretch; gap: 0.3rem; }
-.schiffzeile .schiff { flex: 1; }
+.schiffzeile .schiff { flex: 1; min-width: 0; }
+/* Jede Angabe unter dem Schiff genau eine Zeile (zu lang: abgeschnitten, ganzer Text als Tooltip),
+   damit die Flottenliste nicht springt, wenn sich Status oder Ladung ändern */
+.schiff .status, .schiff .modus, .schiff .ladung, .schiff .kampfwerte, .schiff .kapitaen, .schiff .mitglieder {
+  grid-column: 1 / -1; display: block; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
+.schiff { grid-template-columns: minmax(0, 1fr) auto; }
+.schiff .schiffsname { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .autosymbol { display: flex; align-items: center; justify-content: center; width: 1.9rem; flex: none; border-radius: 4px; font-size: 1.05rem; color: var(--gruen); border: 1px solid var(--rand); background: var(--papier); }
 button.autosymbol.pausiert { color: #fff6e8; background: linear-gradient(#4f8a55, #2f6a35); border-color: #24522a; padding: 0; }
 .modus.pausiert { color: var(--tinte-blass); }

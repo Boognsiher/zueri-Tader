@@ -341,9 +341,9 @@ export class Oberflaeche {
         <span class="laderaum">${s.ladungsmenge(schiff)} / ${s.laderaum(schiff)}</span>
         ${this.kampfzeile(schiff)}
         ${this.kapitaenzeile(schiff)}
-        <span class="status">${this.status(schiff)}</span>
-        ${schiff.auto ? `<span class="modus ${schiff.auto.pausiert ? "pausiert" : ""}">${schiff.auto.pausiert ? "pausiert: " : ""}${esc(this.modus(schiff))}</span>` : ""}
-        ${ladung ? `<span class="ladung">${ladung}</span>` : ""}
+        <span class="status" title="${this.status(schiff)}">${this.status(schiff)}</span>
+        ${schiff.auto ? `<span class="modus ${schiff.auto.pausiert ? "pausiert" : ""}" title="${esc(this.modus(schiff))}">${schiff.auto.pausiert ? "pausiert: " : ""}${esc(this.modus(schiff))}</span>` : ""}
+        <span class="ladung" title="${ladung}">${ladung || "leer"}</span>
       </button></li>`;
     }
     liste += `</ul>`;
@@ -1166,9 +1166,9 @@ export class Oberflaeche {
     const s = this.spiel;
     const t = s.schiffstyp(schiff);
     const kd = s.kampf.daten(schiff);
-    if (!t.kampfschiff && kd.schaden <= 0) return "";
     const rumpf = Math.round(t.rumpf - kd.schaden);
-    return `<span class="kampfwerte">Kampfkraft ${t.kampfkraft} · Rumpf <span class="${kd.schaden > 0.5 * t.rumpf ? "minus" : ""}">${rumpf} / ${t.rumpf}</span>${kd.schaden > 0 ? (s.imHafen(schiff) && !s.diplomatie.hafenGesperrt(schiff.ort) ? " · wird repariert" : " · Reparatur im Hafen") : ""}</span>`;
+    // Immer eine Zeile, auch ohne Schaden: So springt die Flottenliste nicht, wenn ein Schiff Schaden nimmt
+    return `<span class="kampfwerte">${t.kampfschiff ? `Kampfkraft ${t.kampfkraft} · ` : ""}Rumpf <span class="${kd.schaden > 0.5 * t.rumpf ? "minus" : ""}">${rumpf} / ${t.rumpf}</span>${kd.schaden > 0 ? (s.imHafen(schiff) && !s.diplomatie.hafenGesperrt(schiff.ort) ? " · wird repariert" : " · Reparatur im Hafen") : ""}</span>`;
   }
 
   // --- Gefechtsbericht (statische Ansicht) ----------------------------------------------
