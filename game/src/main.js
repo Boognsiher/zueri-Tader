@@ -264,10 +264,11 @@ async function start() {
         neuerTag = true;
       }
       if (!ankuenfte.length) ankuenfte = selbst(spiel.vorruecken(vorrat / dauer));
-      if (ankuenfte.length && $("anhalten").checked) {
-        // Im Hafen hält das Handelsfenster die Zeit an und setzt sie beim Schliessen fort
-        if (!ankuenfte[0].ort) setzeTempo(0);
-        ui.angekommen(ankuenfte[0]);
+      // Angehalten wird nur im Hafen: Das Handelsfenster hält die Zeit an und setzt sie beim Schliessen fort.
+      // Ein Zielpunkt auf dem See hält die Zeit nicht an.
+      const imHafen = ankuenfte.find((s) => s.ort);
+      if (imHafen && $("anhalten").checked) {
+        ui.angekommen(imHafen);
       } else if (ankuenfte.length || neuerTag) {
         ui.aktualisiere();
       }
