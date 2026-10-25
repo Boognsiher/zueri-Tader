@@ -224,13 +224,13 @@ if (abschnitt("Betriebe und Kontor")) {
   const a = spiel.ausbau;
   const schiff = spiel.schiffe[0];
   const zuerich = spiel.welt.stadt["Zürich"];
-  spiel.gulden = 200000;
-  pruefe(`Jede Stadt hat vorhandene Betriebe (${a.betriebe.length} insgesamt)`, spiel.welt.staedte.every((s) => a.betriebeIn(s).length > 0));
+  spiel.gulden = 1e6; // die Mehrheit an einem Stammbetrieb kostet viel
+  pruefe(`Jede Stadt hat Stammbetriebe (${a.betriebe.length} insgesamt)`, spiel.welt.staedte.every((s) => a.betriebeIn(s).length > 0));
 
   const seidenhof = a.betriebeIn(zuerich).find((b) => b.typ === "seidenhandel");
   const seideVorher = zuerich.prod.Rohseide;
   pruefe("Seidenhandel in Zürich kaufen", a.kaufen(seidenhof));
-  pruefe(`Stadtproduktion Rohseide sinkt um die Leistung (${seideVorher} -> ${zuerich.prod.Rohseide})`, zuerich.prod.Rohseide === seideVorher - a.typ(seidenhof).leistung);
+  pruefe(`Stadtproduktion Rohseide sinkt um die Leistung des Stammbetriebs (${seideVorher} -> ${zuerich.prod.Rohseide ?? 0})`, (zuerich.prod.Rohseide ?? 0) === seideVorher - a.leistung(seidenhof));
   const geld = spiel.gulden;
   const lager = zuerich.bestand.Rohseide;
   spiel.tagVoran();
@@ -495,8 +495,12 @@ if (abschnitt("Eigenversorgung")) {
     s.ort = stadt;
     s.pos = [...stadt.pos];
     s.fahrt = null;
-    const b = sp.ausbau.betriebeIn(stadt).find((x) => x.typ === "trotte");
-    sp.ausbau.kaufen(b);
+    // Eine neu gebaute Trotte (der Stammbetrieb der Stadt ist ein Grossbetrieb mit Aktionären)
+    s.ladung.Holz = { menge: 40, einstand: 30 };
+    s.ladung.Werkzeug = { menge: 10, einstand: 120 };
+    const b = sp.ausbau.bauen(stadt, "trotte");
+    delete s.ladung.Holz;
+    delete s.ladung.Werkzeug;
     return { sp, s, stadt, b };
   }
   let kette = 0;
@@ -549,17 +553,21 @@ if (abschnitt("Stufen, Stadtgebäude, Kontorhandel")) {
   k.lager.Holz = { menge: 300, einstand: 30 };
   k.lager.Werkzeug = { menge: 100, einstand: 120 };
 
-  // Betrieb ausbauen: doppelte Leistung, Stadtproduktion unverändert
+  // Stammbetrieb ausbauen (erst mit allen Anteilen): jede Stufe bringt die Leistung eines Neubaus dazu,
+  // die Stadtproduktion bleibt unverändert
   const seidenhof = a.betriebeIn(zuerich).find((b) => b.typ === "seidenhandel");
   a.kaufen(seidenhof);
-  const seideStadt = zuerich.prod.Rohseide;
-  pruefe("Seidenhandel auf Stufe 2 ausbauen", a.betriebAusbauen(seidenhof) && seidenhof.stufe === 2);
-  pruefe(`Leistung verdoppelt (${a.leistung(seidenhof)} Rohseide pro Tag)`, a.leistung(seidenhof) === 2 * a.typ(seidenhof).leistung);
-  pruefe("Ausbau verändert die Stadtproduktion nicht", zuerich.prod.Rohseide === seideStadt);
+  pruefe("Mit der Mehrheit, aber ohne alle Anteile kein Ausbau", a.pruefeBetriebsausbau(seidenhof) !== null);
+  while (seidenhof.anteil < 1 && a.kaufeAnteil(seidenhof, a.naechsterVerkaeufer(seidenhof)));
+  const seideStadt = zuerich.prod.Rohseide ?? 0;
+  const grund = a.leistung(seidenhof);
+  pruefe("Seidenhandel mit allen Anteilen auf Stufe 2 ausbauen", seidenhof.anteil === 1 && a.betriebAusbauen(seidenhof) && seidenhof.stufe === 2);
+  pruefe(`Leistung steigt um einen Neubau (${grund} -> ${a.leistung(seidenhof)} Rohseide pro Tag)`, a.leistung(seidenhof) === grund + a.typ(seidenhof).leistung);
+  pruefe("Ausbau verändert die Stadtproduktion nicht", (zuerich.prod.Rohseide ?? 0) === seideStadt);
   a.betriebAusbauen(seidenhof);
   pruefe("Höchste Stufe ist 3", seidenhof.stufe === 3 && a.pruefeBetriebsausbau(seidenhof) !== null);
   a.verkaufen(seidenhof);
-  pruefe("Verkauf an die Stadt: Grundleistung plus zwei Ausbaustufen produziert die Stadt", zuerich.prod.Rohseide === seideStadt + 3 * a.typ(seidenhof).leistung);
+  pruefe("Alle Anteile verkauft: Grundleistung plus zwei Ausbaustufen produziert die Stadt", zuerich.prod.Rohseide === seideStadt + grund + 2 * a.typ(seidenhof).leistung);
 
   // Kontor ausbauen
   const kapazitaet = a.lagerKapazitaet(k);
@@ -743,9 +751,13 @@ if (abschnitt("Versorgen")) {
   }
   // Rapperswil: Seidenhandel liefert Rohseide ins Kontor; Zürich: Seidenweberei aus dem Kontor
   const handel = a.betriebeIn(rapperswil).find((b) => b.typ === "seidenhandel");
-  const weberei = a.betriebeIn(zuerich).find((b) => b.typ === "seidenweberei");
+  // Zürich: eine neu gebaute Weberei (der Stammbetrieb wäre für ein Schiff viel zu gross)
+  a.kontor(zuerich).lager.Holz = { menge: 100, einstand: 30 };
+  a.kontor(zuerich).lager.Werkzeug = { menge: 20, einstand: 120 };
+  schiff.ort = zuerich;
+  schiff.pos = [...zuerich.pos];
+  const weberei = a.bauen(zuerich, "seidenweberei");
   a.kaufen(handel);
-  a.kaufen(weberei);
   a.setzeZiel(handel, "kontor");
   a.setzeZiel(weberei, "kontor");
   pruefe("Versorgen braucht zwei Städte mit Kontor", starteVersorgung(spiel, schiff, ["Zürich", "Meilen"]) !== null);
@@ -1484,6 +1496,47 @@ if (abschnitt("Stadtspeicher")) {
   Object.assign(schiff, { ort: horgen, pos: [...horgen.pos], fahrt: null });
   a.gebaeudeZurueckbauen(horgen, "stadtspeicher");
   pruefe("Rückbau: Was nicht mehr in die Reserve passt, geht an den Markt", Math.abs(horgen.reserve.Korn - horgen.reserveKapazitaet("Korn")) < 1e-6 && horgen.bestand.Korn > markt);
+}
+
+// --- 22d. Aktien der Stammbetriebe ---------------------------------------------
+if (abschnitt("Aktien")) {
+  const spiel = ohneRisiko(new Spiel(D, 43));
+  const a = spiel.ausbau;
+  const ak = D.aktien;
+  const horgen = spiel.welt.stadt["Horgen"];
+  const schiff = spiel.schiffe[0];
+  Object.assign(schiff, { ort: horgen, pos: [...horgen.pos], fahrt: null });
+  spiel.gulden = 1e7;
+  const b = a.betriebeIn(horgen).find((x) => x.typ === "kornhof");
+  const neu = a.typen.kornhof.leistung;
+  pruefe(`Der Stammbetrieb produziert die ganze Stadtproduktion (${a.leistung(b)} Korn gegen ${neu} bei einem Neubau)`, a.leistung(b) === D.staedte.find((s) => s.name === "Horgen").prod.Korn && a.leistung(b) > neu);
+  const stand = a.standVon(b);
+  const haeuser = Object.keys(b.aktionaere).filter((id) => id !== stand);
+  pruefe(`Aktionäre: ${a.inhaberName(stand)} ${ak.stand_anteil * 100} %, ${haeuser.map((h) => a.inhaberName(h)).join(" und ")}`, b.aktionaere[stand] === ak.stand_anteil && haeuser.length === 2);
+  const p1 = a.anteilPreis(b, haeuser[0]);
+  pruefe("Anteil von einem Handelshaus kaufen", a.kaufeAnteil(b, haeuser[0]) && b.anteil === ak.schritt && b.besitzer !== "spieler");
+  pruefe(`Das Handelshaus verlangt beim nächsten Mal mehr (${p1} -> ${a.anteilPreis(b, haeuser[0])})`, a.anteilPreis(b, haeuser[0]) > p1);
+  const g0 = spiel.gulden;
+  spiel.tagVoran();
+  pruefe(`Minderheit: Dividende ${(b.dividende ?? 0).toFixed(0)} Gulden am Tag (${ak.schritt * 100} % des Gewinns)`, b.dividende > 0 && Math.abs(b.dividende - ak.schritt * Math.max(0, a.ertrag(b))) < b.dividende * 0.5 && spiel.konten.gesamt.dividenden > 0);
+  // Feindliche Übernahme: Mehrheit nur von Handelshäusern
+  const ruf0 = spiel.diplomatie.ruf[stand];
+  while (b.besitzer !== "spieler" && haeuser.some((h) => a.kaufeAnteil(b, h)));
+  pruefe(`Mehrheit ohne den Stand: feindliche Übernahme, Ruf ${ruf0} -> ${spiel.diplomatie.ruf[stand]}`, b.besitzer === "spieler" && b.anteil >= ak.kontrolle_ab && spiel.diplomatie.ruf[stand] === ruf0 + ak.feindlich_ruf);
+  spiel.tagVoran();
+  pruefe(`Mit Mehrheit: Die Mitaktionäre bekommen ihren Teil (${b.gestern.abgabe.toFixed(0)} Gulden)`, b.gestern.abgabe > 0);
+  pruefe("Ausbauen erst mit allen Anteilen", String(a.pruefeBetriebsausbau(b)).includes("allen Anteilen"));
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  const gb = geladen.ausbau.betriebe.find((x) => x.nr === b.nr);
+  pruefe("Speichern und Laden behält Anteile und Aktionäre", gb.anteil === b.anteil && JSON.stringify(gb.aktionaere) === JSON.stringify(b.aktionaere) && gb.besitzer === "spieler");
+  // Verkaufen bis unter die Mehrheit: Kontrolle weg
+  const prod0 = horgen.prod.Korn ?? 0;
+  while (b.anteil >= ak.kontrolle_ab) a.verkaufeAnteil(b);
+  pruefe(`Unter ${ak.kontrolle_ab * 100} %: Der Betrieb geht zurück, die Stadt produziert wieder (${prod0} -> ${horgen.prod.Korn})`, b.besitzer === "stadt" && horgen.prod.Korn === prod0 + a.leistung(b));
+  // Ein feindlicher Stand verkauft nicht
+  const b2 = a.betriebeIn(horgen).find((x) => x !== b);
+  spiel.diplomatie.ruf[stand] = D.fraktionen.ruf.feindlich;
+  pruefe("Ein feindlicher Stand verkauft keine Anteile", String(a.pruefeAnteilKauf(b2, stand)).includes("feindlich"));
 }
 
 // --- 22c. Obergrenzen nach Rang: Schiffe hart, Kontore immer teurer ----------

@@ -36,6 +36,11 @@ function entnimm(lager, g, menge) {
   if (p.menge <= 1e-9) delete lager[g];
 }
 
+// Anteil in Prozent für Meldungen (0.1 -> "10")
+function f100(x) {
+  return String(Math.round(x * 100));
+}
+
 function ohneGulden(kosten) {
   const material = { ...kosten };
   delete material.gulden;
@@ -53,14 +58,29 @@ export class Ausbau {
     this.kontore = {}; // Stadtname -> { stufe, lager: { Ware: {menge, einstand} }, regeln: { Ware: Regel } }
     this.gebaeude = {}; // Stadtname -> { Gebäude-ID: Stufe }
     this.speicher = {}; // Stadtname -> { Ware: {menge, einstand} } (Kornspeicher)
+    this.aktien = spiel.D.aktien;
     this.betriebe = [];
+    // Stammbetriebe: je Stadt und Ware einer mit der ganzen Stadtproduktion, im Besitz von Stand und Handelshäusern
     for (const cfg of this.D.staedte) {
       for (const t of this.bau.betriebe) {
         const menge = (t.art === "produktion" ? cfg.prod : cfg.werk)[t.ware] || 0;
-        const n = Math.min(this.bau.vorhandene_betriebe_pro_ware, Math.floor(menge / t.leistung));
-        for (let i = 0; i < n; i++) this.betriebe.push(neuerBetrieb(this.betriebe.length + 1, t.id, cfg.name, false));
+        if (menge > 0) this.betriebe.push(this.neuerStammbetrieb(this.betriebe.length + 1, t, cfg.name, menge));
       }
     }
+  }
+
+  neuerStammbetrieb(nr, t, stadtName, menge) {
+    const b = neuerBetrieb(nr, t.id, stadtName, false);
+    const haeuser = this.aktien.handelshaeuser;
+    const h1 = haeuser[(nr * 3) % haeuser.length].id;
+    let h2 = haeuser[(nr * 7 + 1) % haeuser.length].id;
+    if (h2 === h1) h2 = haeuser[(nr * 3 + 1) % haeuser.length].id;
+    const rest = (1 - this.aktien.stand_anteil) / 2;
+    b.grund = menge; // Grundleistung: die ganze Stadtproduktion dieser Ware
+    b.anteil = 0; // Anteil des Spielers
+    b.aktionaere = { [this.D.fraktionen.stadt[stadtName]]: this.aktien.stand_anteil, [h1]: rest, [h2]: rest };
+    b.verkauft = {}; // Schritte, die ein Aktionär schon an den Spieler verkauft hat
+    return b;
   }
 
   // --- Werte ------------------------------------------------------------------
@@ -68,14 +88,22 @@ export class Ausbau {
     return this.typen[b.typ ?? b];
   }
 
+  // Grundleistung (Stammbetrieb: die ganze Stadtproduktion) plus je Ausbaustufe die Leistung eines Neubaus
   leistung(b) {
-    return this.typ(b).leistung * (b.stufe ?? 1);
+    const t = this.typ(b);
+    return (b.grund ?? t.leistung) + t.leistung * ((b.stufe ?? 1) - 1);
   }
 
-  // Unterhalt eines Betriebs pro Tag, mit Nachlass durch ein Zunfthaus
+  // Unterhalt eines Betriebs pro Tag (wächst mit der Leistung), mit Nachlass durch ein Zunfthaus
   unterhalt(b) {
+    const t = this.typ(b);
     const rabatt = this.gebaeudeWirkung(b.stadt, "betriebsunterhalt");
-    return this.typ(b).unterhalt * (b.stufe ?? 1) * Math.max(0, 1 - rabatt);
+    return t.unterhalt * (this.leistung(b) / t.leistung) * Math.max(0, 1 - rabatt);
+  }
+
+  // Stammbetrieb einer Stadt (mit Aktien), nicht neu gebaut
+  istStamm(b) {
+    return !b.gebaut && b.grund != null;
   }
 
   // Erwarteter Tagesgewinn einer Stufe nach Unterhalt bei Versorgung über den Markt der Stadt,
@@ -127,8 +155,9 @@ export class Ausbau {
     return Math.max(this.bau.mindestwert, Math.round(roh / 100) * 100);
   }
 
-  // Erlös beim Verkauf an die Stadt, alle Stufen zusammen
+  // Erlös beim Verkauf: Stammbetrieb alle eigenen Anteile, Neubau an die Stadt (alle Stufen zusammen)
   verkaufserloes(b) {
+    if (this.istStamm(b)) return Math.round((b.anteil / this.aktien.schritt) * this.anteilErloes(b));
     const stadt = this.spiel.welt.stadt[b.stadt];
     return Math.round((this.wert(b.typ, stadt) * (b.stufe ?? 1) * this.bau.verkaufserloes_anteil) / 100) * 100;
   }
@@ -169,7 +198,7 @@ export class Ausbau {
         const t = this.typ(b);
         const tabelle = t.art === "produktion" ? prod : werk;
         const stufe = b.stufe ?? 1;
-        if (b.besitzer === "spieler" && !b.gebaut) tabelle[t.ware] -= t.leistung;
+        if (b.besitzer === "spieler" && !b.gebaut) tabelle[t.ware] -= b.grund ?? t.leistung;
         if (b.besitzer === "stadt") tabelle[t.ware] = (tabelle[t.ware] || 0) + t.leistung * (b.gebaut ? stufe : stufe - 1);
       }
       for (const tabelle of [prod, werk]) for (const g of Object.keys(tabelle)) if (tabelle[g] <= 1e-9) delete tabelle[g];
@@ -282,36 +311,154 @@ export class Ausbau {
     this.spiel.buche("bauten", -gulden);
   }
 
-  // --- Betriebe ----------------------------------------------------------------
-  pruefeKauf(b) {
+  // --- Aktien der Stammbetriebe (data/aktien.json) -------------------------------------
+  // Tagesgewinn eines Betriebs mit seiner ganzen Leistung: zu heutigen Marktpreisen der Stadt (mit
+  // Handelsspanne) oder zu Grundpreisen (ohne)
+  // menge: tatsächlich hergestellte Menge (Standard: volle Leistung)
+  ertrag(b, grundpreise = false, menge = this.leistung(b)) {
+    const t = this.typ(b);
     const stadt = this.spiel.welt.stadt[b.stadt];
-    if (b.besitzer === "spieler") return "Gehört dir schon.";
+    const s = this.D.p.SPREAD / 2;
+    const markt = (g) => !grundpreise && stadt.handelt(g);
+    const verkauf = (g) => (markt(g) ? stadt.verkaufspreis(g) : this.D.waren[g] * (grundpreise ? 1 : 1 - s));
+    const kauf = (g) => (markt(g) ? stadt.kaufpreis(g) : this.D.waren[g] * (grundpreise ? 1 : 1 + s));
+    let brutto = verkauf(t.ware);
+    if (t.art === "werkstatt") for (const [z, m] of Object.entries(this.D.rezepte[t.ware])) brutto -= kauf(z) * m;
+    return menge * brutto - this.unterhalt(b);
+  }
+
+  // Gesamtwert (100 %) eines Stammbetriebs
+  gesamtwert(b) {
+    const roh = Math.max(this.ertrag(b), this.ertrag(b, true)) * this.aktien.kurs_tage;
+    return Math.max(this.bau.mindestwert, Math.round(roh / 100) * 100);
+  }
+
+  standVon(b) {
+    return this.D.fraktionen.stadt[b.stadt];
+  }
+
+  inhaberName(id) {
+    return this.aktien.handelshaeuser.find((h) => h.id === id)?.name ?? this.spiel.diplomatie.fraktion(id)?.name ?? id;
+  }
+
+  // Preis eines Schritts (10 %) von einem Aktionär
+  anteilPreis(b, inhaber) {
+    const a = this.aktien;
+    let faktor;
+    if (inhaber === this.standVon(b)) faktor = 1 - (this.spiel.diplomatie.ruf[inhaber] ?? 0) / a.stand_ruf_teiler;
+    else faktor = 1 + a.haus_aufschlag * (b.verkauft?.[inhaber] ?? 0);
+    return Math.round((a.schritt * this.gesamtwert(b) * faktor) / 10) * 10;
+  }
+
+  pruefeAnteilKauf(b, inhaber) {
+    const stadt = this.spiel.welt.stadt[b.stadt];
+    if (!this.istStamm(b)) return "Neu gebaute Betriebe gehören dir ganz.";
+    if ((b.aktionaere?.[inhaber] ?? 0) < this.aktien.schritt - 1e-9) return "Dieser Aktionär hat keine Anteile mehr.";
     if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
-    if (this.spiel.gulden < this.kaufpreisBetrieb(b)) return "Zu wenig Gulden.";
+    if (inhaber === this.standVon(b) && this.spiel.diplomatie.feindlich(inhaber)) return "Der Stand ist dir feindlich gesinnt und verkauft nicht.";
+    if (this.spiel.gulden < this.anteilPreis(b, inhaber)) return "Zu wenig Gulden.";
     return null;
   }
 
-  // Ein Stadtbetrieb kostet den Wert aller seiner Stufen
+  kaufeAnteil(b, inhaber) {
+    if (this.pruefeAnteilKauf(b, inhaber)) return false;
+    const a = this.aktien;
+    const preis = this.anteilPreis(b, inhaber);
+    this.spiel.gulden -= preis;
+    this.spiel.buche("betriebeKauf", -preis);
+    b.aktionaere[inhaber] -= a.schritt;
+    if (b.aktionaere[inhaber] < 1e-9) delete b.aktionaere[inhaber];
+    b.verkauft[inhaber] = (b.verkauft[inhaber] ?? 0) + 1;
+    if (inhaber === this.standVon(b)) b.vomStand = true;
+    b.anteil = Math.round((b.anteil + a.schritt) * 100) / 100;
+    b.kaufpreis = (b.kaufpreis ?? 0) + preis;
+    const name = this.typ(b).name;
+    if (b.besitzer !== "spieler" && b.anteil >= a.kontrolle_ab - 1e-9) {
+      b.besitzer = "spieler";
+      b.ziel = "markt";
+      b.gestern = null;
+      b.summe = 0;
+      this.wendeKapazitaetAn();
+      if (!b.vomStand) {
+        this.spiel.diplomatie.aendereRuf(this.standVon(b), a.feindlich_ruf);
+        this.spiel.melde(`Feindliche Übernahme: Du führst jetzt ${name} in ${b.stadt}. Der ${this.inhaberName(this.standVon(b))} ist verärgert (Ruf ${a.feindlich_ruf}).`, "warnung");
+      } else {
+        this.spiel.melde(`Du hast die Mehrheit an ${name} in ${b.stadt} und führst den Betrieb jetzt selbst.`, "gut");
+      }
+    } else {
+      this.spiel.melde(`${f100(a.schritt)} % von ${name} in ${b.stadt} von ${this.inhaberName(inhaber)} für ${preis} Gulden gekauft (jetzt ${f100(b.anteil)} %).`, "gut");
+    }
+    return true;
+  }
+
+  // Erlös für einen Schritt, verkauft an den Stand
+  anteilErloes(b) {
+    return Math.round((this.aktien.schritt * this.gesamtwert(b) * (1 - this.aktien.verkauf_abschlag)) / 10) * 10;
+  }
+
+  verkaufeAnteil(b) {
+    const a = this.aktien;
+    if (!this.istStamm(b) || b.anteil < a.schritt - 1e-9) return false;
+    const erloes = this.anteilErloes(b);
+    this.spiel.gulden += erloes;
+    this.spiel.buche("betriebeVerkauf", erloes);
+    const stand = this.standVon(b);
+    b.aktionaere[stand] = (b.aktionaere[stand] ?? 0) + a.schritt;
+    b.kaufpreis = (b.kaufpreis ?? 0) * (1 - a.schritt / b.anteil);
+    b.anteil = Math.round((b.anteil - a.schritt) * 100) / 100;
+    if (b.besitzer === "spieler" && b.anteil < a.kontrolle_ab - 1e-9) {
+      b.besitzer = "stadt";
+      b.ziel = "markt";
+      b.gestern = null;
+      this.wendeKapazitaetAn();
+      this.spiel.melde(`${this.typ(b).name} in ${b.stadt}: Du hast die Mehrheit abgegeben.`);
+    }
+    return true;
+  }
+
+  // Bequem (Tests, Bot): Anteile kaufen, bis der Spieler die Mehrheit hat, zuerst beim Stand, dann beim
+  // günstigsten Handelshaus. Gibt true zurück, wenn der Spieler den Betrieb danach führt.
+  pruefeKauf(b) {
+    if (b.besitzer === "spieler") return "Gehört dir schon.";
+    if (!this.istStamm(b)) return "Gehört der Stadt.";
+    const inhaber = this.naechsterVerkaeufer(b);
+    return inhaber ? this.pruefeAnteilKauf(b, inhaber) : "Keine Anteile zu haben.";
+  }
+
+  naechsterVerkaeufer(b) {
+    const ids = Object.keys(b.aktionaere ?? {}).filter((id) => b.aktionaere[id] >= this.aktien.schritt - 1e-9);
+    const stand = this.standVon(b);
+    if (ids.includes(stand) && !this.spiel.diplomatie.feindlich(stand)) return stand;
+    return ids.filter((id) => id !== stand).sort((x, y) => this.anteilPreis(b, x) - this.anteilPreis(b, y))[0] ?? null;
+  }
+
+  // Preis bis zur Mehrheit (für Anzeige und Bot)
   kaufpreisBetrieb(b) {
-    return this.wert(b.typ, this.spiel.welt.stadt[b.stadt]) * (b.stufe ?? 1);
+    if (!this.istStamm(b)) return this.wert(b.typ, this.spiel.welt.stadt[b.stadt]) * (b.stufe ?? 1);
+    const schritte = Math.max(0, Math.ceil((this.aktien.kontrolle_ab - b.anteil) / this.aktien.schritt - 1e-9));
+    return schritte * this.aktien.schritt * this.gesamtwert(b);
   }
 
   kaufen(b) {
     if (this.pruefeKauf(b)) return false;
-    const preis = this.kaufpreisBetrieb(b);
-    this.spiel.gulden -= preis;
-    this.spiel.buche("betriebeKauf", -preis);
-    b.besitzer = "spieler";
-    b.ziel = "markt";
-    b.gestern = null;
-    b.kaufpreis = preis;
-    b.summe = 0;
-    this.wendeKapazitaetAn();
-    this.spiel.melde(`${this.typ(b).name} in ${b.stadt} für ${preis} Gulden gekauft.`, "gut");
-    return true;
+    while (b.besitzer !== "spieler") {
+      const inhaber = this.naechsterVerkaeufer(b);
+      if (!inhaber || !this.kaufeAnteil(b, inhaber)) break;
+    }
+    return b.besitzer === "spieler";
+  }
+
+  // Wert aller Anteile und eigenen Betriebe (Vermögen, Rang)
+  betriebswert() {
+    return this.betriebe.reduce((s, b) => s + (b.besitzer === "spieler" || b.anteil > 0 ? this.verkaufserloes(b) : 0), 0);
   }
 
   verkaufen(b) {
+    if (this.istStamm(b)) {
+      if (!(b.anteil > 0)) return false;
+      while (b.anteil >= this.aktien.schritt - 1e-9) this.verkaufeAnteil(b);
+      return true;
+    }
     if (b.besitzer !== "spieler") return false;
     const erloes = this.verkaufserloes(b);
     this.spiel.gulden += erloes;
@@ -334,6 +481,7 @@ export class Ausbau {
   pruefeBetriebsausbau(b) {
     const stadt = this.spiel.welt.stadt[b.stadt];
     if (b.besitzer !== "spieler") return "Nur eigene Betriebe lassen sich ausbauen.";
+    if (this.istStamm(b) && b.anteil < 1 - 1e-9) return "Ausbauen erst mit allen Anteilen.";
     if ((b.stufe ?? 1) >= this.bau.stufen_max) return "Höchste Stufe erreicht.";
     const k = this.baukosten(b.typ, stadt);
     return this.pruefeKosten(stadt, k.gulden, k.material);
@@ -391,7 +539,8 @@ export class Ausbau {
   pruefeBetriebsrueckbau(b) {
     const stadt = this.spiel.welt.stadt[b.stadt];
     if (b.besitzer !== "spieler") return "Nur eigene Betriebe lassen sich zurückbauen.";
-    if ((b.stufe ?? 1) <= 1 && !b.gebaut) return "Ein gekaufter Betrieb lässt sich nicht abreissen, nur an die Stadt verkaufen.";
+    if ((b.stufe ?? 1) <= 1 && !b.gebaut) return "Ein Stammbetrieb der Stadt lässt sich nicht abreissen, nur seine Anteile verkaufen.";
+    if (this.istStamm(b) && b.anteil < 1 - 1e-9) return "Zurückbauen erst mit allen Anteilen.";
     if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
     return null;
   }
@@ -907,11 +1056,26 @@ export class Ausbau {
           b.verdorben = 0;
         }
       }
-      b.gestern = { menge, kasse };
+      // Mehrheit, aber nicht alle Anteile: Die übrigen Aktionäre bekommen ihren Anteil am Tagesgewinn zu
+      // Marktpreisen, gerechnet mit dem, was heute wirklich hergestellt wurde
+      const abgabe = this.istStamm(b) && b.anteil < 1 ? (1 - b.anteil) * Math.max(0, this.ertrag(b, false, menge)) : 0;
+      kasse -= abgabe;
+      b.gestern = { menge, kasse, abgabe };
       b.summe += kasse;
       kasseGesamt += kasse;
     }
     spiel.buche("betriebe", kasseGesamt);
+    // Dividenden aus Minderheitsanteilen: Anteil am Tagesgewinn zu Marktpreisen
+    let dividenden = 0;
+    for (const b of this.betriebe) {
+      if (b.besitzer === "spieler" || !(b.anteil > 0)) continue;
+      const d = b.anteil * Math.max(0, this.ertrag(b));
+      b.dividende = d;
+      b.summe += d;
+      dividenden += d;
+    }
+    spiel.gulden += dividenden;
+    spiel.buche("dividenden", dividenden);
     // Unterhalt der Kontore und Stadtgebäude
     let kontorUnterhalt = 0;
     Object.values(this.kontore).forEach((k, i) => (kontorUnterhalt += this.kontorUnterhalt(k, i + 1)));
@@ -929,7 +1093,7 @@ export class Ausbau {
 
   // --- Speichern ------------------------------------------------------------------
   zustand() {
-    return { kontore: this.kontore, betriebe: this.betriebe, gebaeude: this.gebaeude, speicher: this.speicher, sperrenInStueck: true };
+    return { kontore: this.kontore, betriebe: this.betriebe, gebaeude: this.gebaeude, speicher: this.speicher, sperrenInStueck: true, aktien: true };
   }
 
   laden(z) {
@@ -940,7 +1104,22 @@ export class Ausbau {
       k.regeln ??= {};
       k.sperren ??= {};
     }
-    this.betriebe = z.betriebe;
+    if (z.aktien) {
+      this.betriebe = z.betriebe;
+    } else {
+      // Spielstände vor den Aktien: Stammbetriebe neu anlegen, gekaufte Stadtbetriebe zum Kaufpreis erstatten,
+      // neu gebaute Betriebe behalten
+      let erstattet = 0;
+      for (const b of z.betriebe) if (!b.gebaut && b.besitzer === "spieler") erstattet += b.kaufpreis ?? 0;
+      const gebaut = z.betriebe.filter((b) => b.gebaut);
+      let nr = this.betriebe.length;
+      for (const b of gebaut) b.nr = ++nr;
+      this.betriebe = [...this.betriebe, ...gebaut];
+      if (erstattet > 0) {
+        this.spiel.gulden += erstattet;
+        this.spiel.melde(`Die Stadtbetriebe gehören jetzt Ständen und Handelshäusern, du kannst Anteile kaufen. Deine gekauften Betriebe wurden erstattet (${Math.round(erstattet)} Gulden).`, "ereignis");
+      }
+    }
     for (const b of this.betriebe) b.stufe ??= 1;
     // Spielstände vor den Sperren in Stück: Tage Bedarf der Werkstätten in Stück umrechnen
     if (!z.sperrenInStueck) {

@@ -1,0 +1,21 @@
+{
+  "_info": "Anteile an den Stammbetrieben der Städte (nur im Spiel, game/src/betriebe.js). Jede Stadt hat je Ware ihrer produktion und werkstaetten (cities.json) einen Stammbetrieb mit der ganzen Stadtproduktion dieser Ware: viel grösser als ein Neubau. Er gehört zu stand_anteil dem Stand der Stadt (fraktionen.json), der Rest zu gleichen Teilen zwei Handelshäusern aus der Liste. Der Spieler kauft Anteile in Schritten von schritt. Gesamtwert eines Betriebs = der höhere Tagesgewinn aus heutigen Marktpreisen (mit Handelsspanne) und Grundpreisen (ohne) mal kurs_tage, mindestens mindestwert aus buildings.json. Preis eines Schritts: schritt mal Gesamtwert, beim Stand mal (1 - Ruf / stand_ruf_teiler), ein Stand, der dem Spieler feindlich ist, verkauft nicht; bei einem Handelshaus mal (1 + haus_aufschlag mal Zahl der schon an den Spieler verkauften Schritte). Verkauf eines Schritts an den Stand: schritt mal Gesamtwert mal (1 - verkauf_abschlag). Dividende: Solange der Spieler nicht die Mehrheit hat, bekommt er täglich seinen Anteil am Tagesgewinn zu Marktpreisen (nur Gewinne). Ab kontrolle_ab führt er den Betrieb selbst (Versorgung Markt oder Kontor, wie ein eigener Betrieb) und zahlt den übrigen Aktionären täglich ihren Anteil am Tagesgewinn zu Marktpreisen. Kommt er ohne Anteile des Stands zur Mehrheit, ist das eine feindliche Übernahme: Ruf beim Stand feindlich_ruf. Ausbauen und Zurückbauen nur mit allen Anteilen.",
+  "schritt": 0.1,
+  "kontrolle_ab": 0.51,
+  "kurs_tage": 200,
+  "stand_anteil": 0.4,
+  "stand_ruf_teiler": 400,
+  "haus_aufschlag": 0.1,
+  "verkauf_abschlag": 0.1,
+  "feindlich_ruf": -15,
+  "handelshaeuser": [
+    {"id": "braendli", "name": "Handelshaus Brändli & Co."},
+    {"id": "ammann", "name": "Gebrüder Ammann"},
+    {"id": "huerlimann", "name": "Compagnie Hürlimann"},
+    {"id": "anker", "name": "Haus zum Goldenen Anker"},
+    {"id": "meierhans", "name": "Seehandlung Meierhans"},
+    {"id": "rueegg", "name": "Rüegg & Söhne"},
+    {"id": "tobler", "name": "Leinwandgesellschaft Tobler"},
+    {"id": "ochsen", "name": "Haus zum Roten Ochsen"}
+  ]
+}

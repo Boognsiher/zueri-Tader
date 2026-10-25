@@ -406,7 +406,8 @@ export class Oberflaeche {
     const a = this.spiel.ausbau;
     const eigene = a.eigene();
     const kontore = Object.entries(a.kontore);
-    if (!eigene.length && !kontore.length && !Object.keys(a.gebaeude).length) {
+    const anteile = a.betriebe.filter((b) => b.anteil > 0 && b.besitzer !== "spieler");
+    if (!eigene.length && !kontore.length && !anteile.length && !Object.keys(a.gebaeude).length) {
       setze(this.e.besitz, `<h2>Besitz</h2><p class="hilfe">Noch keine Kontore und Betriebe. Im Handelsfenster unter «Betriebe» kannst du Betriebe der Stadt kaufen oder neue bauen.</p>`);
       return;
     }
@@ -437,6 +438,12 @@ export class Oberflaeche {
     const gebaeude = Object.entries(a.gebaeude).flatMap(([stadt, g]) =>
       Object.entries(g).filter(([, st]) => st > 0).map(([id, st]) => `<li><b>${esc(a.gebaeudetypen[id].name)}</b> ${st > 1 ? `(${st}) ` : ""}${esc(stadt)}</li>`));
     if (gebaeude.length) html += `<h3>Stadtgebäude</h3><ul class="besitzliste">${gebaeude.join("")}</ul>`;
+    if (anteile.length) {
+      const summe = anteile.reduce((x, b) => x + (b.dividende ?? 0), 0);
+      html += `<h3>Anteile <small>Dividende gestern +${f(summe)} Gulden</small></h3><ul class="besitzliste">${anteile
+        .map((b) => `<li><b>${esc(a.typ(b).name)}</b> ${esc(b.stadt)} · ${f(b.anteil * 100)} %<small>Dividende gestern +${f(b.dividende ?? 0)}</small></li>`)
+        .join("")}</ul>`;
+    }
     setze(this.e.besitz, html);
   }
 
@@ -844,22 +851,23 @@ export class Oberflaeche {
       const leistung = a.leistung(b);
       const zutaten = t.art === "werkstatt" ? ` aus ${Object.entries(this.D.rezepte[t.ware]).map(([z, m]) => `${m * leistung} ${z}`).join(" und ")}` : "";
       const erwartet = a.tagesgewinn(b.typ, stadt) * stufe;
-      html += `<li class="betrieb ${b.besitzer === "spieler" ? "eigen" : ""}"><div class="betriebkopf"><b>${esc(t.name)}</b> <span class="stufe">Stufe ${stufe}/${max}</span> <span class="klein">${leistung} ${esc(t.ware)} pro Tag${esc(zutaten)}${b.gebaut ? " · neu gebaut" : ""}</span></div>`;
+      const stamm = a.istStamm(b);
+      html += `<li class="betrieb ${b.besitzer === "spieler" ? "eigen" : ""}"><div class="betriebkopf"><b>${esc(t.name)}</b> <span class="stufe">Stufe ${stufe}/${max}</span> <span class="klein">${f(leistung)} ${esc(t.ware)} pro Tag${esc(zutaten)}${b.gebaut ? " · neu gebaut" : stamm ? " · Stammbetrieb der Stadt" : ""}</span></div>`;
+      if (stamm) html += this.aktienZeile(b);
       if (b.besitzer === "spieler") {
         const g = b.gestern;
         const gestern = g ? `${f(g.menge)} ${esc(t.ware)}, Kasse ${g.kasse >= 0 ? "+" : "−"}${f(Math.abs(g.kasse))}` : "–";
         const leer = b.ziel === "kontor" && t.art === "werkstatt" && g && g.menge === 0 ? ` · <span class="minus">keine Zutaten im Kontor</span>` : "";
-        html += `<div class="betriebinfo">dein Betrieb · Unterhalt ${f(a.unterhalt(b))}/Tag · gestern: ${gestern} · seit Kauf ${b.summe >= 0 ? "+" : "−"}${f(Math.abs(b.summe))} Gulden${b.verdorben > 0 ? ` · <span class="minus">Kontor voll, ${f(b.verdorben)} verdorben</span>` : ""}${leer}</div>
+        html += `<div class="betriebinfo">${stamm ? "du führst den Betrieb" : "dein Betrieb"} · Unterhalt ${f(a.unterhalt(b))}/Tag · gestern: ${gestern}${g?.abgabe ? ` (nach ${f(g.abgabe)} an die Mitaktionäre)` : ""} · seit Kauf ${b.summe >= 0 ? "+" : "−"}${f(Math.abs(b.summe))} Gulden${b.verdorben > 0 ? ` · <span class="minus">Kontor voll, ${f(b.verdorben)} verdorben</span>` : ""}${leer}</div>
           <div class="betriebknoepfe"><label>Versorgung <select data-betrieb-ziel="${b.nr}">
             <option value="markt" ${b.ziel === "markt" ? "selected" : ""}>Markt der Stadt</option>
             <option value="kontor" ${b.ziel === "kontor" ? "selected" : ""} ${k ? "" : "disabled"}>Kontor${k ? (t.art === "werkstatt" ? " (Zutaten aus dem Kontor, Ware ins Kontor)" : " (Ware ins Kontor)") : " (keins)"}</option></select></label>
             ${stufe < max ? this.knopf(`data-betrieb-ausbau="${b.nr}"`, `ausbauen auf Stufe ${stufe + 1}: ${esc(this.kostentext(a.baukosten(b.typ, stadt).gulden, a.baukosten(b.typ, stadt).material))}`, a.pruefeBetriebsausbau(b)) : ""}
-            <button data-betrieb-verkauf="${b.nr}">an die Stadt verkaufen: ${f(a.verkaufserloes(b))} Gulden</button>
+            ${stamm ? "" : `<button data-betrieb-verkauf="${b.nr}">an die Stadt verkaufen: ${f(a.verkaufserloes(b))} Gulden</button>`}
             ${stufe > 1 || b.gebaut ? this.knopf(`data-betrieb-rueckbau="${b.nr}"`, `${stufe > 1 ? `zurückbauen auf Stufe ${stufe - 1}` : "abreissen"}: ${f(a.erstattung(a.baukosten(b.typ, stadt).gulden))} Gulden zurück`, a.pruefeBetriebsrueckbau(b)) : ""}</div>`;
-      } else {
+      } else if (!stamm) {
         const pot = a.potenzial(b.typ, stadt) * stufe;
-        html += `<div class="betriebinfo">gehört der Stadt · am Markt ${erwartet >= 0 ? "+" : "−"}${f(Math.abs(erwartet))} Gulden pro Tag${t.art === "werkstatt" ? ` · mit Eigenversorgung bis ${pot >= 0 ? "+" : "−"}${f(Math.abs(pot))} (Zutaten günstig gekauft, Ware teuer verkauft, ohne Fahrtkosten)` : ""}</div>
-          <div class="betriebknoepfe">${this.knopf(`data-betrieb-kauf="${b.nr}"`, `kaufen: ${f(a.kaufpreisBetrieb(b))} Gulden`, a.pruefeKauf(b), true)}</div>`;
+        html += `<div class="betriebinfo">gehört der Stadt · am Markt ${erwartet >= 0 ? "+" : "−"}${f(Math.abs(erwartet))} Gulden pro Tag${t.art === "werkstatt" ? ` · mit Eigenversorgung bis ${pot >= 0 ? "+" : "−"}${f(Math.abs(pot))} (Zutaten günstig gekauft, Ware teuer verkauft, ohne Fahrtkosten)` : ""}</div>`;
       }
       html += `</li>`;
     }
@@ -892,6 +900,23 @@ export class Oberflaeche {
         ${stufe ? this.knopf(`data-gebaeude-rueckbau="${t.id}"`, `${stufe > 1 ? `zurückbauen auf Stufe ${stufe - 1}` : "abreissen"}: ${f(a.erstattung(t.baukosten.gulden))} Gulden zurück`, a.pruefeGebaeudeRueckbau(stadt, t.id)) : ""}</div></li>`;
     }
     html += `</ul><p class="ohnemarkt">Baumaterial muss im Kontor oder in einem deiner Schiffe hier liegen. Rohstoffbetriebe gehen nur, wo die Stadt den Rohstoff hat.</p>`;
+    return html;
+  }
+
+  // Aktien eines Stammbetriebs: Aktionäre, Ertrag, Kauf und Verkauf in Schritten
+  aktienZeile(b) {
+    const a = this.spiel.ausbau;
+    const ak = this.D.aktien;
+    const proz = (x) => `${f(x * 100)} %`;
+    const ertrag = a.ertrag(b);
+    const halter = Object.entries(b.aktionaere).filter(([, x]) => x > 1e-9);
+    let html = `<div class="betriebinfo">Aktionäre: ${halter.map(([id, x]) => `${esc(a.inhaberName(id))} ${proz(x)}`).join(", ")}${b.anteil > 0 ? ` · <b>du ${proz(b.anteil)}</b>` : ""} · Tagesgewinn zu Marktpreisen ${ertrag >= 0 ? "+" : "−"}${f(Math.abs(ertrag))} · Gesamtwert ${f(a.gesamtwert(b))}${b.anteil > 0 && b.besitzer !== "spieler" ? ` · Dividende gestern +${f(b.dividende ?? 0)}` : ""}</div>`;
+    const knoepfe = halter
+      .filter(([, x]) => x >= ak.schritt - 1e-9)
+      .map(([id]) => this.knopf(`data-anteil-kauf="${b.nr}" data-inhaber="${esc(id)}"`, `${proz(ak.schritt)} von ${esc(a.inhaberName(id))}: ${f(a.anteilPreis(b, id))}`, a.pruefeAnteilKauf(b, id)));
+    if (b.anteil > 0) knoepfe.push(`<button data-anteil-verkauf="${b.nr}">${proz(ak.schritt)} an den Stand verkaufen: ${f(a.anteilErloes(b))}</button>`);
+    html += `<div class="betriebknoepfe">${knoepfe.join(" ")}</div>`;
+    if (b.besitzer !== "spieler") html += `<div class="hilfe klein">Ab ${proz(ak.kontrolle_ab)} führst du den Betrieb selbst${b.vomStand ? "" : `; ohne Anteile des Stands ist das eine feindliche Übernahme (Ruf ${ak.feindlich_ruf})`}.</div>`;
     return html;
   }
 
@@ -1233,7 +1258,7 @@ export class Oberflaeche {
 
     // Vermögen
     const schiffe = s.schiffe.reduce((a, x) => a + s.werft.verkaufserloes(x), 0);
-    const betriebe = s.ausbau.eigene().reduce((a, b) => a + s.ausbau.verkaufserloes(b), 0);
+    const betriebe = s.ausbau.betriebswert();
     const waren = s.warenwert();
     let html = `<header><div><h2>Bilanz</h2><span class="untertitel">Stand ${esc(s.datum())}</span></div>
       <button class="schliessen" data-bilanz-zu title="Schliessen (Esc)" aria-label="Schliessen">×</button></header>
@@ -1398,6 +1423,10 @@ export class Oberflaeche {
     } else if (d.kontorverkauf) {
       const r = a.kontorVerkaufen(stadt, d.kontorverkauf, wunsch);
       if (r.menge) s.melde(`${r.menge} ${d.kontorverkauf} aus dem Kontor für ${f(r.betrag)} Gulden verkauft.`, "handel");
+    } else if (d.anteilKauf) {
+      a.kaufeAnteil(a.betriebe.find((b) => b.nr === Number(d.anteilKauf)), d.inhaber);
+    } else if (d.anteilVerkauf) {
+      a.verkaufeAnteil(a.betriebe.find((b) => b.nr === Number(d.anteilVerkauf)));
     } else if (d.betriebKauf) {
       a.kaufen(a.betriebe.find((b) => b.nr === Number(d.betriebKauf)));
     } else if (d.betriebVerkauf) {

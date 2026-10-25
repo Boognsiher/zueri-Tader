@@ -16,7 +16,7 @@ export class Ziel {
   vermoegen() {
     const s = this.spiel;
     const schiffe = s.schiffe.reduce((a, x) => a + s.werft.verkaufserloes(x), 0);
-    const betriebe = s.ausbau.eigene().reduce((a, b) => a + s.ausbau.verkaufserloes(b), 0);
+    const betriebe = s.ausbau.betriebswert(); // eigene Betriebe und Anteile
     return s.gulden + s.warenwert() + schiffe + betriebe;
   }
 

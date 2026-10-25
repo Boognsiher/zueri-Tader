@@ -9,6 +9,7 @@ export const KONTEN = [
   { id: "kontorEinkauf", name: "Einkauf der Kontore", gruppe: "Kontore" },
   { id: "kontorUnterhalt", name: "Unterhalt der Kontore", gruppe: "Kontore" },
   { id: "betriebe", name: "Betriebe: Kasse nach Unterhalt", gruppe: "Betriebe und Gebäude" },
+  { id: "dividenden", name: "Dividenden aus Anteilen", gruppe: "Betriebe und Gebäude" },
   { id: "gebaeudeUnterhalt", name: "Unterhalt der Stadtgebäude", gruppe: "Betriebe und Gebäude" },
   { id: "schiffeUnterhalt", name: "Unterhalt der Schiffe", gruppe: "Schiffe" },
   { id: "schiffeReparatur", name: "Reparaturen nach Gefechten", gruppe: "Schiffe" },
@@ -29,8 +30,8 @@ export const KONTEN = [
   { id: "ratssitzKauf", name: "Ratssitze gekauft", gruppe: "Investitionen" },
   { id: "schiffeKauf", name: "Schiffe gekauft", gruppe: "Investitionen" },
   { id: "schiffeVerkauf", name: "Schiffe verkauft", gruppe: "Investitionen" },
-  { id: "betriebeKauf", name: "Betriebe gekauft", gruppe: "Investitionen" },
-  { id: "betriebeVerkauf", name: "Betriebe verkauft", gruppe: "Investitionen" },
+  { id: "betriebeKauf", name: "Betriebe und Anteile gekauft", gruppe: "Investitionen" },
+  { id: "betriebeVerkauf", name: "Betriebe und Anteile verkauft", gruppe: "Investitionen" },
   { id: "bauten", name: "Bauten, Strecken- und Netzausbau", gruppe: "Investitionen" },
 ];
 

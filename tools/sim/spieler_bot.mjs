@@ -38,15 +38,17 @@ function investiere() {
   for (let runde = 0; runde < 12; runde++) {
     const frei = spiel.gulden - reserve;
     if (frei < 2500) return;
-    // Betriebe der Städte in offenen Zonen: bester Tagesgewinn je Gulden
+    // Anteile an Stammbetrieben in offenen Zonen: beste Dividende je Gulden (ein Schritt von 10 %)
     let beste = null;
     for (const b of a.betriebe) {
       const stadt = spiel.welt.stadt[b.stadt];
-      if (b.besitzer === "spieler" || !spiel.zonen.offen(stadt.zone)) continue;
-      const preis = a.kaufpreisBetrieb(b);
+      if (!a.istStamm(b) || !spiel.zonen.offen(stadt.zone)) continue;
+      const inhaber = a.naechsterVerkaeufer(b);
+      if (!inhaber) continue;
+      const preis = a.anteilPreis(b, inhaber);
       if (preis > frei) continue;
-      const rate = (a.tagesgewinn(b.typ, stadt) * (b.stufe ?? 1)) / preis;
-      if (rate > 0 && (!beste || rate > beste.rate)) beste = { b, rate, preis };
+      const rate = (spiel.D.aktien.schritt * a.ertrag(b)) / preis;
+      if (rate > 0 && (!beste || rate > beste.rate)) beste = { b, inhaber, rate, preis };
     }
     // Betriebe ausbauen
     let ausbau = null;
@@ -62,7 +64,7 @@ function investiere() {
     const schiffeOk = spiel.schiffe.length < einwohner / 600 && frei >= 20000;
     const schiffRate = 90 / 20000;
     const wahl = [
-      beste && { art: "betrieb", rate: beste.rate, tun: () => (praesenz(spiel.welt.stadt[beste.b.stadt]), a.kaufen(beste.b)) },
+      beste && { art: "anteil", rate: beste.rate, tun: () => (praesenz(spiel.welt.stadt[beste.b.stadt]), a.kaufeAnteil(beste.b, beste.inhaber)) },
       ausbau && { art: "ausbau", rate: ausbau.rate, tun: () => a.betriebAusbauen(ausbau.b) },
       schiffeOk && { art: "schiff", rate: schiffRate, tun: () => kaufeSchiff(spiel.welt.stadt["Zürich"]) },
     ].filter(Boolean).sort((x, y) => y.rate - x.rate)[0];
