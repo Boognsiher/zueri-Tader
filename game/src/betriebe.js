@@ -501,6 +501,16 @@ export class Ausbau {
     for (const stadt of this.spiel.welt.staedte) {
       stadt.zufriedenheitBonus = this.gebaeudeWirkung(stadt, "zufriedenheit");
       stadt.wohnraumBonus = this.gebaeudeWirkung(stadt, "wohnraum");
+      // Stadtspeicher: Reserve in Tagen Verbrauch; was nach einem Rückbau nicht mehr passt, geht an den Markt
+      stadt.reserveTage = this.gebaeudeWirkung(stadt, "reserve");
+      for (const [g, m] of Object.entries(stadt.reserve)) {
+        const zuviel = m - stadt.reserveKapazitaet(g);
+        if (zuviel > 0) {
+          stadt.reserve[g] -= zuviel;
+          if (stadt.handelt(g)) stadt.bestand[g] += zuviel;
+        }
+        if (stadt.reserve[g] <= 1e-9) delete stadt.reserve[g];
+      }
     }
   }
 

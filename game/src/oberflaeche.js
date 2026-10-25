@@ -872,7 +872,7 @@ export class Oberflaeche {
       const stufe = a.gebaeudeStufe(stadt, t.id);
       const grund = a.pruefeGebaeude(stadt, t.id);
       html += `<li class="betrieb ${stufe ? "eigen" : ""}"><div class="betriebkopf"><b>${esc(t.name)}</b> <span class="stufe">${stufe ? `Stufe ${stufe}/${max}` : "nicht gebaut"}</span> <span class="klein">Unterhalt ${t.unterhalt} Gulden pro Tag und Stufe</span></div>
-        <div class="betriebinfo">${esc(t.text)}</div>${t.wirkung === "speicher" && stufe ? this.speicherZeile(stadt, t) : ""}
+        <div class="betriebinfo">${esc(t.text)}</div>${t.wirkung === "speicher" && stufe ? this.speicherZeile(stadt, t) : ""}${t.wirkung === "reserve" && stufe ? this.reserveZeile(stadt, t) : ""}
         <div class="betriebknoepfe">${stufe < max ? this.knopf(`data-gebaeude="${t.id}"`, `${stufe ? `ausbauen auf Stufe ${stufe + 1}` : "bauen"}: ${esc(this.kostentext(t.baukosten.gulden, t.baukosten))}`, grund, !stufe) : ""}
         ${stufe ? this.knopf(`data-gebaeude-rueckbau="${t.id}"`, `${stufe > 1 ? `zurückbauen auf Stufe ${stufe - 1}` : "abreissen"}: ${f(a.erstattung(t.baukosten.gulden))} Gulden zurück`, a.pruefeGebaeudeRueckbau(stadt, t.id)) : ""}</div></li>`;
     }
@@ -887,6 +887,12 @@ export class Oberflaeche {
     const faktor = this.spiel.welt.saison(t.ware);
     const tut = faktor > 1 ? "Erntezeit: kauft ein" : `verkauft bis zur nächsten Ernte, noch ${a.tageBisErnte(t.ware)} Tage`;
     return `<div class="betriebinfo"><b>Vorrat:</b> ${f(p?.menge ?? 0)} von ${f(a.speicherKapazitaet(stadt, t))} ${esc(t.ware)}${p?.menge >= 1 ? ` (Einstand ${f(p.einstand)})` : ""} · ${tut}</div>`;
+  }
+
+  // Stadtspeicher: Reserve der Stadt je Ware
+  reserveZeile(stadt, t) {
+    const teile = t.waren.filter((g) => stadt.reserveKapazitaet(g) > 0).map((g) => `${esc(g)} ${f(stadt.reserve[g] ?? 0)} / ${f(stadt.reserveKapazitaet(g))}`);
+    return `<div class="betriebinfo"><b>Reserve der Stadt:</b> ${teile.join(" · ") || "–"}</div>`;
   }
 
   // Werft: neue Schiffe (nur in Werftstädten), gebrauchte Angebote, eigene Schiffe verkaufen

@@ -41,6 +41,8 @@ export class Stadt {
     this.einwohner = cfg.einwohner;
     this.einwohner0 = cfg.einwohner; // Startbevölkerung, Bezug für das Wachstum
     this.zufriedenheitBonus = 0; // Versorgungsgebäude des Spielers (betriebe.js)
+    this.reserve = {}; // Stadtspeicher: Ware -> Menge, nicht am Markt (betriebe.js setzt reserveTage)
+    this.reserveTage = 0;
     this.wohnraumBonus = 0; // zusätzlicher Wohnraum als Anteil der Startbevölkerung
     this.pos = cfg.pos;
     this.welt = null; // wird von der Welt gesetzt (Jahr für die Epochenkurven)
@@ -138,6 +140,26 @@ export class Stadt {
     return this.verkaufspreis(g, this.bestand[g] + (this.unterwegs[g] || 0));
   }
 
+  // Stadtspeicher (buildings.json, wirkung «reserve»): Grösse der Reserve je Ware
+  reserveKapazitaet(g) {
+    return this.reserveTage * (this.verbrauch[g] ?? 0);
+  }
+
+  // Überschuss am Markt (über dem Zielbestand) in die Reserve legen, höchstens einlagern_tage Verbrauch pro Tag
+  lagereEin() {
+    if (!this.reserveTage) return;
+    const t = this.D.bau?.stadtgebaeude.find((x) => x.wirkung === "reserve");
+    if (!t) return;
+    for (const g of t.waren) {
+      if (!this.handelt(g)) continue;
+      const m = Math.min(this.bestand[g] - this.ziel[g], this.reserveKapazitaet(g) - (this.reserve[g] ?? 0), t.einlagern_tage * (this.verbrauch[g] ?? 0));
+      if (m > 0) {
+        this.bestand[g] -= m;
+        this.reserve[g] = (this.reserve[g] ?? 0) + m;
+      }
+    }
+  }
+
   static faktor(tabelle, g, tag) {
     const v = tabelle[g];
     return v && v[1] > tag ? v[0] : 1;
@@ -169,8 +191,14 @@ export class Stadt {
     let mangel = false;
     for (const [g, rate] of Object.entries(this.verbrauch)) {
       const bedarf = rate * Stadt.faktor(this.verbrauchFaktor, g, tag);
-      const erhalten = Math.min(bedarf, this.bestand[g]);
+      let erhalten = Math.min(bedarf, this.bestand[g]);
       this.bestand[g] -= erhalten;
+      // Stadtspeicher: Fehlt am Markt etwas, aus der Reserve nehmen
+      if (erhalten < bedarf && this.reserve[g] > 0) {
+        const aus = Math.min(bedarf - erhalten, this.reserve[g]);
+        this.reserve[g] -= aus;
+        erhalten += aus;
+      }
       const anteil = bedarf > 0 ? erhalten / bedarf : 1;
       if (D.grundbedarf.includes(g)) {
         grund.push(anteil);
@@ -190,6 +218,7 @@ export class Stadt {
     this.einwohner = Math.min(Math.max(this.einwohner * (1 + rate), tief), Math.max(this.wohnraum(), tief));
     this.wachstum = rate; // für die Anzeige
     this.skaliere();
+    this.lagereEin();
     for (const g of Object.keys(this.bestand)) {
       if (this.bestand[g] > this.kap[g]) {
         if (st) addiere(st.verdorben, g, this.bestand[g] - this.kap[g]);

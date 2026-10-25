@@ -1445,6 +1445,37 @@ if (abschnitt("Jahreszeiten und Kornspeicher")) {
   pruefe(`Beim Abriss geht der Vorrat an den Markt (${rest.toFixed(0)} Korn)`, !a.speicherBestand(zuerich, t) && spiel.gulden > geld2 + rest * zuerich.basispreis("Korn") * 0.3);
 }
 
+// --- 22b. Stadtspeicher: Reserve der Stadt ------------------------------------
+if (abschnitt("Stadtspeicher")) {
+  const spiel = ohneRisiko(new Spiel(D, 37));
+  const a = spiel.ausbau;
+  const horgen = spiel.welt.stadt["Horgen"];
+  const t = a.gebaeudetypen.stadtspeicher;
+  a.gebaeude["Horgen"] = { stadtspeicher: 2 };
+  a.wendeGebaeudeAn();
+  pruefe(`Reserve: ${2 * t.wert_pro_stufe} Tage Verbrauch (${horgen.reserveKapazitaet("Korn").toFixed(0)} Korn)`, Math.abs(horgen.reserveKapazitaet("Korn") - 2 * t.wert_pro_stufe * horgen.verbrauch.Korn) < 1e-9);
+  horgen.bestand.Korn = horgen.ziel.Korn * 2; // reichlich Korn am Markt
+  for (let i = 0; i < 5; i++) spiel.tagVoran();
+  const reserve = horgen.reserve.Korn ?? 0;
+  pruefe(`Bei Überschuss legt die Stadt Korn beiseite (${reserve.toFixed(0)}, höchstens ${t.einlagern_tage} Tag Verbrauch pro Tag)`, reserve > 0 && reserve <= 5 * t.einlagern_tage * horgen.verbrauch.Korn + 1e-6);
+  const schiff = spiel.schiffe[0];
+  Object.assign(schiff, { ort: horgen, pos: [...horgen.pos], fahrt: null });
+  spiel.kaufen(schiff, "Korn", Infinity);
+  pruefe("Händler kaufen den Markt leer, die Reserve bleibt", (horgen.reserve.Korn ?? 0) === reserve);
+  horgen.bestand.Korn = 0;
+  horgen.prodFaktor.Korn = [0, spiel.welt.tag + 5]; // Missernte: kein frisches Korn
+  const mangel = horgen.schritt(spiel.welt.tag, null);
+  pruefe(`Ohne Korn am Markt versorgt sich die Stadt aus der Reserve (${reserve.toFixed(0)} -> ${(horgen.reserve.Korn ?? 0).toFixed(0)}), kein Mangel`, (horgen.reserve.Korn ?? 0) < reserve && !mangel);
+  delete horgen.prodFaktor.Korn;
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Speichern und Laden behält die Reserve", Math.abs((geladen.welt.stadt["Horgen"].reserve.Korn ?? 0) - (horgen.reserve.Korn ?? 0)) < 1e-9 && geladen.welt.stadt["Horgen"].reserveTage === 2 * t.wert_pro_stufe);
+  horgen.reserve.Korn = horgen.reserveKapazitaet("Korn");
+  const markt = horgen.bestand.Korn;
+  Object.assign(schiff, { ort: horgen, pos: [...horgen.pos], fahrt: null });
+  a.gebaeudeZurueckbauen(horgen, "stadtspeicher");
+  pruefe("Rückbau: Was nicht mehr in die Reserve passt, geht an den Markt", Math.abs(horgen.reserve.Korn - horgen.reserveKapazitaet("Korn")) < 1e-6 && horgen.bestand.Korn > markt);
+}
+
 // --- 23. Fernhandelsverträge an den Verteilzentren ---------------------------
 if (abschnitt("Fernhandelsverträge")) {
   const spiel = ohneRisiko(new Spiel(D, 31));

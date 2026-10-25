@@ -29,6 +29,7 @@ export function speichere(spiel) {
         sperreBis: s.sperreBis,
         zufriedenheit: s.zufriedenheit,
         einwohner: s.einwohner,
+        reserve: s.reserve, // Stadtspeicher
         ereignisse: s.ereignisse,
       })),
       haendler: welt.haendler.map((h) => ({
