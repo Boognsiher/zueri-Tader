@@ -236,9 +236,9 @@ export class Ausbau {
     return !!this.schiffImHafen(stadt) || !!this.kontor(stadt);
   }
 
-  // Baumaterial vor Ort: Kontor und alle eigenen Schiffe im Hafen
+  // Baumaterial vor Ort: Kontor (auch gesperrte Ware, sie ist ja für Ausbauten da) und alle eigenen Schiffe im Hafen
   materialVorOrt(stadt, g) {
-    let menge = this.kontor(stadt) ? this.verfuegbar(stadt, g) : 0;
+    let menge = this.kontor(stadt)?.lager[g]?.menge ?? 0;
     for (const s of this.spiel.schiffe) if (this.spiel.imHafen(s, stadt)) menge += s.ladung[g]?.menge ?? 0;
     return menge;
   }
@@ -254,7 +254,7 @@ export class Ausbau {
       let rest = n;
       const k = this.kontor(stadt);
       if (k?.lager[g]) {
-        const m = Math.min(rest, this.verfuegbar(stadt, g));
+        const m = Math.min(rest, k.lager[g].menge);
         entnimm(k.lager, g, m);
         rest -= m;
       }
@@ -699,10 +699,32 @@ export class Ausbau {
     return summe;
   }
 
-  // Gesperrte Menge: so viele Tage Bedarf der eigenen Werkstätten bleiben im Kontor
+  // Sperre, die der Verwalter setzt: Bedarf der eigenen Werkstätten für einige Tage, mindestens der
+  // Vorrat an Baumaterial für Ausbauten (kontor.verwalter)
+  verwalterSperre(stadt, g) {
+    const v = this.bau.kontor.verwalter;
+    return Math.max(Math.ceil(this.bedarfProTag(stadt, g) * v.werkstatt_tage), v.baumaterial[g] ?? 0);
+  }
+
+  // Der Verwalter ist an, solange der Spieler ihn nicht ausschaltet
+  verwalterAn(stadt) {
+    const k = this.kontor(stadt);
+    return !!k && k.verwalter !== false;
+  }
+
+  setzeVerwalter(stadt, an) {
+    const k = this.kontor(stadt);
+    if (!k) return false;
+    if (an) delete k.verwalter;
+    else k.verwalter = false;
+    return true;
+  }
+
+  // Gesperrte Menge (Stück): bleibt im Kontor, wird nicht verkauft und nicht abgegeben
   gesperrt(stadt, g) {
-    const tage = this.kontor(stadt)?.sperren?.[g] ?? 0;
-    return tage * this.bedarfProTag(stadt, g);
+    const k = this.kontor(stadt);
+    if (!k) return 0;
+    return k.verwalter === false ? k.sperren?.[g] ?? 0 : this.verwalterSperre(stadt, g);
   }
 
   // Menge, die verkauft oder an Schiffe abgegeben werden darf
@@ -711,12 +733,13 @@ export class Ausbau {
     return Math.max(0, menge - this.gesperrt(stadt, g));
   }
 
-  setzeSperre(stadt, g, tage) {
+  // Sperre von Hand in Stück (gilt, wenn der Verwalter aus ist)
+  setzeSperre(stadt, g, menge) {
     const k = this.kontor(stadt);
     if (!k) return false;
     k.sperren ??= {};
-    if (!tage) delete k.sperren[g];
-    else k.sperren[g] = Math.max(0, tage);
+    if (!menge) delete k.sperren[g];
+    else k.sperren[g] = Math.max(0, Math.round(menge));
     return true;
   }
 
@@ -753,7 +776,7 @@ export class Ausbau {
       const bedarf = this.bedarfProTag(stadt, g);
       if (bedarf > 0) {
         this.setzeRegel(stadt, g, { kaufenBis: Math.ceil(Math.max(vorrat, bedarf * v.werkstatt_tage)), kaufPreis: hier(g) ? Math.round(basis * v.kauf_bis_preisfaktor) : null });
-        this.setzeSperre(stadt, g, v.werkstatt_tage);
+        this.setzeSperre(stadt, g, Math.ceil(bedarf * v.werkstatt_tage));
       } else if (hier(g)) {
         this.setzeRegel(stadt, g, { kaufenBis: vorrat, kaufPreis: Math.round(basis * v.kauf_bis_preisfaktor) });
       } else if (!k.nurEinkauf) {
@@ -885,7 +908,7 @@ export class Ausbau {
 
   // --- Speichern ------------------------------------------------------------------
   zustand() {
-    return { kontore: this.kontore, betriebe: this.betriebe, gebaeude: this.gebaeude, speicher: this.speicher };
+    return { kontore: this.kontore, betriebe: this.betriebe, gebaeude: this.gebaeude, speicher: this.speicher, sperrenInStueck: true };
   }
 
   laden(z) {
@@ -898,6 +921,12 @@ export class Ausbau {
     }
     this.betriebe = z.betriebe;
     for (const b of this.betriebe) b.stufe ??= 1;
+    // Spielstände vor den Sperren in Stück: Tage Bedarf der Werkstätten in Stück umrechnen
+    if (!z.sperrenInStueck) {
+      for (const [name, k] of Object.entries(this.kontore)) {
+        for (const g of Object.keys(k.sperren)) this.setzeSperre(name, g, Math.ceil(k.sperren[g] * this.bedarfProTag({ name }, g)));
+      }
+    }
     this.gebaeude = z.gebaeude ?? {};
     this.speicher = z.speicher ?? {};
     this.wendeKapazitaetAn();

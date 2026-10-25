@@ -130,6 +130,11 @@ export class Oberflaeche {
         this.aktualisiere();
         return;
       }
+      if (ev.target.dataset.verwalter !== undefined) {
+        this.spiel.ausbau.setzeVerwalter(this.fensterStadt, ev.target.checked);
+        this.aktualisiere();
+        return;
+      }
       const sperrWare = ev.target.dataset.sperre;
       if (sperrWare) {
         this.spiel.ausbau.setzeSperre(this.fensterStadt, sperrWare, ev.target.value === "" ? 0 : Number(ev.target.value));
@@ -696,19 +701,23 @@ export class Oberflaeche {
     html += `</tbody></table>`;
 
     // Handelsregeln
+    const verwalter = a.verwalterAn(stadt);
+    const bau = Object.entries(kb.verwalter.baumaterial).map(([g, n]) => `${n} ${g}`).join(", ");
+    html += `<label class="nureinkauf"><input type="checkbox" data-verwalter ${verwalter ? "checked" : ""}> <b>Verwalter:</b> sperrt selbst, was deine Werkstätten hier brauchen (${kb.verwalter.werkstatt_tage} Tage Bedarf), und Baumaterial für Ausbauten (${esc(bau)}). Gesperrte Ware wird nicht verkauft und nicht weggefahren, bauen darfst du damit. Ohne Verwalter gibst du die Sperren unten in Stück selbst ein.</label>`;
     html += `<label class="nureinkauf"><input type="checkbox" data-nur-einkauf ${k.nurEinkauf ? "checked" : ""}> <b>Nur einkaufen:</b> Das Kontor verkauft nichts (Verkaufsregeln ruhen). Die Ware bleibt für deine Schiffe, die Automatik lädt sie vor dem Markt.</label>`;
     html += `<details class="regeln" data-key="kontorregeln" ${Object.keys(k.regeln ?? {}).length ? "open" : ""}><summary>Handelsregeln: Das Kontor kauft und verkauft jeden Tag selbst</summary>
       <p class="hilfe">Pro Ware: kaufen, bis so viel im Kontor liegt (nur bis zum Höchstpreis), und verkaufen, was über einer Menge liegt (nur ab dem Mindestpreis). Leer lassen = aus bzw. egal. Höchstens ${kb.handel_pro_tag} Stück je Ware und Tag. Die Regeln wirken, sobald die Zeit läuft (Fenster schliessen); jeder Handel erscheint in den Meldungen.
-      <b>Sperren:</b> So viele Tage Bedarf deiner Werkstätten (mit Kontor-Versorgung) bleiben im Kontor: Das Kontor verkauft sie nicht, Schiffe laden sie nicht weg.</p>
+      <b>Sperren:</b> So viele Stück bleiben im Kontor: Das Kontor verkauft sie nicht, Schiffe laden sie nicht weg. ${verwalter ? "Zurzeit setzt sie der Verwalter." : ""}</p>
       <div class="betriebknoepfe"><button data-regeln-vorschlag title="Setzt für jede Ware eine Regel: Was die Stadt herstellt, kauft das Kontor günstig ein; was deine Werkstätten brauchen, hält es als Vorrat; alles andere verkauft es ab einem guten Preis. Ersetzt die bisherigen Regeln.">Regeln vorschlagen</button>
         <button data-regeln-loeschen ${Object.keys(k.regeln ?? {}).length || Object.keys(k.sperren ?? {}).length ? "" : "disabled"}>Alle Regeln löschen</button></div>
-      <table class="auftraege"><thead><tr><th>Ware</th><th>kaufen bis</th><th>höchstens</th><th>verkaufen über</th><th>mindestens</th><th>sperren (Tage)</th></tr></thead><tbody>`;
+      <table class="auftraege"><thead><tr><th>Ware</th><th>kaufen bis</th><th>höchstens</th><th>verkaufen über</th><th>mindestens</th><th>sperren (Stück)</th></tr></thead><tbody>`;
     for (const g of Object.keys(this.D.waren).filter((x) => stadt.handelt(x))) {
       const r = a.regel(stadt, g) ?? {};
       const feld = (name, platzhalter) => `<input type="number" min="0" placeholder="${platzhalter}" value="${r[name] ?? ""}" data-regel="${esc(g)}" data-regelfeld="${name}" aria-label="${esc(g)} ${name}">`;
       const bedarf = a.bedarfProTag(stadt, g);
-      const tage = k.sperren?.[g] ?? "";
-      const sperre = `<input type="number" min="0" placeholder="–" value="${tage}" data-sperre="${esc(g)}" aria-label="${esc(g)} sperren Tage" title="${bedarf ? `Bedarf deiner Werkstätten: ${f(bedarf)} pro Tag` : "Keine eigene Werkstatt mit Kontor-Versorgung braucht diese Ware"}">${tage && bedarf ? `<small>${f(a.gesperrt(stadt, g))} gesperrt</small>` : ""}`;
+      // Mit Verwalter: seine Sperre anzeigen (nicht änderbar), sonst die eigene Eingabe
+      const menge = verwalter ? a.gesperrt(stadt, g) || "" : k.sperren?.[g] ?? "";
+      const sperre = `<input type="number" min="0" placeholder="–" value="${menge}" data-sperre="${esc(g)}" ${verwalter ? 'disabled title="Setzt der Verwalter"' : `title="${bedarf ? `Bedarf deiner Werkstätten: ${f(bedarf)} pro Tag` : "Stück, die im Kontor bleiben"}"`} aria-label="${esc(g)} sperren Stück">`;
       html += `<tr><td>${esc(g)}${bedarf ? `<small>Bedarf ${f(bedarf)}/Tag</small>` : ""}</td><td>${feld("kaufenBis", "aus")}</td><td>${feld("kaufPreis", "egal")}</td><td>${feld("verkaufenUeber", "aus")}</td><td>${feld("verkaufPreis", "egal")}</td><td>${sperre}</td></tr>`;
     }
     html += `</tbody></table></details>`;

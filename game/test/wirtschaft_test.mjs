@@ -352,7 +352,8 @@ if (abschnitt("Automatischer Handel")) {
 
   const rk = new Spiel(D, 4);
   const h2 = rk.welt.stadt["Horgen"];
-  rk.ausbau.kontore["Horgen"] = { stufe: 1, lager: { Holz: { menge: 30, einstand: 20 } }, regeln: {}, sperren: {} };
+  // Ohne Verwalter: Er würde das Holz als Baumaterial sperren, geprüft wird hier die Route
+  rk.ausbau.kontore["Horgen"] = { stufe: 1, lager: { Holz: { menge: 30, einstand: 20 } }, regeln: {}, sperren: {}, verwalter: false };
   const s6 = rk.schiffe[0];
   rk.anhalten(s6);
   Object.assign(s6, { ort: h2, pos: [...h2.pos], fahrt: null });
@@ -698,10 +699,19 @@ if (abschnitt("Bevölkerung, Versorgung, Kontor, Bilanz")) {
   a.setzeZiel(seide, "kontor");
   k.lager.Rohseide = { menge: 100, einstand: 40 };
   const bedarf = a.bedarfProTag(zuerich, "Rohseide");
-  a.setzeSperre(zuerich, "Rohseide", 5);
-  pruefe(`Sperre 5 Tage = ${(5 * bedarf).toFixed(0)} Rohseide gesperrt`, Math.abs(a.gesperrt(zuerich, "Rohseide") - 5 * bedarf) < 1e-9 && bedarf > 0);
+  const vw = D.bau.kontor.verwalter;
+  pruefe(`Der Verwalter sperrt ${vw.werkstatt_tage} Tage Bedarf der Werkstatt (${a.gesperrt(zuerich, "Rohseide")} Rohseide)`, a.verwalterAn(zuerich) && a.gesperrt(zuerich, "Rohseide") === Math.ceil(vw.werkstatt_tage * bedarf) && bedarf > 0);
+  pruefe(`Der Verwalter sperrt Baumaterial (${a.gesperrt(zuerich, "Holz")} Holz)`, a.gesperrt(zuerich, "Holz") === vw.baumaterial.Holz);
+  a.setzeVerwalter(zuerich, false);
+  a.setzeSperre(zuerich, "Rohseide", 30);
+  pruefe("Ohne Verwalter gilt die eigene Sperre in Stück (30 Rohseide, kein Holz)", a.gesperrt(zuerich, "Rohseide") === 30 && a.gesperrt(zuerich, "Holz") === 0);
   const v = a.kontorVerkaufen(zuerich, "Rohseide", Infinity);
-  pruefe(`Verkaufen lässt die Sperre im Kontor (${v.menge} verkauft, ${k.lager.Rohseide?.menge.toFixed(0)} bleiben)`, Math.abs((k.lager.Rohseide?.menge ?? 0) - 5 * bedarf) < 1);
+  pruefe(`Verkaufen lässt die Sperre im Kontor (${v.menge} verkauft, ${k.lager.Rohseide?.menge.toFixed(0)} bleiben)`, Math.abs((k.lager.Rohseide?.menge ?? 0) - 30) < 1e-9);
+  // Bauen darf gesperrte Ware verwenden
+  a.setzeVerwalter(zuerich, true);
+  k.lager.Holz = { menge: 40, einstand: 30 };
+  pruefe("Gesperrtes Baumaterial zählt fürs Bauen", a.materialVorOrt(zuerich, "Holz") >= 40 && a.verfuegbar(zuerich, "Holz") === 0);
+  a.setzeVerwalter(zuerich, false);
 
   // Bilanz
   const kn = spiel.konten;
@@ -710,7 +720,7 @@ if (abschnitt("Bevölkerung, Versorgung, Kontor, Bilanz")) {
   pruefe(`Bilanz führt Monate (${Object.keys(kn.monate).join(", ")})`, Object.keys(kn.monate).length >= 2);
   const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
   pruefe("Bevölkerung, Sperren und Bilanz überstehen Speichern und Laden",
-    Math.abs(geladen.welt.stadt["Zürich"].einwohner - zuerich.einwohner) < 1e-9 && geladen.ausbau.kontor(zuerich).sperren.Rohseide === 5 &&
+    Math.abs(geladen.welt.stadt["Zürich"].einwohner - zuerich.einwohner) < 1e-9 && geladen.ausbau.kontor(zuerich).sperren.Rohseide === 30 && geladen.ausbau.verwalterAn(zuerich) === false &&
     geladen.konten.gesamt.bauten === kn.gesamt.bauten && geladen.welt.stadt["Zürich"].wohnraumBonus === zuerich.wohnraumBonus);
 }
 

@@ -365,6 +365,7 @@ function ausKontor(spiel, schiff, hier) {
   const k = a.kontor(hier);
   if (!k || !spiel.imHafen(schiff, hier)) return null;
   // Ein normales Kontor behält den Zielbestand seiner Einkaufsregel, ein Einkaufslager gibt alles ab
+  // (gesperrte Ware wie Baumaterial bleibt ohnehin liegen, siehe verfuegbar)
   const frei = (g) => Math.max(0, a.verfuegbar(hier, g) - (k.nurEinkauf ? 0 : (k.regeln?.[g]?.kaufenBis ?? 0)));
   const waren = Object.keys(k.lager).filter((g) => frei(g) >= 1);
   if (!waren.length) return null;
