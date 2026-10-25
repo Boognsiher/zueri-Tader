@@ -73,6 +73,7 @@ export function speichere(spiel) {
       risiko: spiel.risiko.zustand(),
       zoll: spiel.zoll.zustand(),
       zonen: spiel.zonen.zustand(),
+    vertraege: spiel.vertraege.zustand(),
       spielsekunden: spiel.spielsekunden,
     },
   };
@@ -143,6 +144,7 @@ export function lade(D, stand) {
   spiel.risiko.laden(sp.risiko);
   spiel.zoll.laden(sp.zoll);
   spiel.zonen.laden(sp.zonen);
+  spiel.vertraege.laden(sp.vertraege); // Spielstände vor den Fernhandelsverträgen: leer
   spiel.spielsekunden = sp.spielsekunden ?? 0;
   return spiel;
 }

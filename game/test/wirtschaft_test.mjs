@@ -1445,5 +1445,52 @@ if (abschnitt("Jahreszeiten und Kornspeicher")) {
   pruefe(`Beim Abriss geht der Vorrat an den Markt (${rest.toFixed(0)} Korn)`, !a.speicherBestand(zuerich, t) && spiel.gulden > geld2 + rest * zuerich.basispreis("Korn") * 0.3);
 }
 
+// --- 23. Fernhandelsverträge an den Verteilzentren ---------------------------
+if (abschnitt("Fernhandelsverträge")) {
+  const spiel = ohneRisiko(new Spiel(D, 31));
+  const vt = spiel.vertraege;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  const v = D.vertraege;
+  spiel.gulden = 200000;
+  pruefe("Zürich ist das Verteilzentrum des Zürichsees, Horgen nicht", vt.zoneVonZentrum(zuerich)?.id === "zuerichsee" && !vt.zoneVonZentrum(spiel.welt.stadt["Horgen"]));
+  const angebote = vt.angebote(zuerich);
+  const einkauf = angebote.find((x) => x.art === "einkauf" && x.ware === "Eisenerz");
+  const verkauf = angebote.find((x) => x.art === "verkauf");
+  pruefe(`Angebote nur aus nicht erschlossenen Zonen, höchstens ${v.vorlauf_jahre} Jahre vor dem Erschliessen (${angebote.length} Angebote aus ${[...new Set(angebote.map((x) => x.zone))].join(", ")})`, angebote.length > 0 && angebote.every((x) => !spiel.zonen.offen(x.zone) && spiel.jahr() >= spiel.zonen.zone(x.zone).ab_jahr - v.vorlauf_jahre));
+  pruefe(`Eisenerz (fehlt am Zürichsee) kommt per Vertrag billiger als hier (${einkauf?.preis} aus ${einkauf?.zone})`, !!einkauf && einkauf.preis < D.waren.Eisenerz * 1.3);
+  pruefe(`Ohne Kontor kein Vertrag: "${vt.pruefe(zuerich, einkauf, 40)}"`, String(vt.pruefe(zuerich, einkauf, 40)).includes("Kontor"));
+  spiel.ausbau.kontore["Zürich"] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
+  const k = spiel.ausbau.kontor(zuerich);
+  const vertrag = vt.abschliessen(zuerich, einkauf, 40);
+  pruefe("Einkaufsvertrag abschliessen", !!vertrag && vt.liste.length === 1);
+  pruefe("Derselbe Vertrag nicht doppelt", vt.pruefe(zuerich, einkauf, 40) !== null);
+  // Bis zum ersten Monatswechsel laufen lassen
+  const geld0 = spiel.gulden;
+  const monat0 = spiel.monat();
+  while (spiel.monat() === monat0) spiel.tagVoran();
+  spiel.tagVoran();
+  pruefe(`Am Monatswechsel liegt das Eisenerz im Kontor (${k.lager.Eisenerz?.menge ?? 0}, Einstand ${k.lager.Eisenerz?.einstand})`, k.lager.Eisenerz?.menge === 40 && Math.abs(k.lager.Eisenerz.einstand - einkauf.preis) < 1e-9);
+  pruefe("Erfüllte Lieferung baut das Geschäft auf: Erschliessen wird billiger", vt.rabatt(einkauf.zone) === v.rabatt_je_lieferung && spiel.zonen.erschliessungskosten(einkauf.zone) < spiel.zonen.zone(einkauf.zone).erschliessung);
+  pruefe("Die Lieferung ist in der Bilanz gebucht", spiel.konten.gesamt.vertraege <= -40 * einkauf.preis + 1e-6 && spiel.gulden < geld0);
+  // Abnahmevertrag ohne Ware: Strafe
+  const ab = vt.abschliessen(zuerich, verkauf, 20);
+  const geld1 = spiel.gulden;
+  const monat1 = spiel.monat();
+  delete k.lager[verkauf.ware];
+  while (spiel.monat() === monat1) spiel.tagVoran();
+  pruefe(`Fehlt die Ware für die Abnahme, wird eine Strafe fällig (${verkauf.ware})`, !!ab && spiel.gulden < geld1 - 20 * verkauf.preis * v.strafe_anteil * 0.99 - 40 * einkauf.preis);
+  // Speichern und Laden
+  const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
+  pruefe("Speichern und Laden behält Verträge und Rabatt", geladen.vertraege.liste.length === 2 && geladen.vertraege.rabatt(einkauf.zone) === vt.rabatt(einkauf.zone));
+  // Kündigen und Laufzeit
+  const geld2 = spiel.gulden;
+  pruefe("Kündigen kostet die Strafe für eine Monatsmenge", vt.kuendigen(ab.nr) && Math.abs(geld2 - spiel.gulden - vt.kuendigungsstrafe(ab)) < 1e-6 && vt.liste.length === 1);
+  for (let m = 0; m < v.laufzeit_monate + 1; m++) {
+    const jetzt = spiel.monat();
+    while (spiel.monat() === jetzt) spiel.tagVoran();
+  }
+  pruefe(`Nach ${v.laufzeit_monate} Monaten ist der Vertrag erfüllt und endet`, vt.liste.length === 0 && vertrag.rest === 0);
+}
+
 console.log(fehler ? `\n${fehler} Check(s) durchgefallen` : "\nAlle Checks bestanden");
 process.exit(fehler ? 1 : 0);

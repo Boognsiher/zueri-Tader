@@ -656,7 +656,8 @@ export class Oberflaeche {
     if (!k) {
       return `<p>Ein Kontor ist dein Lager in ${esc(stadt.name)} (${f(kb.lager)} Plätze, ausbaubar). Es kauft und verkauft selbst am Markt, Betriebe können hineinliefern, Schiffe laden und entladen, und Handelsrouten nutzen es automatisch.</p>
         <p>Kosten: ${esc(this.kostentext(kb.baukosten.gulden, kb.baukosten))}, Unterhalt ${kb.unterhalt} Gulden pro Tag und Stufe.</p>
-        ${this.knopf("data-kontorbau", "Kontor bauen", a.pruefeKontorBau(stadt), true)}`;
+        ${this.knopf("data-kontorbau", "Kontor bauen", a.pruefeKontorBau(stadt), true)}
+        ${s.vertraege.zoneVonZentrum(stadt) ? `<p class="hilfe">${esc(stadt.name)} ist ein Verteilzentrum: Mit einem Kontor hier kannst du Fernhandelsverträge mit Zonen schliessen, die du noch nicht erschlossen hast.</p>` : ""}`;
     }
     const wunsch = this.menge === "max" ? Infinity : Number(this.menge);
     const stufe = k.stufe ?? 1;
@@ -707,7 +708,44 @@ export class Oberflaeche {
     }
     html += `</tbody></table></details>`;
     html += this.verbindungsAbschnitt(stadt, k, wunsch);
+    html += this.fernhandelAbschnitt(stadt);
     return html;
+  }
+
+  // Fernhandelsverträge mit noch nicht erschlossenen Zonen (nur in Verteilzentren, vertraege.js)
+  fernhandelAbschnitt(stadt) {
+    const s = this.spiel;
+    const vt = s.vertraege;
+    const hier = vt.zoneVonZentrum(stadt);
+    if (!hier) return "";
+    const v = this.D.vertraege;
+    const laufend = vt.liste.filter((x) => x.stadt === stadt.name);
+    let html = `<details class="regeln" data-key="fernhandel" ${laufend.length ? "open" : ""}><summary>Fernhandel: Verträge mit Zonen, die du noch nicht erschlossen hast</summary>
+      <p class="hilfe">${esc(stadt.name)} ist das Verteilzentrum des ${esc(hier.name)}s. Handelshäuser aus fremden Zonen liefern hier jeden Monat eine feste Menge in dein Kontor oder nehmen sie ab, ${v.laufzeit_monate} Monate lang zum festen Preis. Fehlen Geld, Lagerplatz oder Ware, zahlst du ${f(v.strafe_anteil * 100)} % des ausgefallenen Werts als Strafe. Jede erfüllte Lieferung macht das spätere Erschliessen der Zone ${f(v.rabatt_je_lieferung * 100)} % billiger (höchstens ${f(v.rabatt_max * 100)} %).</p>`;
+    if (laufend.length) {
+      html += `<table class="auftraege"><thead><tr><th>Vertrag</th><th>Menge/Monat</th><th>Preis</th><th>noch</th><th></th></tr></thead><tbody>`;
+      for (const x of laufend) {
+        html += `<tr><td>${x.art === "einkauf" ? "Lieferung" : "Abnahme"} ${esc(x.ware)}<small>${esc(s.zonen.zone(x.zone).name)}</small></td><td class="zahl">${f(x.menge)}</td><td class="zahl">${f(x.preis)}</td><td class="zahl">${x.rest} Mt.</td>
+          <td><button data-fern-kuendigen="${x.nr}" title="Kündigen kostet die Strafe für eine Monatsmenge">kündigen: ${f(vt.kuendigungsstrafe(x))}</button></td></tr>`;
+      }
+      html += `</tbody></table>`;
+    }
+    const angebote = vt.angebote(stadt);
+    if (!angebote.length) return html + `<p class="hilfe">Zurzeit bietet keine fremde Zone etwas an.</p></details>`;
+    html += `<table class="auftraege"><thead><tr><th>Angebot</th><th>Preis</th><th>hier</th><th>Menge pro Monat</th></tr></thead><tbody>`;
+    for (const an of angebote) {
+      const zone = s.zonen.zone(an.zone);
+      const markt = stadt.handelt(an.ware) ? (an.art === "einkauf" ? s.kaufpreis(stadt, an.ware) : s.verkaufspreis(stadt, an.ware)) : null;
+      const knoepfe = v.mengen
+        .map((m) => {
+          const grund = vt.pruefe(stadt, an, m);
+          return `<button data-fern-art="${an.art}" data-fern-zone="${esc(an.zone)}" data-fern-ware="${esc(an.ware)}" data-fern-menge="${m}" ${grund ? "disabled" : ""} title="${esc(grund ?? `${f(m * an.preis)} Gulden pro Monat`)}">${m}</button>`;
+        })
+        .join("");
+      html += `<tr><td>${an.art === "einkauf" ? "kaufen" : "verkaufen"}: ${esc(an.ware)}<small>${esc(zone.name)}${vt.rabatt(an.zone) ? ` · ${f(vt.rabatt(an.zone) * 100)} % Rabatt aufs Erschliessen` : ""}</small></td>
+        <td class="zahl">${f(an.preis)}</td><td class="zahl">${markt === null ? "–" : f(markt)}</td><td class="aktionen breit">${knoepfe}</td></tr>`;
+    }
+    return html + `</tbody></table></details>`;
   }
 
   // Ausbau, Konzession und Maut einer Strecke (Verbindung oder Netz einer Landzone)
@@ -938,7 +976,7 @@ export class Oberflaeche {
       const kontore = s.welt.staedte.filter((x) => x.zone === zone.id && s.ausbau.kontor(x)).length;
       const schiffe = s.schiffe.filter((x) => (x.ort ?? s.naechsteStadt(x.pos)).zone === zone.id).length;
       html += `<li class="${offen ? "" : "gesperrt"}"><div><b>${offen ? "" : "🔒 "}${esc(zone.name)}</b> <small>${esc(zone.text)}</small></div>
-        <div class="klein">${offen ? `${kontore} Kontor${kontore === 1 ? "" : "e"} · ${schiffe} Schiff${schiffe === 1 ? "" : "e"}` : `Rang «${esc(s.ziel.raenge[zone.rang].name)}», ab ${zone.ab_jahr}, ${f(zone.erschliessung)} Gulden`}
+        <div class="klein">${offen ? `${kontore} Kontor${kontore === 1 ? "" : "e"} · ${schiffe} Schiff${schiffe === 1 ? "" : "e"}` : `Rang «${esc(s.ziel.raenge[zone.rang].name)}», ab ${zone.ab_jahr}, ${f(s.zonen.erschliessungskosten(zone.id))} Gulden${s.vertraege.rabatt(zone.id) ? ` (${f(s.vertraege.rabatt(zone.id) * 100)} % Rabatt aus Verträgen)` : ""}`}
           <button data-zone-zeige="${zone.id}" title="Karte zu diesem See bewegen">anzeigen</button>
           ${offen ? "" : `<button class="haupt" data-zone-erschliessen="${zone.id}" ${grund ? "disabled" : ""} title="${esc(grund ?? "")}">erschliessen</button>`}</div>${!offen && grund ? `<div class="hinweis">${esc(grund)}</div>` : ""}${offen && zone.art === "land" ? `<details class="regeln" data-key="netz-${zone.id}"><summary>Strassen- und Schienennetz</summary>${this.streckenBlock(zo.strecke("netz_" + zone.id))}</details>` : ""}</li>`;
     }
@@ -1371,6 +1409,10 @@ export class Oberflaeche {
       s.zonen.kaufeKonzession(s.zonen.strecke(d.konzession));
     } else if (d.vertrag !== undefined) {
       s.zoll.schliesseVertrag(stadt);
+    } else if (d.fernArt) {
+      s.vertraege.abschliessen(stadt, { art: d.fernArt, zone: d.fernZone, ware: d.fernWare, preis: s.vertraege.angebote(stadt).find((x) => x.art === d.fernArt && x.zone === d.fernZone && x.ware === d.fernWare)?.preis }, Number(d.fernMenge));
+    } else if (d.fernKuendigen) {
+      s.vertraege.kuendigen(Number(d.fernKuendigen));
     } else if (d.ratssitz !== undefined) {
       s.ziel.kaufeRatssitz(stadt);
     } else if (d.kapAnheuern) {

@@ -129,6 +129,12 @@ export class Zonen {
     return liste;
   }
 
+  // Kosten des Erschliessens, abzüglich des Rabatts aus erfüllten Fernhandelsverträgen (vertraege.js)
+  erschliessungskosten(zoneId) {
+    const zone = this.zone(zoneId);
+    return Math.round((zone.erschliessung * (1 - (this.spiel.vertraege?.rabatt(zoneId) ?? 0))) / 100) * 100;
+  }
+
   pruefeErschliessen(zoneId) {
     const s = this.spiel;
     const zone = this.zone(zoneId);
@@ -136,7 +142,7 @@ export class Zonen {
     if (s.ziel.rangIndex < zone.rang) return `Dafür brauchst du mindestens den Rang «${s.ziel.raenge[zone.rang].name}».`;
     if (s.jahr() < zone.ab_jahr) return `Frühestens ab ${zone.ab_jahr}.`;
     if (!this.zugaenge(zoneId).length) return "Dafür brauchst du ein Kontor am anderen Ende einer Verbindung in einer erschlossenen Zone.";
-    if (s.gulden < zone.erschliessung) return "Zu wenig Gulden.";
+    if (s.gulden < this.erschliessungskosten(zoneId)) return "Zu wenig Gulden.";
     return null;
   }
 
@@ -146,8 +152,9 @@ export class Zonen {
     const s = this.spiel;
     const zone = this.zone(zoneId);
     const { dort } = this.zugaenge(zoneId)[0];
-    s.gulden -= zone.erschliessung;
-    s.buche("erschliessung", -zone.erschliessung);
+    const kosten = this.erschliessungskosten(zoneId);
+    s.gulden -= kosten;
+    s.buche("erschliessung", -kosten);
     this.erschlossen.push(zoneId);
     s.ausbau.kontore[dort.name] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
     s.melde(`${zone.name} erschlossen: Kontor in ${dort.name} angelegt. Dort kannst du Schiffe oder Fahrzeuge kaufen und handeln.`, "gut");

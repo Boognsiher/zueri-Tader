@@ -1,0 +1,14 @@
+{
+  "_info": "Fernhandelsverträge an den Verteilzentren (verteilzentrum in zonen.json, nur im Spiel, game/src/vertraege.js). Damit handelt der Spieler mit Zonen, die er noch nicht erschlossen hat: Ein Handelshaus dort liefert jeden Kalendermonat eine feste Menge einer Ware ins eigene Kontor am Verteilzentrum (einkauf) oder nimmt sie dort ab (verkauf). Preis fest für die ganze Laufzeit: Grundpreis mal Preisniveau der fremden Zone, beim Einkauf plus aufschlag_einkauf (Transport), beim Verkauf minus abschlag_verkauf. Angeboten werden beim Einkauf die Waren, die die fremde Zone selbst erzeugt und die so billiger sind als der Grundpreis im eigenen Verteilzentrum, beim Verkauf die Waren, die der fremden Zone fehlen (ihr Verteilzentrum führt sie ein) oder die dort mindestens verkauf_ab_preisniveau kosten, je höchstens angebote_je_art. Eine Zone handelt schon vorlauf_jahre vor ihrem ab_jahr (frühestes Erschliessen), so baut der Spieler das Geschäft vorher auf. Fehlt bei der Abrechnung Geld, Platz im Kontor oder Ware, fällt die Lieferung (oder der Rest) aus, und der Spieler zahlt strafe_anteil des ausgefallenen Werts. Kündigen kostet strafe_anteil des Werts einer Monatsmenge. Jede vollständig erfüllte Lieferung baut das Geschäft mit der Zone auf: Ihr Erschliessen wird um rabatt_je_lieferung billiger, höchstens um rabatt_max. Höchstens max_vertraege laufen gleichzeitig.",
+  "laufzeit_monate": 12,
+  "mengen": [20, 40, 80],
+  "aufschlag_einkauf": 0.25,
+  "abschlag_verkauf": 0.15,
+  "verkauf_ab_preisniveau": 1.15,
+  "angebote_je_art": 4,
+  "strafe_anteil": 0.2,
+  "rabatt_je_lieferung": 0.02,
+  "rabatt_max": 0.3,
+  "max_vertraege": 6,
+  "vorlauf_jahre": 40
+}

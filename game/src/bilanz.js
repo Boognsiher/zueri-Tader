@@ -14,6 +14,7 @@ export const KONTEN = [
   { id: "schiffeReparatur", name: "Reparaturen nach Gefechten", gruppe: "Schiffe" },
   { id: "zoll", name: "Zoll auf Verkäufe und Durchfuhr", gruppe: "Handel" },
   { id: "fracht", name: "Fracht auf Verbindungen", gruppe: "Handel" },
+  { id: "vertraege", name: "Fernhandelsverträge (Lieferungen, Strafen)", gruppe: "Handel" },
   { id: "versicherungPraemie", name: "Versicherungsprämien", gruppe: "Schiffe" },
   { id: "versicherungLeistung", name: "Leistungen der Versicherung", gruppe: "Schiffe" },
   { id: "kapitaenslohn", name: "Lohn der Kapitäne", gruppe: "Schiffe" },

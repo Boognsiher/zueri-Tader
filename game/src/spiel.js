@@ -16,6 +16,7 @@ import { Ziel } from "./ziel.js";
 import { Risiko } from "./risiko.js";
 import { Zoll } from "./zoll.js";
 import { Zonen } from "./zonen.js";
+import { Vertraege } from "./vertraege.js";
 import { Zufall } from "./zufall.js";
 
 const MELDUNGEN_JE_REIHE = 60;
@@ -49,6 +50,7 @@ export class Spiel {
     this.risiko = new Risiko(this, seed);
     this.zoll = new Zoll(this);
     this.zonen = new Zonen(this);
+    this.vertraege = new Vertraege(this);
     this.spielsekunden = 0; // echte Spielzeit mit laufender Uhr, für die Abstimmung des Spieltempos
     if (!leer) this.kapitaene.starte();
     if (!leer) this.neuesSchiff(this.welt.stadt[D.spiel.start.stadt]);
@@ -473,6 +475,7 @@ export class Spiel {
     this.risiko.tag();
     this.zoll.tag();
     this.zonen.tag();
+    this.vertraege.tag();
     const ankuenfte = this.pruefeAnkuenfte();
     // Automatische Schiffe, die warten (gesperrter Hafen, kein Geschäft), versuchen es neu
     for (const s of this.schiffe) if (automatik.aktiv(s) && !s.fahrt && !ankuenfte.includes(s)) automatik.weiter(this, s);
