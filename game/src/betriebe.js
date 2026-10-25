@@ -350,10 +350,18 @@ export class Ausbau {
     return true;
   }
 
+  // Standort: Rohstoffbetriebe nur, wo die Stadt den Rohstoff erzeugt, Werkstätten nur, wo das
+  // Handwerk ansässig ist (cities.json). So entstehen Lieferketten zwischen den Städten.
+  standort(stadt, typId) {
+    const t = this.typen[typId];
+    const cfg = this.basis[stadt.name ?? stadt];
+    return t.ware in (t.art === "produktion" ? cfg.prod : cfg.werk);
+  }
+
   pruefeBau(stadt, typId) {
     const t = this.typen[typId];
     if (this.freiePlaetze(stadt) <= 0) return "Kein freier Bauplatz.";
-    if (t.art === "produktion" && !(t.ware in this.basis[stadt.name].prod)) return `In ${stadt.name} gibt es kein ${t.ware}.`;
+    if (!this.standort(stadt, typId)) return t.art === "produktion" ? `In ${stadt.name} gibt es kein ${t.ware}.` : `In ${stadt.name} ist kein Handwerk für ${t.ware} ansässig.`;
     const k = this.baukosten(typId, stadt);
     return this.pruefeKosten(stadt, k.gulden, k.material);
   }

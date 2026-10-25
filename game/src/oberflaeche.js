@@ -811,7 +811,7 @@ export class Oberflaeche {
 
     const frei = a.freiePlaetze(stadt);
     html += `<h3>Neu bauen <small>${frei} von ${a.bauplaetze(stadt)} Bauplätzen frei</small></h3>`;
-    const moeglich = a.bau.betriebe.filter((t) => t.art === "werkstatt" || t.ware in a.basis[stadt.name].prod);
+    const moeglich = a.bau.betriebe.filter((t) => a.standort(stadt, t.id));
     html += `<table class="markt bauliste"><thead><tr><th>Betrieb</th><th>Kosten</th><th>erwartet</th><th></th></tr></thead><tbody>`;
     for (const t of moeglich) {
       const kosten = a.baukosten(t.id, stadt);

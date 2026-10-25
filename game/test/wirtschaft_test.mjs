@@ -248,6 +248,7 @@ if (abschnitt("Betriebe und Kontor")) {
 
   // Neubau: Bauplatz, Rohstoff der Stadt, Material
   pruefe("Kein Neubau eines Sägewerks in Zürich (kein Holz dort)", a.pruefeBau(zuerich, "saegewerk") !== null);
+  pruefe(`Keine Schmiede in Zürich (kein Handwerk dort): "${a.pruefeBau(zuerich, "schmiede")}"`, String(a.pruefeBau(zuerich, "schmiede")).includes("Handwerk"));
   const kostenTrotte = a.baukosten("trotte", zuerich);
   spiel.kaufen(schiff, "Holz", 30);
   pruefe(`Werkzeug fehlt für die Trotte: "${a.pruefeBau(zuerich, "trotte")}"`, String(a.pruefeBau(zuerich, "trotte")).includes("Werkzeug"));
