@@ -35,7 +35,8 @@ document.addEventListener("click", (ev) => {
 function setze(el, html) {
   if (el._html === html) return;
   const aktiv = document.activeElement;
-  const tippt = aktiv?.tagName === "TEXTAREA" || (aktiv?.tagName === "INPUT" && !["checkbox", "radio", "button"].includes(aktiv.type));
+  // Auch eine Auswahlliste: Neu zeichnen würde sie schliessen, solange man wählt (Handy)
+  const tippt = aktiv?.tagName === "TEXTAREA" || aktiv?.tagName === "SELECT" || (aktiv?.tagName === "INPUT" && !["checkbox", "radio", "button"].includes(aktiv.type));
   if (tippt && el.contains(aktiv)) {
     if (el._wartet === undefined) aktiv.addEventListener("blur", () => setTimeout(() => setze(el, el._wartet ?? el._html), 0), { once: true });
     el._wartet = html;
@@ -112,6 +113,10 @@ export class Oberflaeche {
     this.e.markt.addEventListener("click", (ev) => {
       if (ev.target.closest("[data-stadtfenster]")) this.oeffneStadt(this.stadt);
     });
+    // Nach der Wahl gibt die Auswahlliste den Fokus ab, damit die Anzeige gleich neu gezeichnet wird (siehe setze)
+    document.addEventListener("change", (ev) => {
+      if (ev.target.tagName === "SELECT") ev.target.blur();
+    }, true);
     this.e.markt.addEventListener("change", (ev) => {
       if (ev.target.name === "stadtwahl") {
         this.stadt = this.spiel.welt.staedte[Number(ev.target.value)];
