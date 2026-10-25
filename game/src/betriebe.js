@@ -162,7 +162,7 @@ export class Ausbau {
   wendeKapazitaetAn() {
     for (const stadt of this.spiel.welt.staedte) {
       const cfg = this.basis[stadt.name];
-      const prod = { ...cfg.prod };
+      const prod = { ...cfg.prod, ...cfg.imp };
       const werk = { ...cfg.werk };
       for (const b of this.betriebe.filter((x) => x.stadt === stadt.name)) {
         const t = this.typ(b);

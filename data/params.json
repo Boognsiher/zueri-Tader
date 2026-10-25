@@ -5,7 +5,7 @@
     "PRICE_MIN": {"wert": 0.4, "info": "Preis-Untergrenze als Anteil am Basispreis"},
     "PRICE_MAX": {"wert": 2.5, "info": "Preis-Obergrenze als Anteil am Basispreis"},
     "K": {"wert": 0.7, "info": "Preisempfindlichkeit k in der Preisformel Basispreis * (Ziel / Bestand)^k"},
-    "TARGET_DAYS_USE": {"wert": 30, "info": "Zielbestand in Tagen Eigenbedarf (Verbrauch + Werkstatt). WICHTIGSTE BALANCE-SCHRAUBE: gross = träger Markt mit moderaten Renditen, klein = nervöser Markt mit hohen Gewinnen"},
+    "TARGET_DAYS_USE": {"wert": 45, "info": "Zielbestand in Tagen Eigenbedarf (Verbrauch + Werkstatt). WICHTIGSTE BALANCE-SCHRAUBE: gross = träger Markt mit moderaten Renditen, klein = nervöser Markt mit hohen Gewinnen. Seit der Spezialisierung der Rohstoffe (25.10.2026) 45 statt 30: Viele Städte erzeugen ihren Grundbedarf nicht mehr selbst und halten grössere Vorräte"},
     "TARGET_DAYS_PROD": {"wert": 20, "info": "Zielbestand in Tagen Produktion (siehe TARGET_DAYS_USE)"},
     "CAP_FACTOR": {"wert": 4.0, "info": "Lagerkapazität als Vielfaches des Zielbestands; Überschuss verdirbt"},
     "SPEED": {"wert": 9.5, "info": "Schiffsgeschwindigkeit (Nauen/Ledischiff) in Karteneinheiten pro Tag"},

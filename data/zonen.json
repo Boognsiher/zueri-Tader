@@ -20,7 +20,11 @@
    "text": "Das Heimatrevier: acht Gemeinden zwischen Zürich und Schmerikon.",
    "hoehe": 66,
    "ab_jahr": 1650,
-   "art": "see"
+   "art": "see",
+   "verteilzentrum": "Zürich",
+   "preisfaktor": {
+    "Eisenerz": 1.3
+   }
   },
   {
    "id": "walensee",
@@ -46,12 +50,13 @@
     "Werkzeug": 0.9,
     "Zucker": 1.25,
     "Gewürze": 1.25,
-    "Rohseide": 1.1,
-    "Baumwolle": 1.1
+    "Rohseide": 1.3,
+    "Baumwolle": 1.3
    },
    "hoehe": 16,
    "ab_jahr": 1665,
-   "art": "see"
+   "art": "see",
+   "verteilzentrum": "Weesen"
   },
   {
    "id": "hochrhein",
@@ -76,13 +81,14 @@
     "Werkzeug": 1.0,
     "Zucker": 0.85,
     "Gewürze": 0.85,
-    "Rohseide": 0.9,
+    "Rohseide": 1.3,
     "Baumwolle": 0.9,
     "Trauben": 1.05
    },
    "hoehe": 24,
    "ab_jahr": 1690,
-   "art": "fluss"
+   "art": "fluss",
+   "verteilzentrum": "Basel"
   },
   {
    "id": "bodensee",
@@ -100,20 +106,21 @@
     "Fisch": 0.9,
     "Holz": 0.95,
     "Käse": 0.9,
-    "Eisenerz": 1.05,
+    "Eisenerz": 1.3,
     "Wein": 1.0,
     "Seide": 1.1,
     "Tuch": 0.9,
     "Werkzeug": 1.1,
     "Zucker": 1.1,
     "Gewürze": 1.1,
-    "Rohseide": 1.1,
+    "Rohseide": 1.3,
     "Baumwolle": 0.9,
     "Trauben": 0.95
    },
    "hoehe": 38,
    "ab_jahr": 1720,
-   "art": "see"
+   "art": "see",
+   "verteilzentrum": "Konstanz"
   },
   {
    "id": "genfersee",
@@ -131,7 +138,7 @@
     "Fisch": 1.0,
     "Holz": 1.05,
     "Käse": 1.1,
-    "Eisenerz": 1.15,
+    "Eisenerz": 1.3,
     "Wein": 0.8,
     "Seide": 1.0,
     "Tuch": 1.1,
@@ -139,12 +146,13 @@
     "Zucker": 1.0,
     "Gewürze": 0.95,
     "Rohseide": 1.0,
-    "Baumwolle": 1.1,
+    "Baumwolle": 1.3,
     "Trauben": 0.8
    },
    "hoehe": 36,
    "ab_jahr": 1755,
-   "art": "see"
+   "art": "see",
+   "verteilzentrum": "Genf"
   },
   {
    "id": "mittelrhein",
@@ -164,7 +172,7 @@
     "Korn": 0.95,
     "Fisch": 1.0,
     "Holz": 1.0,
-    "Käse": 1.1,
+    "Käse": 1.3,
     "Eisenerz": 0.95,
     "Wein": 0.9,
     "Seide": 1.05,
@@ -172,10 +180,11 @@
     "Werkzeug": 0.95,
     "Zucker": 0.95,
     "Gewürze": 0.95,
-    "Rohseide": 1.05,
+    "Rohseide": 1.3,
     "Baumwolle": 1.0,
     "Trauben": 0.9
-   }
+   },
+   "verteilzentrum": "Köln"
   },
   {
    "id": "niederrhein",
@@ -196,7 +205,7 @@
     "Fisch": 0.9,
     "Holz": 1.1,
     "Käse": 0.85,
-    "Eisenerz": 1.0,
+    "Eisenerz": 1.3,
     "Wein": 1.2,
     "Seide": 1.1,
     "Tuch": 0.95,
@@ -205,8 +214,9 @@
     "Gewürze": 0.75,
     "Rohseide": 1.0,
     "Baumwolle": 0.85,
-    "Trauben": 1.2
-   }
+    "Trauben": 1.3
+   },
+   "verteilzentrum": "Amsterdam"
   },
   {
    "id": "rhone",
@@ -226,8 +236,8 @@
     "Korn": 1.0,
     "Fisch": 0.95,
     "Holz": 1.15,
-    "Käse": 1.1,
-    "Eisenerz": 1.1,
+    "Käse": 1.3,
+    "Eisenerz": 1.3,
     "Wein": 0.85,
     "Seide": 0.9,
     "Tuch": 1.1,
@@ -237,7 +247,8 @@
     "Rohseide": 0.9,
     "Baumwolle": 0.95,
     "Trauben": 0.85
-   }
+   },
+   "verteilzentrum": "Marseille"
   },
   {
    "id": "mittelland",
@@ -265,10 +276,11 @@
     "Werkzeug": 1.0,
     "Zucker": 1.15,
     "Gewürze": 1.15,
-    "Rohseide": 1.05,
+    "Rohseide": 1.3,
     "Baumwolle": 1.05,
-    "Trauben": 1.05
-   }
+    "Trauben": 1.3
+   },
+   "verteilzentrum": "Bern"
   },
   {
    "id": "nordost",
@@ -289,17 +301,18 @@
     "Fisch": 1.2,
     "Holz": 0.95,
     "Käse": 0.8,
-    "Eisenerz": 1.1,
+    "Eisenerz": 1.3,
     "Wein": 1.15,
     "Seide": 1.0,
     "Tuch": 0.85,
     "Werkzeug": 1.05,
     "Zucker": 1.1,
     "Gewürze": 1.1,
-    "Rohseide": 1.1,
+    "Rohseide": 1.3,
     "Baumwolle": 0.9,
-    "Trauben": 1.1
-   }
+    "Trauben": 1.3
+   },
+   "verteilzentrum": "St. Gallen"
   },
   {
    "id": "westschweiz",
@@ -327,10 +340,11 @@
     "Werkzeug": 0.9,
     "Zucker": 1.05,
     "Gewürze": 1.05,
-    "Rohseide": 1.1,
-    "Baumwolle": 1.1,
+    "Rohseide": 1.3,
+    "Baumwolle": 1.3,
     "Trauben": 0.9
-   }
+   },
+   "verteilzentrum": "Fribourg"
   },
   {
    "id": "alpen",
@@ -359,9 +373,10 @@
     "Zucker": 1.2,
     "Gewürze": 1.1,
     "Rohseide": 1.0,
-    "Baumwolle": 1.2,
+    "Baumwolle": 1.3,
     "Trauben": 0.95
-   }
+   },
+   "verteilzentrum": "Chur"
   }
  ],
  "verbindungen": [

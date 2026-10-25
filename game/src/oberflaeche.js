@@ -470,7 +470,10 @@ export class Oberflaeche {
         .map((e) => `<span class="marke">${esc(e.name)} bis ${esc(s.datumWelt(e.bis))}</span>`)
         .join(" ")}</p>`;
     }
-    const erzeugt = Object.keys(stadt.prod).join(", ");
+    const cfg = s.ausbau.basis[stadt.name];
+    const erzeugt = Object.keys(stadt.prod).filter((g) => !(g in cfg.imp)).join(", ");
+    // Verteilzentrum: führt Rohstoffe ein, die es in der Zone nicht gibt (teurer als dort, wo sie wachsen)
+    const einfuhr = Object.keys(cfg.imp).length ? `<br><b>Verteilzentrum, führt ein:</b> ${esc(Object.keys(cfg.imp).join(", "))} (in der Zone sonst nicht zu haben)` : "";
     const werk = Object.entries(stadt.werk)
       .map(([g]) => `${g} aus ${Object.keys(D.rezepte[g]).join(" und ")}`)
       .join(", ");
@@ -480,7 +483,7 @@ export class Oberflaeche {
       s.diplomatie.hafenGesperrt(stadt) ? ` · <span class="minus">dir feindlich, Hafen gesperrt</span>` : ""}</p>`;
     const zollSaetze = Object.keys(D.waren).map((g) => s.zoll.satz(stadt, g));
     const zollText = `<br><b>Zoll auf Verkäufe:</b> ${f(Math.min(...zollSaetze) * 100)} bis ${f(Math.max(...zollSaetze) * 100)} % (Grundwaren am wenigsten, Importwaren am meisten)`;
-    html += `<p class="profil"><b>Erzeugt:</b> ${esc(erzeugt || "nichts")}${werk ? `<br><b>Werkstätten:</b> ${esc(werk)}` : ""}${werft}${zollText}</p>`;
+    html += `<p class="profil"><b>Erzeugt:</b> ${esc(erzeugt || "nichts")}${einfuhr}${werk ? `<br><b>Werkstätten:</b> ${esc(werk)}` : ""}${werft}${zollText}</p>`;
     return html;
   }
 

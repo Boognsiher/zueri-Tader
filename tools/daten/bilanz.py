@@ -23,7 +23,7 @@ def bilanz(cities):
     for c in cities:
         for g, v in cons.items():
             bedarf[g] += c["einwohner"] / 1000 * v
-        for g, v in c["produktion"].items():
+        for g, v in {**c["produktion"], **c.get("import", {})}.items():   # Einfuhr der Verteilzentren
             angebot[g] += v
         for g, n in c["werkstaetten"].items():
             angebot[g] += n

@@ -76,7 +76,8 @@ def load_data(data_dir=DEFAULT_DATA_DIR):
     BASIC = c["grundbedarf"]
     COMFORT = c["gehobener_bedarf"]
     CITIES = [{"name": s["name"], "pop": s["einwohner"], "pos": tuple(s["position"]),
-               "prod": s["produktion"], "work": s["werkstaetten"],
+               # Einfuhr der Verteilzentren (import) zaehlt wie Produktion
+               "prod": {**s["produktion"], **s.get("import", {})}, "work": s["werkstaetten"],
                "zone": s.get("zone", "zuerichsee")}
               for s in _read(data_dir, "cities.json")["staedte"]]
     EVENTS = _read(data_dir, "events.json")["ereignisse"]

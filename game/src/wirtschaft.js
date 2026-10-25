@@ -47,7 +47,8 @@ export class Stadt {
     this.zone = cfg.zone; // Wirtschaftszone (zonen.json): KI-Händler handeln nur innerhalb einer Zone
     this.preisfaktor = D.zonen?.zonen.find((z) => z.id === cfg.zone)?.preisfaktor ?? {}; // Preisniveau der Zone je Ware
     // Kopien: Betriebe des Spielers verschieben Leistung zwischen Stadt und Spieler (betriebe.js)
-    this.prod = { ...cfg.prod };
+    // Einfuhr der Verteilzentren (imp) zählt wie Produktion
+    this.prod = { ...cfg.prod, ...cfg.imp };
     this.werk = { ...cfg.werk };
     this.unterwegs = {}; // Ladung der KI-Händler, die hierher unterwegs ist
     this.ballast = 0; // KI-Schiffe, die leer hierher unterwegs sind

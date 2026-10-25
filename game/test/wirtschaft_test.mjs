@@ -227,24 +227,24 @@ if (abschnitt("Betriebe und Kontor")) {
   spiel.gulden = 200000;
   pruefe(`Jede Stadt hat vorhandene Betriebe (${a.betriebe.length} insgesamt)`, spiel.welt.staedte.every((s) => a.betriebeIn(s).length > 0));
 
-  const kornhof = a.betriebeIn(zuerich).find((b) => b.typ === "kornhof");
-  const kornVorher = zuerich.prod.Korn;
-  pruefe("Kornhof in Zürich kaufen", a.kaufen(kornhof));
-  pruefe(`Stadtproduktion Korn sinkt um die Leistung (${kornVorher} -> ${zuerich.prod.Korn})`, zuerich.prod.Korn === kornVorher - a.typ(kornhof).leistung);
+  const seidenhof = a.betriebeIn(zuerich).find((b) => b.typ === "seidenhandel");
+  const seideVorher = zuerich.prod.Rohseide;
+  pruefe("Seidenhandel in Zürich kaufen", a.kaufen(seidenhof));
+  pruefe(`Stadtproduktion Rohseide sinkt um die Leistung (${seideVorher} -> ${zuerich.prod.Rohseide})`, zuerich.prod.Rohseide === seideVorher - a.typ(seidenhof).leistung);
   const geld = spiel.gulden;
-  const lager = zuerich.bestand.Korn;
+  const lager = zuerich.bestand.Rohseide;
   spiel.tagVoran();
-  pruefe(`Der Betrieb liefert an den Markt und bringt Geld (${kornhof.gestern.kasse.toFixed(0)} Gulden am ersten Tag)`, kornhof.gestern.kasse > 0 && spiel.gulden > geld - 100);
+  pruefe(`Der Betrieb liefert an den Markt und bringt Geld (${seidenhof.gestern.kasse.toFixed(0)} Gulden am ersten Tag)`, seidenhof.gestern.kasse > 0 && spiel.gulden > geld - 100);
 
   // Kontor: Holz mitbringen, bauen, Erzeugnisse einlagern, umlagern
   spiel.kaufen(schiff, "Holz", 40);
   pruefe("Kontor in Zürich bauen (Holz aus dem Schiff)", a.kontorBauen(zuerich));
-  pruefe("Betrieb liefert ins Kontor", a.setzeZiel(kornhof, "kontor"));
+  pruefe("Betrieb liefert ins Kontor", a.setzeZiel(seidenhof, "kontor"));
   spiel.tagVoran();
-  const imKontor = a.kontor(zuerich).lager.Korn?.menge ?? 0;
-  pruefe(`Korn liegt im Kontor (${imKontor})`, imKontor > 0);
-  const umgelagert = a.umlagern(schiff, "Korn", 5, "insSchiff");
-  pruefe("Kontor -> Schiff umlagern", umgelagert === Math.min(5, Math.floor(imKontor)) && schiff.ladung.Korn?.menge >= umgelagert);
+  const imKontor = a.kontor(zuerich).lager.Rohseide?.menge ?? 0;
+  pruefe(`Rohseide liegt im Kontor (${imKontor})`, imKontor > 0);
+  const umgelagert = a.umlagern(schiff, "Rohseide", 5, "insSchiff");
+  pruefe("Kontor -> Schiff umlagern", umgelagert === Math.min(5, Math.floor(imKontor)) && schiff.ladung.Rohseide?.menge >= umgelagert);
 
   // Neubau: Bauplatz, Rohstoff der Stadt, Material
   pruefe("Kein Neubau eines Sägewerks in Zürich (kein Holz dort)", a.pruefeBau(zuerich, "saegewerk") !== null);
@@ -256,8 +256,8 @@ if (abschnitt("Betriebe und Kontor")) {
   const neu = a.bauen(zuerich, "trotte");
   pruefe("Trotte neu bauen mit Material aus Kontor und Schiff", !!neu && a.freiePlaetze(zuerich) === a.bauplaetze(zuerich) - 1);
 
-  pruefe("Kornhof an die Stadt verkaufen", a.verkaufen(kornhof));
-  pruefe("Stadtproduktion Korn wieder wie vorher", zuerich.prod.Korn === kornVorher);
+  pruefe("Seidenhandel an die Stadt verkaufen", a.verkaufen(seidenhof));
+  pruefe("Stadtproduktion Rohseide wieder wie vorher", zuerich.prod.Rohseide === seideVorher);
   pruefe("Unterhalt des Kontors wird bezahlt", (() => { const g = spiel.gulden; spiel.tagVoran(); return spiel.gulden < g + 1e6; })());
 
   // Die Betriebe des Spielers lassen die Wirtschaft stabil: alle kaufen und ein Jahr laufen lassen
@@ -548,16 +548,16 @@ if (abschnitt("Stufen, Stadtgebäude, Kontorhandel")) {
   k.lager.Werkzeug = { menge: 100, einstand: 120 };
 
   // Betrieb ausbauen: doppelte Leistung, Stadtproduktion unverändert
-  const kornhof = a.betriebeIn(zuerich).find((b) => b.typ === "kornhof");
-  a.kaufen(kornhof);
-  const kornStadt = zuerich.prod.Korn;
-  pruefe("Kornhof auf Stufe 2 ausbauen", a.betriebAusbauen(kornhof) && kornhof.stufe === 2);
-  pruefe(`Leistung verdoppelt (${a.leistung(kornhof)} Korn pro Tag)`, a.leistung(kornhof) === 2 * a.typ(kornhof).leistung);
-  pruefe("Ausbau verändert die Stadtproduktion nicht", zuerich.prod.Korn === kornStadt);
-  a.betriebAusbauen(kornhof);
-  pruefe("Höchste Stufe ist 3", kornhof.stufe === 3 && a.pruefeBetriebsausbau(kornhof) !== null);
-  a.verkaufen(kornhof);
-  pruefe("Verkauf an die Stadt: Grundleistung plus zwei Ausbaustufen produziert die Stadt", zuerich.prod.Korn === kornStadt + 3 * a.typ(kornhof).leistung);
+  const seidenhof = a.betriebeIn(zuerich).find((b) => b.typ === "seidenhandel");
+  a.kaufen(seidenhof);
+  const seideStadt = zuerich.prod.Rohseide;
+  pruefe("Seidenhandel auf Stufe 2 ausbauen", a.betriebAusbauen(seidenhof) && seidenhof.stufe === 2);
+  pruefe(`Leistung verdoppelt (${a.leistung(seidenhof)} Rohseide pro Tag)`, a.leistung(seidenhof) === 2 * a.typ(seidenhof).leistung);
+  pruefe("Ausbau verändert die Stadtproduktion nicht", zuerich.prod.Rohseide === seideStadt);
+  a.betriebAusbauen(seidenhof);
+  pruefe("Höchste Stufe ist 3", seidenhof.stufe === 3 && a.pruefeBetriebsausbau(seidenhof) !== null);
+  a.verkaufen(seidenhof);
+  pruefe("Verkauf an die Stadt: Grundleistung plus zwei Ausbaustufen produziert die Stadt", zuerich.prod.Rohseide === seideStadt + 3 * a.typ(seidenhof).leistung);
 
   // Kontor ausbauen
   const kapazitaet = a.lagerKapazitaet(k);
@@ -607,7 +607,7 @@ if (abschnitt("Stufen, Stadtgebäude, Kontorhandel")) {
   const geladen = lade(D, JSON.parse(JSON.stringify(speichere(spiel))));
   pruefe("Stufen, Stadtgebäude und Kontorregeln überstehen Speichern und Laden",
     geladen.ausbau.gebaeudeStufe(zuerich, "markthalle") === 3 && geladen.ausbau.kontor(zuerich).stufe === 2 &&
-    geladen.ausbau.regel(zuerich, "Rohseide").kaufenBis === 300 && geladen.welt.stadt["Zürich"].prod.Korn === zuerich.prod.Korn);
+    geladen.ausbau.regel(zuerich, "Rohseide").kaufenBis === 300 && geladen.welt.stadt["Zürich"].prod.Rohseide === zuerich.prod.Rohseide);
 }
 
 if (abschnitt("Rückbau")) {
@@ -632,9 +632,9 @@ if (abschnitt("Rückbau")) {
   pruefe("Betrieb abreissen gibt den Bauplatz frei", a.betriebZurueckbauen(b) && !a.betriebe.includes(b) && a.freiePlaetze(zuerich) === frei);
 
   // Gekaufter Stadtbetrieb lässt sich nicht abreissen
-  const kornhof = a.betriebeIn(zuerich).find((x) => x.typ === "kornhof");
-  a.kaufen(kornhof);
-  pruefe("Gekaufter Betrieb auf Stufe 1 lässt sich nicht abreissen", a.pruefeBetriebsrueckbau(kornhof) !== null);
+  const seidenhof = a.betriebeIn(zuerich).find((x) => x.typ === "seidenhandel");
+  a.kaufen(seidenhof);
+  pruefe("Gekaufter Betrieb auf Stufe 1 lässt sich nicht abreissen", a.pruefeBetriebsrueckbau(seidenhof) !== null);
 
   // Stadtgebäude: Stufe zurück, abreissen, Wirkung weg
   a.baueGebaeude(zuerich, "spital");

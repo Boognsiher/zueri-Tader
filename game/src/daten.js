@@ -39,6 +39,7 @@ function aufbereiten(roh) {
     pos: s.position,
     zone: s.zone ?? "zuerichsee",
     prod: s.produktion,
+    imp: s.import ?? {}, // Einfuhr der Verteilzentren: zählt wie Produktion, aber ohne Rohstoffbetrieb
     werk: s.werkstaetten,
   }));
 
