@@ -665,13 +665,14 @@ export class Oberflaeche {
     const kb = a.bau.kontor;
     if (!k) {
       return `<p>Ein Kontor ist dein Lager in ${esc(stadt.name)} (${f(kb.lager)} Plätze, ausbaubar). Es kauft und verkauft selbst am Markt, Betriebe können hineinliefern, Schiffe laden und entladen, und Handelsrouten nutzen es automatisch.</p>
-        <p>Kosten: ${esc(this.kostentext(kb.baukosten.gulden, kb.baukosten))}, Unterhalt ${kb.unterhalt} Gulden pro Tag und Stufe.</p>
+        <p>Kosten: ${esc(this.kostentext(a.kontorBaukosten().gulden, a.kontorBaukosten()))}, Unterhalt ${f(kb.unterhalt * a.kontorFaktor(Object.keys(a.kontore).length + 1))} Gulden pro Tag und Stufe.</p>
+        <p class="hilfe">Du hast ${Object.keys(a.kontore).length} Kontor${Object.keys(a.kontore).length === 1 ? "" : "e"}, dein Rang «${esc(s.ziel.rang.name)}» erlaubt ${a.kontoreMax()} zum normalen Preis. Jedes weitere kostet ${kb.ueber_rang_faktor}-mal so viel wie das vorherige (Bau und Unterhalt).</p>
         ${this.knopf("data-kontorbau", "Kontor bauen", a.pruefeKontorBau(stadt), true)}
         ${s.vertraege.zoneVonZentrum(stadt) ? `<p class="hilfe">${esc(stadt.name)} ist ein Verteilzentrum: Mit einem Kontor hier kannst du Fernhandelsverträge mit Zonen schliessen, die du noch nicht erschlossen hast.</p>` : ""}`;
     }
     const wunsch = this.menge === "max" ? Infinity : Number(this.menge);
     const stufe = k.stufe ?? 1;
-    let html = `${k.nurEinkauf ? `<p class="hilfe"><b>Einkaufslager:</b> Das Kontor kauft nach seinen Regeln und verkauft nichts. Schiffe mit Automatik laden hier zuerst aus dem Kontor.</p>` : ""}<p class="stadtkopf">Kontor Stufe ${stufe} von ${a.bau.stufen_max} · Lager ${f(a.lagerMenge(k))} / ${f(a.lagerKapazitaet(k))} · Unterhalt ${f(kb.unterhalt * stufe)} Gulden pro Tag</p>`;
+    let html = `${k.nurEinkauf ? `<p class="hilfe"><b>Einkaufslager:</b> Das Kontor kauft nach seinen Regeln und verkauft nichts. Schiffe mit Automatik laden hier zuerst aus dem Kontor.</p>` : ""}<p class="stadtkopf">Kontor Stufe ${stufe} von ${a.bau.stufen_max} · Lager ${f(a.lagerMenge(k))} / ${f(a.lagerKapazitaet(k))} · Unterhalt ${f(a.kontorUnterhalt(k))} Gulden pro Tag${a.kontorFaktor(Object.values(a.kontore).indexOf(k) + 1) > 1 ? " (über der Grenze deines Rangs)" : ""}</p>`;
     if (stufe < a.bau.stufen_max) {
       html += `<div class="betriebknoepfe">${this.knopf("data-kontorausbau", `Ausbauen auf Stufe ${stufe + 1} (+${f(kb.lager)} Plätze): ${esc(this.kostentext(kb.ausbau.gulden, kb.ausbau))}`, a.pruefeKontorAusbau(stadt))}</div>`;
     }
@@ -915,7 +916,7 @@ export class Oberflaeche {
     const w = s.werft;
     const daten = this.D.schiffe;
     const schiffzeile = (t) => `<span class="klein">Laderaum ${t.laderaum} · Tempo ${f(t.tempo * 100)} % · Kampfkraft ${t.kampfkraft} · Rumpf ${t.rumpf} · Unterhalt ${t.unterhalt} Gulden/Tag</span>`;
-    let html = "";
+    let html = `<p class="hilfe">Deine Flotte: ${w.anzahlSchiffe()} von höchstens ${w.schiffeMax()} Schiffen (Rang «${esc(s.ziel.rang.name)}»).</p>`;
     if (w.istWerft(stadt)) {
       html += `<h3>Neue ${s.zonen.zone(stadt.zone).art === "land" ? "Fahrzeuge" : "Schiffe"} <small>im Jahr ${s.jahr()}</small></h3><ul class="betriebe">`;
       for (const t of w.neueTypen(stadt)) {

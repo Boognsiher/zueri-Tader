@@ -45,8 +45,25 @@ export class Werft {
     return this.daten.typen.filter((t) => (t.ab_jahr ?? 0) > jahr && (!medium || (t.medium ?? "wasser") === medium)).sort((a, b) => a.ab_jahr - b.ab_jahr);
   }
 
+  // --- Obergrenze der Flotte nach Rang (ziel.json schiffe_max) -----------------------------
+  // Schiffe eines Verbands zählen einzeln
+  anzahlSchiffe() {
+    return this.spiel.schiffe.reduce((a, s) => a + (s.mitglieder?.length ?? 1), 0);
+  }
+
+  schiffeMax() {
+    return this.spiel.ziel?.rang?.schiffe_max ?? Infinity;
+  }
+
+  pruefeFlottengroesse() {
+    if (this.anzahlSchiffe() >= this.schiffeMax()) return `Dein Rang «${this.spiel.ziel.rang.name}» erlaubt höchstens ${this.schiffeMax()} Schiffe. Mehr gibt es mit dem nächsten Rang.`;
+    return null;
+  }
+
   // --- Neue Schiffe ---------------------------------------------------------------
   pruefeNeukauf(stadt, typId) {
+    const zuViele = this.pruefeFlottengroesse();
+    if (zuViele) return zuViele;
     if (!this.neuBaubar(this.typ(typId))) return this.typ(typId).ab_jahr > this.spiel.jahr() ? `Diesen Typ gibt es erst ab ${this.typ(typId).ab_jahr}.` : `Diesen Typ baut keine Werft mehr (bis ${this.typ(typId).bis_jahr}).`;
     const t = this.typ(typId);
     const zone = this.spiel.zonen.zone(stadt.zone);
@@ -101,6 +118,8 @@ export class Werft {
   }
 
   pruefeGebraucht(angebot) {
+    const zuViele = this.pruefeFlottengroesse();
+    if (zuViele) return zuViele;
     const stadt = this.spiel.welt.stadt[angebot.stadt];
     if (!this.vorOrt(stadt)) return "Dafür brauchst du ein Schiff im Hafen oder ein Kontor hier.";
     if (this.spiel.gulden < angebot.preis) return "Zu wenig Gulden.";

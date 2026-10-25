@@ -1486,6 +1486,39 @@ if (abschnitt("Stadtspeicher")) {
   pruefe("Rückbau: Was nicht mehr in die Reserve passt, geht an den Markt", Math.abs(horgen.reserve.Korn - horgen.reserveKapazitaet("Korn")) < 1e-6 && horgen.bestand.Korn > markt);
 }
 
+// --- 22c. Obergrenzen nach Rang: Schiffe hart, Kontore immer teurer ----------
+if (abschnitt("Obergrenzen")) {
+  const spiel = ohneRisiko(new Spiel(D, 41));
+  const w = spiel.werft;
+  const a = spiel.ausbau;
+  const zuerich = spiel.welt.stadt["Zürich"];
+  spiel.gulden = 1e7;
+  const max = D.ziel.raenge[0].schiffe_max;
+  while (w.anzahlSchiffe() < max) w.kaufeNeu(zuerich, "nauen");
+  pruefe(`Als ${spiel.ziel.rang.name} höchstens ${max} Schiffe: ein weiteres geht nicht`, w.anzahlSchiffe() === max && w.kaufeNeu(zuerich, "nauen") === null && String(w.pruefeNeukauf(zuerich, "nauen")).includes("Rang"));
+  w.angebote.push({ nr: 999, stadt: "Zürich", typ: "nauen", preis: 100, alter: 3 });
+  pruefe("Auch gebraucht nicht", w.pruefeGebraucht(w.angebote.at(-1)) !== null);
+  // Kontore: bis zur Grenze normal, darüber dreimal so teuer wie das vorherige
+  const kmax = D.ziel.raenge[0].kontore_max;
+  const grund = D.bau.kontor.baukosten.gulden;
+  const f = D.bau.kontor.ueber_rang_faktor;
+  const staedte = ["Zürich", "Horgen", "Meilen", "Lachen", "Rapperswil"].map((n) => spiel.welt.stadt[n]);
+  const preise = [];
+  for (const st of staedte) {
+    preise.push(a.kontorBaukosten().gulden);
+    const s = spiel.schiffe[0];
+    Object.assign(s, { ort: st, pos: [...st.pos], fahrt: null });
+    s.ladung.Holz = { menge: 100, einstand: 30 };
+    a.kontorBauen(st);
+  }
+  pruefe(`Kontorpreise: ${preise.join(", ")} (Grenze ${kmax})`, preise.every((p, i) => p === grund * Math.pow(f, Math.max(0, i + 1 - kmax))) && Object.keys(a.kontore).length === staedte.length);
+  const k = a.kontor(staedte.at(-1));
+  pruefe("Unterhalt des Kontors über der Grenze ist teurer", a.kontorUnterhalt(k) === D.bau.kontor.unterhalt * Math.pow(f, staedte.length - kmax) && a.kontorUnterhalt(a.kontor(zuerich)) === D.bau.kontor.unterhalt);
+  // Höherer Rang: mehr Schiffe
+  spiel.ziel.rangIndex = 2;
+  pruefe(`Als ${spiel.ziel.rang.name} wieder Platz in der Flotte (${D.ziel.raenge[2].schiffe_max})`, w.pruefeNeukauf(zuerich, "nauen") === null);
+}
+
 // --- 23. Fernhandelsverträge an den Verteilzentren ---------------------------
 if (abschnitt("Fernhandelsverträge")) {
   const spiel = ohneRisiko(new Spiel(D, 31));

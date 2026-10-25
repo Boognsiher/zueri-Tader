@@ -589,19 +589,40 @@ export class Ausbau {
   }
 
   // --- Kontor ------------------------------------------------------------------------
+  // Obergrenze des Rangs (ziel.json kontore_max): Darüber kostet jedes weitere Kontor ueber_rang_faktor
+  // mal so viel wie das vorherige, beim Bau und im Unterhalt
+  kontoreMax() {
+    return this.spiel.ziel?.rang?.kontore_max ?? Infinity;
+  }
+
+  // Kostenfaktor des nr-ten Kontors (1 = erstes)
+  kontorFaktor(nr) {
+    return Math.pow(this.bau.kontor.ueber_rang_faktor, Math.max(0, nr - this.kontoreMax()));
+  }
+
+  kontorBaukosten() {
+    const k = this.bau.kontor.baukosten;
+    return { ...k, gulden: k.gulden * this.kontorFaktor(Object.keys(this.kontore).length + 1) };
+  }
+
   pruefeKontorBau(stadt) {
     if (this.kontor(stadt)) return "Hier hast du schon ein Kontor.";
-    const k = this.bau.kontor.baukosten;
+    const k = this.kontorBaukosten();
     return this.pruefeKosten(stadt, k.gulden, ohneGulden(k));
   }
 
   kontorBauen(stadt) {
     if (this.pruefeKontorBau(stadt)) return false;
-    const k = this.bau.kontor.baukosten;
+    const k = this.kontorBaukosten();
     this.bezahle(stadt, k.gulden, ohneGulden(k));
     this.kontore[stadt.name] = { stufe: 1, lager: {}, regeln: {}, sperren: {} };
     this.spiel.melde(`Kontor in ${stadt.name} gebaut.`, "gut");
     return true;
+  }
+
+  // Unterhalt eines Kontors pro Tag; nr = Platz in der Reihenfolge des Baus (über der Obergrenze teurer)
+  kontorUnterhalt(kontor, nr = Object.values(this.kontore).indexOf(kontor) + 1) {
+    return this.bau.kontor.unterhalt * (kontor.stufe ?? 1) * this.kontorFaktor(nr);
   }
 
   pruefeKontorAusbau(stadt) {
@@ -893,7 +914,7 @@ export class Ausbau {
     spiel.buche("betriebe", kasseGesamt);
     // Unterhalt der Kontore und Stadtgebäude
     let kontorUnterhalt = 0;
-    for (const k of Object.values(this.kontore)) kontorUnterhalt += this.bau.kontor.unterhalt * (k.stufe ?? 1);
+    Object.values(this.kontore).forEach((k, i) => (kontorUnterhalt += this.kontorUnterhalt(k, i + 1)));
     let gebaeudeUnterhalt = 0;
     for (const g of Object.values(this.gebaeude)) {
       for (const [id, stufe] of Object.entries(g)) gebaeudeUnterhalt += this.gebaeudetypen[id].unterhalt * stufe;
